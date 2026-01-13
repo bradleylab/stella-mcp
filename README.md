@@ -20,7 +20,7 @@ This is particularly useful for:
 
 ## Installation
 
-### From PyPI (coming soon)
+### From PyPI
 
 ```bash
 pip install stella-mcp
