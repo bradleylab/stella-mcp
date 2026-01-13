@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stella-mcp"
+version = "0.1.0"
+description = "MCP server for creating and manipulating Stella system dynamics models (.stmx files)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "EEPS3230 Biogeochemistry" }
+]
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.scripts]
+stella-mcp = "stella_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["stella_mcp"]
