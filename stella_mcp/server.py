@@ -56,6 +56,8 @@ async def list_tools() -> list[Tool]:
                     "initial_value": {"type": "string", "description": "Initial value (number or equation)"},
                     "units": {"type": "string", "description": "Units", "default": ""},
                     "non_negative": {"type": "boolean", "description": "Prevent negative values", "default": True},
+                    "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
+                    "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
                 },
                 "required": ["name", "initial_value"],
             },
@@ -72,6 +74,8 @@ async def list_tools() -> list[Tool]:
                     "from_stock": {"type": "string", "description": "Source stock (null for external source)"},
                     "to_stock": {"type": "string", "description": "Destination stock (null for external sink)"},
                     "non_negative": {"type": "boolean", "description": "Prevent negative values", "default": True},
+                    "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
+                    "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
                 },
                 "required": ["name", "equation"],
             },
@@ -85,6 +89,8 @@ async def list_tools() -> list[Tool]:
                     "name": {"type": "string", "description": "Variable name"},
                     "equation": {"type": "string", "description": "Equation or constant value"},
                     "units": {"type": "string", "description": "Units", "default": ""},
+                    "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
+                    "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
                 },
                 "required": ["name", "equation"],
             },
@@ -175,10 +181,15 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 initial_value=arguments["initial_value"],
                 units=arguments.get("units", ""),
                 non_negative=arguments.get("non_negative", True),
+                x=arguments.get("x"),
+                y=arguments.get("y"),
             )
+            pos_info = ""
+            if arguments.get("x") is not None and arguments.get("y") is not None:
+                pos_info = f" at position ({arguments['x']}, {arguments['y']})"
             return [TextContent(
                 type="text",
-                text=f"Added stock '{arguments['name']}' with initial value {arguments['initial_value']}"
+                text=f"Added stock '{arguments['name']}' with initial value {arguments['initial_value']}{pos_info}"
             )]
 
         elif name == "add_flow":
@@ -190,6 +201,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 from_stock=arguments.get("from_stock"),
                 to_stock=arguments.get("to_stock"),
                 non_negative=arguments.get("non_negative", True),
+                x=arguments.get("x"),
+                y=arguments.get("y"),
             )
             flow_desc = []
             if arguments.get("from_stock"):
@@ -197,9 +210,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             if arguments.get("to_stock"):
                 flow_desc.append(f"to {arguments['to_stock']}")
             flow_str = " ".join(flow_desc) if flow_desc else "(external)"
+            pos_info = ""
+            if arguments.get("x") is not None and arguments.get("y") is not None:
+                pos_info = f" at position ({arguments['x']}, {arguments['y']})"
             return [TextContent(
                 type="text",
-                text=f"Added flow '{arguments['name']}' {flow_str}: {arguments['equation']}"
+                text=f"Added flow '{arguments['name']}' {flow_str}: {arguments['equation']}{pos_info}"
             )]
 
         elif name == "add_aux":
@@ -208,10 +224,15 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 name=arguments["name"],
                 equation=arguments["equation"],
                 units=arguments.get("units", ""),
+                x=arguments.get("x"),
+                y=arguments.get("y"),
             )
+            pos_info = ""
+            if arguments.get("x") is not None and arguments.get("y") is not None:
+                pos_info = f" at position ({arguments['x']}, {arguments['y']})"
             return [TextContent(
                 type="text",
-                text=f"Added auxiliary '{arguments['name']}' = {arguments['equation']}"
+                text=f"Added auxiliary '{arguments['name']}' = {arguments['equation']}{pos_info}"
             )]
 
         elif name == "add_connector":
