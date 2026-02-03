@@ -1,5 +1,6 @@
 """XMILE XML generation and parsing for Stella .stmx files."""
 
+import math
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -224,52 +225,51 @@ class StellaModel:
         """Find linear chains of stocks connected by flows within a subsystem.
 
         Returns list of chains, where each chain is ordered by flow direction.
+        Stocks are ordered by incoming flow count (true sources first).
         """
-        stocks_in_subsystem = [s for s in sorted(subsystem) if s in self.stocks]
+        stocks_in_subsystem = [s for s in subsystem if s in self.stocks]
         if not stocks_in_subsystem:
             return []
 
-        # Build stock-to-stock adjacency via flows
+        # Build directed stock adjacency from flows
         stock_adj: dict[str, list[str]] = {s: [] for s in stocks_in_subsystem}
-        for name, flow in self.flows.items():
-            if (flow.from_stock in stocks_in_subsystem and
-                flow.to_stock in stocks_in_subsystem):
+        incoming_count: dict[str, int] = {s: 0 for s in stocks_in_subsystem}
+
+        for flow in self.flows.values():
+            if (flow.from_stock in stocks_in_subsystem
+                    and flow.to_stock in stocks_in_subsystem):
                 if flow.to_stock not in stock_adj[flow.from_stock]:
                     stock_adj[flow.from_stock].append(flow.to_stock)
+                    incoming_count[flow.to_stock] += 1
 
-        # Find chain starting points (stocks with no incoming flow from within subsystem)
-        has_incoming: set[str] = set()
-        for sources in stock_adj.values():
-            has_incoming.update(sources)
+        # Find true sources: sort by incoming_count ASC, then alphabetically for determinism
+        # This ensures stocks with 0 incoming flows come first (true sources)
+        start_candidates = sorted(
+            stocks_in_subsystem,
+            key=lambda s: (incoming_count[s], s)
+        )
 
-        start_stocks = [s for s in stocks_in_subsystem if s not in has_incoming]
-        if not start_stocks:
-            # Cycle - pick alphabetically first for determinism
-            start_stocks = [stocks_in_subsystem[0]]
-
-        # Trace chains
+        # Trace chains starting from true sources
         chains: list[list[str]] = []
         visited: set[str] = set()
 
-        for start in start_stocks:
+        for start in start_candidates:
             if start in visited:
                 continue
+
             chain = []
             current: Optional[str] = start
+
             while current and current not in visited:
                 visited.add(current)
                 chain.append(current)
-                # Follow first outgoing flow (sorted for determinism)
+                # Follow flow direction to next stock (sorted for determinism)
                 next_stocks = sorted(stock_adj.get(current, []))
                 unvisited_next = [s for s in next_stocks if s not in visited]
                 current = unvisited_next[0] if unvisited_next else None
+
             if chain:
                 chains.append(chain)
-
-        # Add any remaining stocks not in chains
-        for stock in stocks_in_subsystem:
-            if stock not in visited:
-                chains.append([stock])
 
         return chains
 
@@ -357,25 +357,67 @@ class StellaModel:
                 flow.x = (to_stock.x or start_x) - 90
                 flow.y = to_stock.y or stock_y
 
-        # Position auxs near their targets
+        # Position auxs near their targets with horizontal spread for same-target overlap
         auxs_in_subsystem = [a for a in sorted(subsystem) if a in self.auxs]
         positioned_auxs: set[str] = set()
-        aux_x_offset = 0  # For auxs without clear targets
+        AUX_SPREAD_SPACING = 70  # pixels between auxs targeting the same element
 
-        # First pass: position auxs that have clear targets
+        # First pass: group auxs by their primary connector target
+        target_to_auxs: dict[str, list[str]] = {}
         for aux_name in auxs_in_subsystem:
             aux = self.auxs[aux_name]
             if aux.x is not None and aux.y is not None:
                 positioned_auxs.add(aux_name)
                 continue
 
-            target_pos = self._find_aux_target_position(aux_name, outgoing)
-            if target_pos:
-                aux.x = target_pos[0]
-                aux.y = aux_y  # Above the target's y level
+            # Find targets via connectors
+            targets = [c.to_var for c in self.connectors if c.from_var == aux_name]
+            if targets:
+                # Use first target (sorted for determinism)
+                primary_target = sorted(targets)[0]
+                if primary_target not in target_to_auxs:
+                    target_to_auxs[primary_target] = []
+                target_to_auxs[primary_target].append(aux_name)
+
+        # Position each group with horizontal spread centered on target
+        for target, aux_names in target_to_auxs.items():
+            # Get target position
+            target_x: Optional[float] = None
+            target_y: Optional[float] = None
+            if target in self.stocks:
+                target_x = self.stocks[target].x
+                target_y = self.stocks[target].y
+            elif target in self.flows:
+                target_x = self.flows[target].x
+                target_y = self.flows[target].y
+            elif target in self.auxs:
+                target_x = self.auxs[target].x
+                target_y = self.auxs[target].y
+
+            if target_x is None:
+                continue
+
+            # Sort aux names for determinism
+            aux_names = sorted(aux_names)
+            n = len(aux_names)
+
+            # Center the group horizontally above target
+            # Offsets: for n=3 -> [-70, 0, +70], for n=2 -> [-35, +35]
+            start_offset = -((n - 1) * AUX_SPREAD_SPACING) / 2
+
+            for i, aux_name in enumerate(aux_names):
+                aux = self.auxs[aux_name]
+                aux.x = target_x + start_offset + (i * AUX_SPREAD_SPACING)
+                # Position above flows (80px), at aux_y for stocks
+                if target in self.flows and target_y is not None:
+                    aux.y = target_y - 80
+                else:
+                    aux.y = aux_y
                 positioned_auxs.add(aux_name)
 
         # Second pass: position remaining auxs (those without connector targets)
+        # These may be referenced in flow equations
+        aux_x_offset = 0
         for aux_name in auxs_in_subsystem:
             if aux_name in positioned_auxs:
                 continue
@@ -592,6 +634,9 @@ class StellaModel:
         # Always recalculate flow points to connect stocks at their actual positions
         self._recalculate_flow_points(START_X, STOCK_Y)
 
+        # Calculate connector angles based on final positions
+        self._calculate_connector_angles()
+
     def _recalculate_flow_points(self, start_x: float, stock_y: float):
         """Recalculate flow.points to connect stocks at their actual positions."""
         for name, flow in self.flows.items():
@@ -624,6 +669,40 @@ class StellaModel:
                     (to_x - 160, to_y),
                     (to_x - 22.5, to_y)
                 ]
+
+    def _calculate_connector_angles(self):
+        """Calculate connector angles based on source and target positions.
+
+        Uses atan2 to compute the angle from source to target.
+        Convention: degrees, 0 = right, counter-clockwise positive.
+        Note: -dy because screen y-coordinates increase downward.
+        """
+        # Build position lookup for all elements
+        positions: dict[str, tuple[float, float]] = {}
+        for name, stock in self.stocks.items():
+            if stock.x is not None and stock.y is not None:
+                positions[name] = (stock.x, stock.y)
+        for name, flow in self.flows.items():
+            if flow.x is not None and flow.y is not None:
+                positions[name] = (flow.x, flow.y)
+        for name, aux in self.auxs.items():
+            if aux.x is not None and aux.y is not None:
+                positions[name] = (aux.x, aux.y)
+
+        for conn in self.connectors:
+            from_pos = positions.get(conn.from_var)
+            to_pos = positions.get(conn.to_var)
+
+            if from_pos and to_pos:
+                dx = to_pos[0] - from_pos[0]
+                dy = to_pos[1] - from_pos[1]
+
+                # Handle zero distance (same position)
+                if abs(dx) < 0.001 and abs(dy) < 0.001:
+                    conn.angle = 0
+                else:
+                    # -dy because y increases downward in screen coordinates
+                    conn.angle = math.degrees(math.atan2(-dy, dx))
 
     def to_xml(self) -> str:
         """Generate XMILE XML string for the model."""

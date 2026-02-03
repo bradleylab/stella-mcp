@@ -170,8 +170,8 @@ class TestSmartLayout:
         # Aux should be positioned at or near the flow's x coordinate
         assert abs(aux_x - flow_x) <= 10  # Very close since it's the target
 
-    def test_multiple_auxs_connected_to_same_flow(self):
-        """Multiple auxs connected to the same flow cluster near it."""
+    def test_multiple_auxs_connected_to_same_flow_spread_horizontally(self):
+        """Multiple auxs connected to the same flow should spread horizontally."""
         model = StellaModel("Test")
         model.add_stock("Population", "100")
         model.add_aux("rate1", "0.02")
@@ -187,11 +187,19 @@ class TestSmartLayout:
         flow_x = model.flows["growth"].x
         assert flow_x is not None
 
-        # All auxs should be near the flow
+        # All auxs should have different x positions (spread out)
+        aux_positions = []
         for aux_name in ["rate1", "rate2", "rate3"]:
             aux_x = model.auxs[aux_name].x
             assert aux_x is not None
-            assert abs(aux_x - flow_x) <= 10
+            aux_positions.append(aux_x)
+
+        # All positions should be unique (no overlap)
+        assert len(set(aux_positions)) == 3
+
+        # Group should be centered around flow_x
+        avg_x = sum(aux_positions) / len(aux_positions)
+        assert abs(avg_x - flow_x) < 5  # Center should be near flow
 
     def test_subsystem_separation(self):
         """Independent subsystems should be visually separated."""
@@ -271,6 +279,59 @@ class TestSmartLayout:
         assert main_subsystem_max_x is not None
         # birth_rate should be offset as a separate subsystem
         assert model.auxs["birth_rate"].x > main_subsystem_max_x
+
+    def test_connector_angles_calculated(self):
+        """Connectors should have angles pointing from source to target."""
+        model = StellaModel("Test")
+        model.add_stock("A", "100", x=100, y=300)
+        model.add_aux("rate", "0.1", x=100, y=150)
+        model.add_connector("rate", "A")
+
+        model._auto_layout()
+
+        # Connector from (100, 150) to (100, 300) points straight down
+        # In screen coordinates: dy = 300 - 150 = 150 (positive = down)
+        # Angle = atan2(-150, 0) = -90 degrees
+        conn = model.connectors[0]
+        assert abs(conn.angle - (-90)) < 1  # Should be approximately -90 degrees
+
+    def test_connector_angle_horizontal_right(self):
+        """Connector pointing right should have angle 0."""
+        model = StellaModel("Test")
+        model.add_aux("source", "1", x=100, y=200)
+        model.add_aux("target", "source", x=300, y=200)
+        model.add_connector("source", "target")
+
+        model._auto_layout()
+
+        conn = model.connectors[0]
+        assert abs(conn.angle - 0) < 1  # Should be approximately 0 degrees
+
+    def test_stock_chain_follows_flow_direction(self):
+        """Stocks should be ordered by flow topology, not alphabetically."""
+        model = StellaModel("Test")
+        # Add in wrong alphabetical order
+        model.add_stock("Vegetation", "100")  # Should be middle
+        model.add_stock("Atmosphere", "100")  # Should be first (source)
+        model.add_stock("SOM", "100")         # Should be last (sink)
+
+        model.add_flow("GPP", "10", from_stock="Atmosphere", to_stock="Vegetation")
+        model.add_flow("Litter", "5", from_stock="Vegetation", to_stock="SOM")
+
+        model._auto_layout()
+
+        # Atmosphere should have smallest x (leftmost, it's the source)
+        # Vegetation in middle, SOM rightmost (sink)
+        atm_x = model.stocks["Atmosphere"].x
+        veg_x = model.stocks["Vegetation"].x
+        som_x = model.stocks["SOM"].x
+
+        assert atm_x is not None
+        assert veg_x is not None
+        assert som_x is not None
+
+        # Flow direction: Atmosphere -> Vegetation -> SOM
+        assert atm_x < veg_x < som_x
 
 
 class TestExtractVariableRefs:
