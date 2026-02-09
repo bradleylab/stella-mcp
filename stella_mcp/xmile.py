@@ -278,7 +278,7 @@ class StellaModel:
 
         # Build edges with weights
         FLOW_WEIGHT = 2.0
-        CONNECTOR_WEIGHT = 0.5
+        CONNECTOR_WEIGHT = 1.5
 
         edges: list[tuple[str, str, float]] = []
 

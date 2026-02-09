@@ -1,4 +1,11 @@
-"""Geometry primitives and force-directed layout for Stella model diagrams."""
+"""Geometry primitives and force-directed layout for Stella model diagrams.
+
+Phase 2 TODO (visual tuning after Stella Professional testing):
+- Re-enable _resolve_layout_violations checks if connector/flow lines cross unrelated stocks
+- Add L-R post-processing if linear chains need left-to-right ordering
+- Further tune edge weights (FLOW_WEIGHT, CONNECTOR_WEIGHT) based on real models
+- Profile to_xml() for larger (30+ element) models
+"""
 
 import math
 from collections.abc import Mapping
