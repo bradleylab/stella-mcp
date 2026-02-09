@@ -8,7 +8,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-from .xmile import StellaModel, parse_stmx
+from .xmile import GraphicalFunction, StellaModel, parse_stmx
 from .validator import validate_model
 
 # Global model state (one model at a time)
@@ -22,6 +22,27 @@ def get_model() -> StellaModel:
     return _current_model
 
 
+def build_graphical_function(data: dict | None) -> GraphicalFunction | None:
+    """Build a GraphicalFunction from tool input."""
+    if not data:
+        return None
+    ypts = data.get("ypts")
+    if not ypts:
+        raise ValueError("graphical_function requires non-empty ypts")
+    xscale = data.get("xscale")
+    xpts = data.get("xpts")
+    if xscale is not None and xpts is not None:
+        raise ValueError("graphical_function cannot define both xscale and xpts")
+    yscale = data.get("yscale")
+    return GraphicalFunction(
+        ypts=[float(val) for val in ypts],
+        xscale=(float(xscale["min"]), float(xscale["max"])) if xscale else None,
+        xpts=[float(val) for val in xpts] if xpts is not None else None,
+        yscale=(float(yscale["min"]), float(yscale["max"])) if yscale else None,
+        gf_type=data.get("type"),
+    )
+
+
 # Create MCP server
 server = Server("stella-mcp")
 
@@ -29,6 +50,45 @@ server = Server("stella-mcp")
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     """List available tools."""
+    graphical_function_schema = {
+        "type": "object",
+        "description": "Graphical function (lookup table) definition",
+        "properties": {
+            "ypts": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Y values for the lookup table",
+            },
+            "xscale": {
+                "type": "object",
+                "description": "X scale when x points are evenly spaced",
+                "properties": {
+                    "min": {"type": "number"},
+                    "max": {"type": "number"},
+                },
+                "required": ["min", "max"],
+            },
+            "xpts": {
+                "type": "array",
+                "items": {"type": "number"},
+                "description": "Explicit X values (same length as ypts)",
+            },
+            "yscale": {
+                "type": "object",
+                "description": "Optional Y scale for display",
+                "properties": {
+                    "min": {"type": "number"},
+                    "max": {"type": "number"},
+                },
+                "required": ["min", "max"],
+            },
+            "type": {
+                "type": "string",
+                "description": "Graphical function type (e.g., continuous or discrete)",
+            },
+        },
+        "required": ["ypts"],
+    }
     return [
         Tool(
             name="create_model",
@@ -76,6 +136,7 @@ async def list_tools() -> list[Tool]:
                     "non_negative": {"type": "boolean", "description": "Prevent negative values", "default": True},
                     "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
                     "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
+                    "graphical_function": graphical_function_schema,
                 },
                 "required": ["name", "equation"],
             },
@@ -91,6 +152,7 @@ async def list_tools() -> list[Tool]:
                     "units": {"type": "string", "description": "Units", "default": ""},
                     "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
                     "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
+                    "graphical_function": graphical_function_schema,
                 },
                 "required": ["name", "equation"],
             },
@@ -203,6 +265,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 non_negative=arguments.get("non_negative", True),
                 x=arguments.get("x"),
                 y=arguments.get("y"),
+                graphical_function=build_graphical_function(arguments.get("graphical_function")),
             )
             flow_desc = []
             if arguments.get("from_stock"):
@@ -226,6 +289,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 units=arguments.get("units", ""),
                 x=arguments.get("x"),
                 y=arguments.get("y"),
+                graphical_function=build_graphical_function(arguments.get("graphical_function")),
             )
             pos_info = ""
             if arguments.get("x") is not None and arguments.get("y") is not None:

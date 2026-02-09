@@ -29,6 +29,78 @@ STELLA_FUNCTIONS = {
     'TRUE', 'FALSE', 'PI', 'E', 'INF', 'NAN',
 }
 
+# Layout constants
+AUX_RADIUS = 18  # Default aux circle radius in pixels
+
+
+# =============================================================================
+# Geometry Primitives for Layout Collision/Crossing Detection
+# =============================================================================
+
+@dataclass
+class BoundingBox:
+    """Axis-aligned bounding box for collision detection."""
+    x: float  # center x
+    y: float  # center y
+    width: float
+    height: float
+
+    def intersects(self, other: "BoundingBox", margin: float = 0) -> bool:
+        """Check if two boxes overlap (with optional margin)."""
+        return (abs(self.x - other.x) < (self.width + other.width) / 2 + margin and
+                abs(self.y - other.y) < (self.height + other.height) / 2 + margin)
+
+
+def _ccw(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]) -> bool:
+    """Check if three points are in counter-clockwise order."""
+    return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
+
+
+def segments_intersect(
+    p1: tuple[float, float], p2: tuple[float, float],
+    p3: tuple[float, float], p4: tuple[float, float]
+) -> bool:
+    """Check if line segment p1-p2 intersects segment p3-p4.
+
+    Uses the counter-clockwise orientation test for robust intersection detection.
+    """
+    return (_ccw(p1, p3, p4) != _ccw(p2, p3, p4) and
+            _ccw(p1, p2, p3) != _ccw(p1, p2, p4))
+
+
+def segment_intersects_box(
+    p1: tuple[float, float], p2: tuple[float, float],
+    box: BoundingBox
+) -> bool:
+    """Check if line segment p1-p2 intersects a bounding box.
+
+    Tests intersection with all four edges of the box.
+    """
+    # Box corners
+    left = box.x - box.width / 2
+    right = box.x + box.width / 2
+    top = box.y - box.height / 2
+    bottom = box.y + box.height / 2
+
+    # Check if segment is entirely inside box
+    if (left <= p1[0] <= right and top <= p1[1] <= bottom and
+        left <= p2[0] <= right and top <= p2[1] <= bottom):
+        return True
+
+    # Check intersection with each edge
+    edges = [
+        ((left, top), (right, top)),      # top edge
+        ((right, top), (right, bottom)),  # right edge
+        ((right, bottom), (left, bottom)),  # bottom edge
+        ((left, bottom), (left, top)),    # left edge
+    ]
+
+    for edge_p1, edge_p2 in edges:
+        if segments_intersect(p1, p2, edge_p1, edge_p2):
+            return True
+
+    return False
+
 
 @dataclass
 class Stock:
@@ -41,6 +113,8 @@ class Stock:
     non_negative: bool = True
     x: Optional[float] = None  # None means auto-position
     y: Optional[float] = None  # None means auto-position
+    width: int = 45  # Default stock width
+    height: int = 35  # Default stock height
 
 
 @dataclass
@@ -55,6 +129,7 @@ class Flow:
     x: Optional[float] = None  # None means auto-position
     y: Optional[float] = None  # None means auto-position
     points: list[tuple[float, float]] = field(default_factory=list)
+    graphical_function: Optional["GraphicalFunction"] = None
 
 
 @dataclass
@@ -65,6 +140,17 @@ class Aux:
     units: str = ""
     x: Optional[float] = None  # None means auto-position
     y: Optional[float] = None  # None means auto-position
+    graphical_function: Optional["GraphicalFunction"] = None
+
+
+@dataclass
+class GraphicalFunction:
+    """Represents a graphical function (lookup table) definition."""
+    ypts: list[float]
+    xscale: Optional[tuple[float, float]] = None
+    xpts: Optional[list[float]] = None
+    yscale: Optional[tuple[float, float]] = None
+    gf_type: Optional[str] = None
 
 
 @dataclass
@@ -535,7 +621,8 @@ class StellaModel:
         to_stock: Optional[str] = None,
         non_negative: bool = True,
         x: Optional[float] = None,
-        y: Optional[float] = None
+        y: Optional[float] = None,
+        graphical_function: Optional[GraphicalFunction] = None
     ) -> Flow:
         """Add a flow to the model."""
         flow = Flow(
@@ -546,7 +633,8 @@ class StellaModel:
             to_stock=self._normalize_name(to_stock) if to_stock else None,
             non_negative=non_negative,
             x=x,
-            y=y
+            y=y,
+            graphical_function=graphical_function,
         )
         self.flows[self._normalize_name(name)] = flow
 
@@ -573,10 +661,18 @@ class StellaModel:
         equation: str,
         units: str = "",
         x: Optional[float] = None,
-        y: Optional[float] = None
+        y: Optional[float] = None,
+        graphical_function: Optional[GraphicalFunction] = None
     ) -> Aux:
         """Add an auxiliary variable to the model."""
-        aux = Aux(name=name, equation=equation, units=units, x=x, y=y)
+        aux = Aux(
+            name=name,
+            equation=equation,
+            units=units,
+            x=x,
+            y=y,
+            graphical_function=graphical_function,
+        )
         self.auxs[self._normalize_name(name)] = aux
         return aux
 
@@ -590,21 +686,73 @@ class StellaModel:
         self.connectors.append(connector)
         return connector
 
+    def _calculate_stock_sizes(self):
+        """Calculate appropriate width/height for each stock based on connectivity.
+
+        Stocks with more flows get larger to allow visual separation of flow attachments.
+        Maintains a pleasing aspect ratio (roughly 1.3:1 width:height).
+        """
+        MIN_WIDTH = 45
+        MAX_WIDTH = 120
+        MIN_HEIGHT = 35
+        MAX_HEIGHT = 90
+        FLOW_WIDTH_CONTRIBUTION = 15  # Extra width per flow beyond 2
+        ASPECT_RATIO = 1.3  # width:height ratio
+
+        for stock in self.stocks.values():
+            num_flows = len(stock.inflows) + len(stock.outflows)
+
+            # Start at minimum, add width for extra flows
+            width = MIN_WIDTH + max(0, num_flows - 2) * FLOW_WIDTH_CONTRIBUTION
+            width = min(width, MAX_WIDTH)
+
+            # Scale height to maintain aspect ratio
+            height = int(width / ASPECT_RATIO)
+            height = max(MIN_HEIGHT, min(height, MAX_HEIGHT))
+
+            stock.width = width
+            stock.height = height
+
+    def _calculate_stock_spacing(self) -> int:
+        """Calculate appropriate spacing between stocks based on their sizes.
+
+        Returns the minimum spacing needed to prevent overlap and allow
+        room for flows, valves, and labels.
+        """
+        if not self.stocks:
+            return 200  # Default
+
+        # Find the maximum stock width
+        max_width = max(s.width for s in self.stocks.values())
+
+        # Spacing = max stock width + gap for flows/valves/labels
+        # Gap should be at least 100px for flow valve + labels
+        MIN_GAP = 100
+
+        return max_width + MIN_GAP
+
     def _auto_layout(self):
         """Auto-arrange visual positions using graph-based hierarchical layout.
 
         Uses connector relationships to position elements:
-        1. Builds dependency graph from connectors
-        2. Detects subsystems (connected components)
-        3. Positions stocks in chains following flow direction
-        4. Positions auxs near their connector targets
-        5. Separates independent subsystems visually
+        1. Calculates stock sizes based on connectivity
+        2. Calculates dynamic spacing based on stock sizes
+        3. Builds dependency graph from connectors
+        4. Detects subsystems (connected components)
+        5. Positions stocks in chains following flow direction
+        6. Positions auxs near their connector targets
+        7. Separates independent subsystems visually
 
         Falls back to simple row layout if no connectors exist.
         Always recalculates flow.points to ensure flows connect to stocks correctly.
         """
+        # Calculate stock sizes first (affects spacing and flow attachment)
+        self._calculate_stock_sizes()
+
+        # Calculate dynamic spacing based on stock sizes
+        STOCK_SPACING = self._calculate_stock_spacing()
+
         # Layout constants
-        STOCK_SPACING = 200
         AUX_SPACING = 80
         STOCK_Y = 300
         AUX_Y = 150
@@ -637,8 +785,57 @@ class StellaModel:
         # Calculate connector angles based on final positions
         self._calculate_connector_angles()
 
+        # Resolve any layout violations (collisions, crossings)
+        self._resolve_layout_violations()
+
+    def _calculate_flow_offset(self, index: int, total: int) -> float:
+        """Calculate vertical offset for flow attachment point.
+
+        When multiple flows share a stock endpoint, offset them vertically
+        to prevent overlap. Centers the group around the stock center.
+
+        Args:
+            index: This flow's index in the group (0-based)
+            total: Total number of flows in the group
+
+        Returns:
+            Vertical offset in pixels (positive = down, negative = up)
+        """
+        if total <= 1:
+            return 0.0
+        # Center the group: e.g., 3 flows -> offsets of -20, 0, +20
+        return (index - (total - 1) / 2) * 20.0
+
     def _recalculate_flow_points(self, start_x: float, stock_y: float):
-        """Recalculate flow.points to connect stocks at their actual positions."""
+        """Recalculate flow.points to connect stocks at their actual positions.
+
+        Uses orthogonal (L-shaped/U-shaped) routing for multiple flows from the
+        same stock to prevent visual overlap. Routes flows in the direction of
+        their actual destination (up for destinations above, down for below).
+        """
+        ROUTE_OFFSET = 40  # Vertical offset between routing paths (pixels)
+
+        # Group flows by their source and destination stocks
+        outflows_by_stock: dict[str, list[str]] = {}
+        inflows_by_stock: dict[str, list[str]] = {}
+
+        for name, flow in self.flows.items():
+            if flow.from_stock:
+                if flow.from_stock not in outflows_by_stock:
+                    outflows_by_stock[flow.from_stock] = []
+                outflows_by_stock[flow.from_stock].append(name)
+            if flow.to_stock:
+                if flow.to_stock not in inflows_by_stock:
+                    inflows_by_stock[flow.to_stock] = []
+                inflows_by_stock[flow.to_stock].append(name)
+
+        # Sort flow lists for determinism
+        for stock_name in outflows_by_stock:
+            outflows_by_stock[stock_name].sort()
+        for stock_name in inflows_by_stock:
+            inflows_by_stock[stock_name].sort()
+
+        # Calculate flow points with orthogonal routing
         for name, flow in self.flows.items():
             from_stock = self.stocks.get(flow.from_stock) if flow.from_stock else None
             to_stock = self.stocks.get(flow.to_stock) if flow.to_stock else None
@@ -649,25 +846,128 @@ class StellaModel:
                 to_x = to_stock.x if to_stock.x is not None else start_x
                 to_y = to_stock.y if to_stock.y is not None else stock_y
 
-                flow.points = [
-                    (from_x + 22.5, from_y),
-                    (to_x - 22.5, to_y)
-                ]
+                # Use actual stock dimensions for attachment points
+                from_half_width = from_stock.width / 2
+                from_half_height = from_stock.height / 2
+                to_half_width = to_stock.width / 2
+                to_half_height = to_stock.height / 2
+
+                # Get flow's position in outflow group
+                outflows = outflows_by_stock.get(flow.from_stock, [name])
+                total = len(outflows)
+
+                # Calculate entry offset for inflows
+                to_offset = 0.0
+                if flow.to_stock and flow.to_stock in inflows_by_stock:
+                    inflows = inflows_by_stock[flow.to_stock]
+                    if len(inflows) > 1:
+                        inflow_index = inflows.index(name)
+                        to_offset = self._calculate_flow_offset(inflow_index, len(inflows))
+
+                if total == 1:
+                    # Single flow: straight 2-point path
+                    flow.points = [
+                        (from_x + from_half_width, from_y),
+                        (to_x - to_half_width, to_y + to_offset)
+                    ]
+                else:
+                    # Multiple flows: route based on destination position
+                    # Group flows by direction (up/same/down) relative to source
+                    flows_up = []
+                    flows_same = []
+                    flows_down = []
+
+                    for flow_name in outflows:
+                        f = self.flows[flow_name]
+                        dest = self.stocks.get(f.to_stock)
+                        if dest and dest.y is not None:
+                            dest_y = dest.y
+                            if dest_y < from_y - 20:
+                                flows_up.append(flow_name)
+                            elif dest_y > from_y + 20:
+                                flows_down.append(flow_name)
+                            else:
+                                flows_same.append(flow_name)
+                        else:
+                            flows_same.append(flow_name)
+
+                    # Determine this flow's direction and index within that group
+                    if name in flows_up:
+                        go_up = True
+                        group_index = flows_up.index(name)
+                        group_size = len(flows_up)
+                    elif name in flows_down:
+                        go_up = False
+                        group_index = flows_down.index(name)
+                        group_size = len(flows_down)
+                    else:
+                        # Same level: alternate up/down
+                        same_index = flows_same.index(name)
+                        if same_index == 0:
+                            # First same-level flow: straight
+                            flow.points = [
+                                (from_x + from_half_width, from_y),
+                                (to_x - to_half_width, to_y + to_offset)
+                            ]
+                            continue
+                        go_up = (same_index % 2 == 1)
+                        group_index = (same_index - 1) // 2
+                        group_size = (len(flows_same) - 1) // 2 + 1
+
+                    # Calculate routing offset based on position in group
+                    offset = (group_index + 1) * ROUTE_OFFSET
+                    route_y = from_y - from_half_height - offset if go_up else from_y + from_half_height + offset
+
+                    # Offset entry X based on position in direction group to prevent overlap
+                    ENTRY_X_OFFSET = 30  # Horizontal spacing between entry points
+                    exit_x = from_x + from_half_width
+                    exit_y = from_y - from_half_height if go_up else from_y + from_half_height
+                    entry_x = to_x - to_half_width - (group_index * ENTRY_X_OFFSET)
+                    entry_y = to_y - to_half_height if go_up else to_y + to_half_height
+
+                    flow.points = [
+                        (exit_x, exit_y),       # Exit from stock edge
+                        (exit_x, route_y),      # Go up/down
+                        (entry_x, route_y),     # Go across
+                        (entry_x, entry_y)      # Go to destination edge
+                    ]
+
             elif from_stock:
+                # Source-only flow (external sink)
                 from_x = from_stock.x if from_stock.x is not None else start_x
                 from_y = from_stock.y if from_stock.y is not None else stock_y
+                from_half_width = from_stock.width / 2
+
+                # Calculate offset for this flow among other outflows
+                from_offset = 0.0
+                if flow.from_stock and flow.from_stock in outflows_by_stock:
+                    outflows = outflows_by_stock[flow.from_stock]
+                    if len(outflows) > 1:
+                        index = outflows.index(name)
+                        from_offset = self._calculate_flow_offset(index, len(outflows))
 
                 flow.points = [
-                    (from_x + 22.5, from_y),
-                    (from_x + 160, from_y)
+                    (from_x + from_half_width, from_y + from_offset),
+                    (from_x + 160, from_y + from_offset)
                 ]
+
             elif to_stock:
+                # Sink-only flow (external source)
                 to_x = to_stock.x if to_stock.x is not None else start_x
                 to_y = to_stock.y if to_stock.y is not None else stock_y
+                to_half_width = to_stock.width / 2
+
+                # Calculate offset for this flow among other inflows
+                to_offset = 0.0
+                if flow.to_stock and flow.to_stock in inflows_by_stock:
+                    inflows = inflows_by_stock[flow.to_stock]
+                    if len(inflows) > 1:
+                        index = inflows.index(name)
+                        to_offset = self._calculate_flow_offset(index, len(inflows))
 
                 flow.points = [
-                    (to_x - 160, to_y),
-                    (to_x - 22.5, to_y)
+                    (to_x - 160, to_y + to_offset),
+                    (to_x - to_half_width, to_y + to_offset)
                 ]
 
     def _calculate_connector_angles(self):
@@ -703,6 +1003,408 @@ class StellaModel:
                 else:
                     # -dy because y increases downward in screen coordinates
                     conn.angle = math.degrees(math.atan2(-dy, dx))
+
+    # =========================================================================
+    # Layout Collision/Crossing Detection and Resolution
+    # =========================================================================
+
+    def _get_element_box(self, name: str) -> Optional[BoundingBox]:
+        """Get bounding box for any model element."""
+        if name in self.stocks:
+            stock = self.stocks[name]
+            if stock.x is not None and stock.y is not None:
+                return BoundingBox(stock.x, stock.y, stock.width, stock.height)
+        elif name in self.flows:
+            flow = self.flows[name]
+            if flow.x is not None and flow.y is not None:
+                # Flow valve is roughly 20x20
+                return BoundingBox(flow.x, flow.y, 20, 20)
+        elif name in self.auxs:
+            aux = self.auxs[name]
+            if aux.x is not None and aux.y is not None:
+                return BoundingBox(aux.x, aux.y, AUX_RADIUS * 2, AUX_RADIUS * 2)
+        return None
+
+    def _get_all_bounding_boxes(self) -> dict[str, BoundingBox]:
+        """Get bounding boxes for all positioned elements."""
+        boxes: dict[str, BoundingBox] = {}
+        for name in self.stocks:
+            box = self._get_element_box(name)
+            if box:
+                boxes[name] = box
+        for name in self.auxs:
+            box = self._get_element_box(name)
+            if box:
+                boxes[name] = box
+        # Note: flows are not included as their position is the valve,
+        # and flow lines are handled separately
+        return boxes
+
+    def _get_connector_segments(self) -> dict[int, tuple[tuple[float, float], tuple[float, float]]]:
+        """Get line segments for all connectors (from source to target position)."""
+        segments: dict[int, tuple[tuple[float, float], tuple[float, float]]] = {}
+
+        # Build position lookup
+        positions: dict[str, tuple[float, float]] = {}
+        for name, stock in self.stocks.items():
+            if stock.x is not None and stock.y is not None:
+                positions[name] = (stock.x, stock.y)
+        for name, flow in self.flows.items():
+            if flow.x is not None and flow.y is not None:
+                positions[name] = (flow.x, flow.y)
+        for name, aux in self.auxs.items():
+            if aux.x is not None and aux.y is not None:
+                positions[name] = (aux.x, aux.y)
+
+        for conn in self.connectors:
+            from_pos = positions.get(conn.from_var)
+            to_pos = positions.get(conn.to_var)
+            if from_pos and to_pos:
+                segments[conn.uid] = (from_pos, to_pos)
+
+        return segments
+
+    def _get_flow_segments(self) -> dict[str, list[tuple[tuple[float, float], tuple[float, float]]]]:
+        """Get line segments for all flow paths."""
+        segments: dict[str, list[tuple[tuple[float, float], tuple[float, float]]]] = {}
+
+        for name, flow in self.flows.items():
+            if flow.points and len(flow.points) >= 2:
+                flow_segs: list[tuple[tuple[float, float], tuple[float, float]]] = []
+                for i in range(len(flow.points) - 1):
+                    flow_segs.append((flow.points[i], flow.points[i + 1]))
+                segments[name] = flow_segs
+
+        return segments
+
+    def _detect_aux_collisions(self) -> list[tuple[str, str]]:
+        """Detect pairs of auxs that overlap."""
+        collisions: list[tuple[str, str]] = []
+        aux_names = list(self.auxs.keys())
+
+        for i, name1 in enumerate(aux_names):
+            box1 = self._get_element_box(name1)
+            if not box1:
+                continue
+            for name2 in aux_names[i + 1:]:
+                box2 = self._get_element_box(name2)
+                if box2 and box1.intersects(box2, margin=5):
+                    collisions.append((name1, name2))
+
+        return collisions
+
+    def _detect_connector_flow_crossings(self) -> list[tuple[int, str]]:
+        """Detect connectors that cross flow lines. Returns (connector_uid, flow_name) pairs.
+
+        Note: A connector is expected to touch its target flow, so we skip checking
+        if a connector crosses the flow it's connected TO.
+        """
+        crossings: list[tuple[int, str]] = []
+
+        connector_segs = self._get_connector_segments()
+        flow_segs = self._get_flow_segments()
+
+        # Build map of connector uid -> target name
+        conn_targets: dict[int, str] = {}
+        for conn in self.connectors:
+            conn_targets[conn.uid] = conn.to_var
+
+        for conn_uid, (cp1, cp2) in connector_segs.items():
+            target = conn_targets.get(conn_uid)
+            for flow_name, segments in flow_segs.items():
+                # Skip if this is the connector's target flow
+                if flow_name == target:
+                    continue
+                for fp1, fp2 in segments:
+                    if segments_intersect(cp1, cp2, fp1, fp2):
+                        crossings.append((conn_uid, flow_name))
+                        break  # One crossing per connector-flow pair is enough
+
+        return crossings
+
+    def _detect_flow_stock_crossings(self) -> list[tuple[str, str]]:
+        """Detect flows that pass through stocks (not their source/dest). Returns (flow_name, stock_name) pairs."""
+        crossings: list[tuple[str, str]] = []
+
+        flow_segs = self._get_flow_segments()
+
+        for flow_name, segments in flow_segs.items():
+            flow = self.flows[flow_name]
+            for stock_name, stock in self.stocks.items():
+                # Skip source and destination stocks
+                if stock_name in (flow.from_stock, flow.to_stock):
+                    continue
+
+                box = self._get_element_box(stock_name)
+                if not box:
+                    continue
+
+                for p1, p2 in segments:
+                    if segment_intersects_box(p1, p2, box):
+                        crossings.append((flow_name, stock_name))
+                        break
+
+        return crossings
+
+    def _detect_connector_stock_crossings(self) -> list[tuple[int, str]]:
+        """Detect connectors that pass through stocks. Returns (connector_uid, stock_name) pairs.
+
+        Skips stocks that are the source or target of the connector.
+        """
+        crossings: list[tuple[int, str]] = []
+
+        connector_segs = self._get_connector_segments()
+
+        # Build map of connector uid -> (from_var, to_var)
+        conn_endpoints: dict[int, tuple[str, str]] = {}
+        for conn in self.connectors:
+            conn_endpoints[conn.uid] = (conn.from_var, conn.to_var)
+
+        for conn_uid, (cp1, cp2) in connector_segs.items():
+            from_var, to_var = conn_endpoints.get(conn_uid, ("", ""))
+            for stock_name, stock in self.stocks.items():
+                # Skip if this stock is the source or target of the connector
+                if stock_name in (from_var, to_var):
+                    continue
+
+                box = self._get_element_box(stock_name)
+                if not box:
+                    continue
+
+                if segment_intersects_box(cp1, cp2, box):
+                    crossings.append((conn_uid, stock_name))
+
+        return crossings
+
+    def _separate_auxs(self, name1: str, name2: str):
+        """Push two overlapping auxs apart."""
+        aux1 = self.auxs.get(name1)
+        aux2 = self.auxs.get(name2)
+
+        if not aux1 or not aux2:
+            return
+        if aux1.x is None or aux1.y is None or aux2.x is None or aux2.y is None:
+            return
+
+        # Direction from aux1 to aux2
+        dx = aux2.x - aux1.x
+        dy = aux2.y - aux1.y
+        dist = math.sqrt(dx * dx + dy * dy)
+
+        if dist < 0.001:
+            # Same position - push horizontally
+            dx, dy = 1.0, 0.0
+            dist = 1.0
+
+        # Minimum distance is 2 * radius + margin
+        min_dist = AUX_RADIUS * 2 + 10
+        if dist >= min_dist:
+            return  # Already separated
+
+        # Push each aux half the needed distance
+        push = (min_dist - dist) / 2 + 2
+        aux1.x -= push * dx / dist
+        aux1.y -= push * dy / dist
+        aux2.x += push * dx / dist
+        aux2.y += push * dy / dist
+
+    def _reposition_aux_to_avoid_crossing(self, conn_uid: int, obstacle_name: str, obstacle_type: str = "flow"):
+        """Move aux so its connector doesn't cross the specified obstacle.
+
+        Args:
+            conn_uid: The connector's unique ID
+            obstacle_name: Name of the flow or stock to avoid
+            obstacle_type: Either "flow" or "stock"
+        """
+        # Find the connector and its source aux
+        conn = None
+        for c in self.connectors:
+            if c.uid == conn_uid:
+                conn = c
+                break
+
+        if not conn:
+            return
+
+        aux = self.auxs.get(conn.from_var)
+        if not aux or aux.x is None or aux.y is None:
+            return
+
+        # Get target position and size for proportional offsets
+        target_pos: Optional[tuple[float, float]] = None
+        target_size = 45  # Default size for offset calculation
+        if conn.to_var in self.stocks:
+            stock = self.stocks[conn.to_var]
+            if stock.x is not None and stock.y is not None:
+                target_pos = (stock.x, stock.y)
+                target_size = max(stock.width, stock.height)
+        elif conn.to_var in self.flows:
+            flow = self.flows[conn.to_var]
+            if flow.x is not None and flow.y is not None:
+                target_pos = (flow.x, flow.y)
+                target_size = 20  # Flow valve size
+        elif conn.to_var in self.auxs:
+            other_aux = self.auxs[conn.to_var]
+            if other_aux.x is not None and other_aux.y is not None:
+                target_pos = (other_aux.x, other_aux.y)
+                target_size = AUX_RADIUS * 2
+
+        if not target_pos:
+            return
+
+        # Build obstacle check function based on type
+        if obstacle_type == "flow":
+            flow_segs = self._get_flow_segments().get(obstacle_name, [])
+            if not flow_segs:
+                return
+
+            def crosses_obstacle(candidate: tuple[float, float]) -> bool:
+                for fp1, fp2 in flow_segs:
+                    if segments_intersect(candidate, target_pos, fp1, fp2):
+                        return True
+                return False
+        else:  # stock
+            stock_box = self._get_element_box(obstacle_name)
+            if not stock_box:
+                return
+
+            def crosses_obstacle(candidate: tuple[float, float]) -> bool:
+                return segment_intersects_box(candidate, target_pos, stock_box)
+
+        # Calculate proportional offsets based on target element size
+        base_offset = target_size + AUX_RADIUS + 20
+        diag_offset = int(base_offset * 0.75)
+        far_offset = int(base_offset * 1.5)
+
+        offsets = [
+            (0, -base_offset), (0, base_offset),  # above, below
+            (-base_offset, 0), (base_offset, 0),  # left, right
+            (-diag_offset, -diag_offset), (diag_offset, -diag_offset),  # diagonal up
+            (-diag_offset, diag_offset), (diag_offset, diag_offset),  # diagonal down
+            (0, -far_offset), (0, far_offset),  # further above/below
+            (-far_offset, 0), (far_offset, 0),  # further left/right
+        ]
+
+        for dx, dy in offsets:
+            candidate = (target_pos[0] + dx, target_pos[1] + dy)
+
+            if not crosses_obstacle(candidate):
+                aux.x, aux.y = candidate
+                return
+
+        # Fallback: keep current position (crossing unavoidable with simple repositioning)
+
+    def _reroute_flow_around_stock(self, flow_name: str, stock_name: str):
+        """Add waypoints to route flow around a stock it currently crosses.
+
+        This is a best-effort fix - if the flow has already been modified multiple
+        times (>8 points), we skip to avoid infinite loops.
+        """
+        flow = self.flows.get(flow_name)
+        stock = self.stocks.get(stock_name)
+
+        if not flow or not stock or not flow.points or len(flow.points) < 2:
+            return
+        if stock.x is None or stock.y is None:
+            return
+
+        # Guard against infinite rerouting - if flow already has many points, skip
+        if len(flow.points) > 8:
+            return
+
+        box = BoundingBox(stock.x, stock.y, stock.width, stock.height)
+        # Clearance proportional to stock size (minimum 20px, plus half the larger dimension)
+        clearance = 20 + max(stock.width, stock.height) / 2
+
+        # Find which segment intersects and modify
+        for i in range(len(flow.points) - 1):
+            p1, p2 = flow.points[i], flow.points[i + 1]
+
+            if not segment_intersects_box(p1, p2, box):
+                continue
+
+            # Determine if this is a horizontal or vertical segment
+            is_horizontal = abs(p1[1] - p2[1]) < abs(p1[0] - p2[0])
+
+            if is_horizontal:
+                # Route above or below the stock - pick the side further from current Y
+                dist_above = abs(p1[1] - (stock.y - stock.height / 2))
+                dist_below = abs(p1[1] - (stock.y + stock.height / 2))
+
+                if dist_above > dist_below:
+                    route_y = stock.y - stock.height / 2 - clearance
+                else:
+                    route_y = stock.y + stock.height / 2 + clearance
+
+                # Insert waypoints to go around
+                new_points = list(flow.points[:i + 1])
+                new_points.append((p1[0], route_y))
+                new_points.append((p2[0], route_y))
+                new_points.extend(flow.points[i + 1:])
+                flow.points = [(float(x), float(y)) for x, y in new_points]
+            else:
+                # Vertical segment - route left or right
+                dist_left = abs(p1[0] - (stock.x - stock.width / 2))
+                dist_right = abs(p1[0] - (stock.x + stock.width / 2))
+
+                if dist_left > dist_right:
+                    route_x = stock.x - stock.width / 2 - clearance
+                else:
+                    route_x = stock.x + stock.width / 2 + clearance
+
+                new_points = list(flow.points[:i + 1])
+                new_points.append((route_x, p1[1]))
+                new_points.append((route_x, p2[1]))
+                new_points.extend(flow.points[i + 1:])
+                flow.points = [(float(x), float(y)) for x, y in new_points]
+
+            return  # Only fix one intersection per call
+
+    def _resolve_layout_violations(self, max_iterations: int = 10):
+        """Iteratively resolve collisions and crossings in the layout."""
+        # Track what we've already tried to fix to avoid infinite loops
+        processed_flow_stock: set[tuple[str, str]] = set()
+        processed_connector_flow: set[tuple[int, str]] = set()
+        processed_connector_stock: set[tuple[int, str]] = set()
+
+        for iteration in range(max_iterations):
+            # Detect all violations
+            aux_collisions = self._detect_aux_collisions()
+            connector_flow_crossings = self._detect_connector_flow_crossings()
+            connector_stock_crossings = self._detect_connector_stock_crossings()
+            flow_stock_crossings = self._detect_flow_stock_crossings()
+
+            # Filter out already-processed items
+            new_connector_flow = [c for c in connector_flow_crossings if c not in processed_connector_flow]
+            new_connector_stock = [c for c in connector_stock_crossings if c not in processed_connector_stock]
+            new_flow_stock = [c for c in flow_stock_crossings if c not in processed_flow_stock]
+
+            if not aux_collisions and not new_connector_flow and not new_connector_stock and not new_flow_stock:
+                return  # Layout is valid (or as good as we can make it)
+
+            # Resolve aux collisions first (simplest)
+            for name1, name2 in aux_collisions:
+                self._separate_auxs(name1, name2)
+
+            # Resolve connector-flow crossings by repositioning auxs
+            for conn_uid, flow_name in new_connector_flow:
+                self._reposition_aux_to_avoid_crossing(conn_uid, flow_name, "flow")
+                processed_connector_flow.add((conn_uid, flow_name))
+
+            # Resolve connector-stock crossings by repositioning auxs
+            for conn_uid, stock_name in new_connector_stock:
+                self._reposition_aux_to_avoid_crossing(conn_uid, stock_name, "stock")
+                processed_connector_stock.add((conn_uid, stock_name))
+
+            # Resolve flow-stock crossings by rerouting flows
+            for flow_name, stock_name in new_flow_stock:
+                self._reroute_flow_around_stock(flow_name, stock_name)
+                processed_flow_stock.add((flow_name, stock_name))
+
+            # Recalculate connector angles after moving auxs
+            self._calculate_connector_angles()
+
+        # If we hit max iterations, layout is best-effort (some violations may remain)
 
     def to_xml(self) -> str:
         """Generate XMILE XML string for the model."""
@@ -759,6 +1461,8 @@ class StellaModel:
             display = escape(self._display_name(flow.name))
             lines.append(f'\t\t\t<flow name="{display}">')
             lines.append(f'\t\t\t\t<eqn>{escape(flow.equation)}</eqn>')
+            if flow.graphical_function is not None:
+                self._add_graphical_function_str(lines, flow.graphical_function)
             if flow.non_negative:
                 lines.append('\t\t\t\t<non_negative/>')
             if flow.units:
@@ -770,6 +1474,8 @@ class StellaModel:
             display = escape(self._display_name(aux.name))
             lines.append(f'\t\t\t<aux name="{display}">')
             lines.append(f'\t\t\t\t<eqn>{escape(aux.equation)}</eqn>')
+            if aux.graphical_function is not None:
+                self._add_graphical_function_str(lines, aux.graphical_function)
             if aux.units:
                 lines.append(f'\t\t\t\t<units>{escape(aux.units)}</units>')
             lines.append('\t\t\t</aux>')
@@ -789,7 +1495,7 @@ class StellaModel:
             display = escape(self._display_name(stock.name))
             sx = int(stock.x) if stock.x is not None else 0
             sy = int(stock.y) if stock.y is not None else 0
-            lines.append(f'\t\t\t\t<stock x="{sx}" y="{sy}" name="{display}"/>')
+            lines.append(f'\t\t\t\t<stock x="{sx}" y="{sy}" width="{stock.width}" height="{stock.height}" name="{display}"/>')
 
         # Flow visuals (positions guaranteed by _auto_layout)
         for name, flow in self.flows.items():
@@ -846,6 +1552,21 @@ class StellaModel:
         lines.append('\t\t\t\t\t<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>')
         lines.append('\t\t\t\t</style>')
 
+    def _format_point_list(self, points: list[float]) -> str:
+        return " ".join(f"{p:g}" for p in points)
+
+    def _add_graphical_function_str(self, lines: list[str], gf: GraphicalFunction):
+        attrs = f' type="{escape(gf.gf_type)}"' if gf.gf_type else ""
+        lines.append(f'\t\t\t\t<gf{attrs}>')
+        if gf.xpts is not None:
+            lines.append(f'\t\t\t\t\t<xpts>{self._format_point_list(gf.xpts)}</xpts>')
+        elif gf.xscale is not None:
+            lines.append(f'\t\t\t\t\t<xscale min="{gf.xscale[0]:g}" max="{gf.xscale[1]:g}"/>')
+        if gf.yscale is not None:
+            lines.append(f'\t\t\t\t\t<yscale min="{gf.yscale[0]:g}" max="{gf.yscale[1]:g}"/>')
+        lines.append(f'\t\t\t\t\t<ypts>{self._format_point_list(gf.ypts)}</ypts>')
+        lines.append('\t\t\t\t</gf>')
+
 
 def parse_stmx(filepath: str) -> StellaModel:
     """Parse an existing .stmx file and return a StellaModel."""
@@ -882,6 +1603,44 @@ def parse_stmx(filepath: str) -> StellaModel:
         if not elems:
             elems = parent.findall(tag)
         return elems
+
+    def parse_point_list(text: Optional[str]) -> list[float]:
+        if not text:
+            return []
+        return [float(val) for val in text.split()]
+
+    def parse_gf(elem: Optional[ET.Element]) -> Optional[GraphicalFunction]:
+        if elem is None:
+            return None
+        gf_type = elem.get("type")
+        xpts_elem = find_child(elem, "xpts")
+        xscale_elem = find_child(elem, "xscale")
+        yscale_elem = find_child(elem, "yscale")
+        ypts_elem = find_child(elem, "ypts")
+
+        xpts = parse_point_list(xpts_elem.text) if xpts_elem is not None else None
+        xscale = None
+        if xscale_elem is not None:
+            xscale = (
+                float(xscale_elem.get("min", "0")),
+                float(xscale_elem.get("max", "0")),
+            )
+        yscale = None
+        if yscale_elem is not None:
+            yscale = (
+                float(yscale_elem.get("min", "0")),
+                float(yscale_elem.get("max", "0")),
+            )
+        ypts = parse_point_list(ypts_elem.text if ypts_elem is not None else None)
+        if not ypts:
+            return None
+        return GraphicalFunction(
+            ypts=ypts,
+            xscale=xscale,
+            xpts=xpts,
+            yscale=yscale,
+            gf_type=gf_type if gf_type else None,
+        )
 
     # Get model name
     header = find_child(root, "header")
@@ -949,6 +1708,7 @@ def parse_stmx(filepath: str) -> StellaModel:
             name = flow_elem.get("name")
             eqn = find_child(flow_elem, "eqn")
             equation = eqn.text if eqn is not None else "0"
+            gf = parse_gf(find_child(flow_elem, "gf"))
 
             units_elem = find_child(flow_elem, "units")
             units = units_elem.text if units_elem is not None else ""
@@ -959,7 +1719,8 @@ def parse_stmx(filepath: str) -> StellaModel:
                 name=name,
                 equation=equation,
                 units=units,
-                non_negative=non_negative
+                non_negative=non_negative,
+                graphical_function=gf,
             )
             model.flows[model._normalize_name(name)] = flow
 
@@ -968,11 +1729,17 @@ def parse_stmx(filepath: str) -> StellaModel:
             name = aux_elem.get("name")
             eqn = find_child(aux_elem, "eqn")
             equation = eqn.text if eqn is not None else "0"
+            gf = parse_gf(find_child(aux_elem, "gf"))
 
             units_elem = find_child(aux_elem, "units")
             units = units_elem.text if units_elem is not None else ""
 
-            aux = Aux(name=name, equation=equation, units=units)
+            aux = Aux(
+                name=name,
+                equation=equation,
+                units=units,
+                graphical_function=gf,
+            )
             model.auxs[model._normalize_name(name)] = aux
 
     # Determine flow from/to stocks based on stock inflows/outflows
