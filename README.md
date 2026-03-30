@@ -39,6 +39,10 @@ pip install -e .
 - Python 3.10+
 - `mcp>=1.0.0`
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/bradleylab-stella-mcp).
+
 ## Configuration
 
 ### Claude Desktop
