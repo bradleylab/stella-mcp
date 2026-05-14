@@ -1,388 +1,218 @@
 """MCP server for Stella system dynamics models."""
 
-import json
-from pathlib import Path
-from typing import Any
+import math
+from typing import Any, Callable
+import uuid
+from dataclasses import dataclass, field
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from mcp.types import CallToolResult, Tool, TextContent
 
-from .xmile import GraphicalFunction, StellaModel, parse_stmx
-from .validator import validate_model
-
-# Global model state (one model at a time)
-_current_model: StellaModel | None = None
+from .xmile import GraphicalFunction, StellaModel
+from .tool_handlers import register_tool_handlers
+from .tool_schemas import build_tool_definitions
 
 
-def get_model() -> StellaModel:
-    """Get the current model, raising an error if none exists."""
-    if _current_model is None:
-        raise ValueError("No model created. Use create_model first.")
-    return _current_model
+@dataclass
+class SessionModels:
+    """Model state for a single MCP session."""
+    models: dict[str, StellaModel] = field(default_factory=dict)
+    current_model_id: str | None = None
 
 
-def build_graphical_function(data: dict | None) -> GraphicalFunction | None:
-    """Build a GraphicalFunction from tool input."""
-    if not data:
-        return None
-    ypts = data.get("ypts")
-    if not ypts:
-        raise ValueError("graphical_function requires non-empty ypts")
-    xscale = data.get("xscale")
-    xpts = data.get("xpts")
-    if xscale is not None and xpts is not None:
-        raise ValueError("graphical_function cannot define both xscale and xpts")
-    yscale = data.get("yscale")
-    return GraphicalFunction(
-        ypts=[float(val) for val in ypts],
-        xscale=(float(xscale["min"]), float(xscale["max"])) if xscale else None,
-        xpts=[float(val) for val in xpts] if xpts is not None else None,
-        yscale=(float(yscale["min"]), float(yscale["max"])) if yscale else None,
-        gf_type=data.get("type"),
-    )
+# Session-keyed model registry (key is id(server.request_context.session))
+_session_models: dict[int, SessionModels] = {}
+_GF_TYPES = {"continuous", "discrete"}
 
 
 # Create MCP server
 server = Server("stella-mcp")
 
 
+def _get_session_key() -> int:
+    """Get a stable key for the current MCP session context."""
+    try:
+        return id(server.request_context.session)
+    except LookupError:
+        # Fallback for non-request contexts (tests/scripts)
+        return -1
+
+
+def _get_session_models() -> SessionModels:
+    """Get or create model state for the current session."""
+    session_key = _get_session_key()
+    if session_key not in _session_models:
+        _session_models[session_key] = SessionModels()
+    return _session_models[session_key]
+
+
+def _set_current_model(model: StellaModel, model_id: str | None = None) -> str:
+    """Store model in session and set as current."""
+    session_models = _get_session_models()
+    resolved_id = model_id or f"model_{uuid.uuid4().hex[:8]}"
+    if resolved_id in session_models.models:
+        raise ValueError(f"model_id '{resolved_id}' already exists in this session")
+    session_models.models[resolved_id] = model
+    session_models.current_model_id = resolved_id
+    return resolved_id
+
+
+def get_model(model_id: str | None = None) -> tuple[str, StellaModel]:
+    """Get current (or requested) model for this session."""
+    session_models = _get_session_models()
+    resolved_id = model_id or session_models.current_model_id
+    if not resolved_id:
+        raise ValueError("No model created in this session. Use create_model first.")
+    model = session_models.models.get(resolved_id)
+    if model is None:
+        raise ValueError(f"Unknown model_id '{resolved_id}' for this session")
+    session_models.current_model_id = resolved_id
+    return resolved_id, model
+
+
+def _validate_scale(name: str, data: dict[str, Any]) -> tuple[float, float]:
+    """Validate and parse {min,max} scale object."""
+    if "min" not in data or "max" not in data:
+        raise ValueError(f"{name} requires both min and max")
+    min_val = float(data["min"])
+    max_val = float(data["max"])
+    if not (math.isfinite(min_val) and math.isfinite(max_val)):
+        raise ValueError(f"{name} values must be finite numbers")
+    if min_val >= max_val:
+        raise ValueError(f"{name} must satisfy min < max")
+    return min_val, max_val
+
+
+def build_graphical_function(data: dict | None) -> GraphicalFunction | None:
+    """Build a GraphicalFunction from tool input."""
+    if not data:
+        return None
+
+    ypts_raw = data.get("ypts")
+    if not ypts_raw:
+        raise ValueError("graphical_function requires non-empty ypts")
+    ypts = [float(val) for val in ypts_raw]
+    if len(ypts) < 2:
+        raise ValueError("graphical_function requires at least 2 ypts")
+    if not all(math.isfinite(val) for val in ypts):
+        raise ValueError("graphical_function ypts must be finite numbers")
+
+    xscale = data.get("xscale")
+    xpts = data.get("xpts")
+    if (xscale is None) == (xpts is None):
+        raise ValueError("graphical_function requires exactly one of xscale or xpts")
+
+    parsed_xscale = _validate_scale("xscale", xscale) if xscale is not None else None
+    parsed_xpts = None
+    if xpts is not None:
+        parsed_xpts = [float(val) for val in xpts]
+        if len(parsed_xpts) < 2:
+            raise ValueError("graphical_function requires at least 2 xpts")
+        if len(parsed_xpts) != len(ypts):
+            raise ValueError("graphical_function xpts and ypts must have the same length")
+        if not all(math.isfinite(val) for val in parsed_xpts):
+            raise ValueError("graphical_function xpts must be finite numbers")
+
+    yscale = data.get("yscale")
+    parsed_yscale = _validate_scale("yscale", yscale) if yscale is not None else None
+
+    gf_type = data.get("type")
+    if gf_type is not None:
+        gf_type = str(gf_type).lower()
+        if gf_type not in _GF_TYPES:
+            raise ValueError(f"graphical_function type must be one of {sorted(_GF_TYPES)}")
+
+    return GraphicalFunction(
+        ypts=ypts,
+        xscale=parsed_xscale,
+        xpts=parsed_xpts,
+        yscale=parsed_yscale,
+        gf_type=gf_type,
+    )
+
+
+def _error_result(code: str, message: str, category: str) -> CallToolResult:
+    """Build a structured MCP tool error result."""
+    return CallToolResult(
+        isError=True,
+        content=[TextContent(type="text", text=f"[{code}] {message}")],
+        structuredContent={
+            "error": {
+                "code": code,
+                "message": message,
+                "category": category,
+            }
+        },
+    )
+
+
+def _classify_error(exc: Exception) -> tuple[str, str]:
+    """Map Python exceptions to stable tool error codes/categories."""
+    message = str(exc)
+    if isinstance(exc, FileNotFoundError):
+        return ("not_found", "user_input")
+    if isinstance(exc, ValueError):
+        if "No model created in this session" in message or "Unknown model_id" in message:
+            return ("model_not_found", "user_input")
+        return ("invalid_input", "user_input")
+    return ("internal_error", "internal")
+
+
+def _compat_warning_suffix(warnings: list[str]) -> str:
+    """Build compact warning suffix for tool text responses."""
+    if not warnings:
+        return ""
+    return (
+        f" (compatibility warnings: {len(warnings)}; "
+        f"first: {warnings[0]})"
+    )
+
+
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     """List available tools."""
-    graphical_function_schema = {
-        "type": "object",
-        "description": "Graphical function (lookup table) definition",
-        "properties": {
-            "ypts": {
-                "type": "array",
-                "items": {"type": "number"},
-                "description": "Y values for the lookup table",
-            },
-            "xscale": {
-                "type": "object",
-                "description": "X scale when x points are evenly spaced",
-                "properties": {
-                    "min": {"type": "number"},
-                    "max": {"type": "number"},
-                },
-                "required": ["min", "max"],
-            },
-            "xpts": {
-                "type": "array",
-                "items": {"type": "number"},
-                "description": "Explicit X values (same length as ypts)",
-            },
-            "yscale": {
-                "type": "object",
-                "description": "Optional Y scale for display",
-                "properties": {
-                    "min": {"type": "number"},
-                    "max": {"type": "number"},
-                },
-                "required": ["min", "max"],
-            },
-            "type": {
-                "type": "string",
-                "description": "Graphical function type (e.g., continuous or discrete)",
-            },
-        },
-        "required": ["ypts"],
-    }
-    return [
-        Tool(
-            name="create_model",
-            description="Create a new Stella model with specified time settings",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "Model name"},
-                    "start": {"type": "number", "description": "Simulation start time", "default": 0},
-                    "stop": {"type": "number", "description": "Simulation stop time", "default": 100},
-                    "dt": {"type": "number", "description": "Time step", "default": 0.25},
-                    "method": {"type": "string", "description": "Integration method (Euler or RK4)", "default": "Euler"},
-                    "time_units": {"type": "string", "description": "Time units", "default": "Years"},
-                },
-                "required": ["name"],
-            },
-        ),
-        Tool(
-            name="add_stock",
-            description="Add a stock (reservoir) to the current model",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "Stock name"},
-                    "initial_value": {"type": "string", "description": "Initial value (number or equation)"},
-                    "units": {"type": "string", "description": "Units", "default": ""},
-                    "non_negative": {"type": "boolean", "description": "Prevent negative values", "default": True},
-                    "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
-                    "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
-                },
-                "required": ["name", "initial_value"],
-            },
-        ),
-        Tool(
-            name="add_flow",
-            description="Add a flow between stocks in the current model",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "Flow name"},
-                    "equation": {"type": "string", "description": "Flow rate equation"},
-                    "units": {"type": "string", "description": "Units", "default": ""},
-                    "from_stock": {"type": "string", "description": "Source stock (null for external source)"},
-                    "to_stock": {"type": "string", "description": "Destination stock (null for external sink)"},
-                    "non_negative": {"type": "boolean", "description": "Prevent negative values", "default": True},
-                    "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
-                    "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
-                    "graphical_function": graphical_function_schema,
-                },
-                "required": ["name", "equation"],
-            },
-        ),
-        Tool(
-            name="add_aux",
-            description="Add an auxiliary variable (parameter or intermediate calculation) to the current model",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "Variable name"},
-                    "equation": {"type": "string", "description": "Equation or constant value"},
-                    "units": {"type": "string", "description": "Units", "default": ""},
-                    "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
-                    "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
-                    "graphical_function": graphical_function_schema,
-                },
-                "required": ["name", "equation"],
-            },
-        ),
-        Tool(
-            name="add_connector",
-            description="Add a connector (dependency arrow) between variables",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "from_var": {"type": "string", "description": "Source variable name"},
-                    "to_var": {"type": "string", "description": "Target variable name (the one using from_var)"},
-                },
-                "required": ["from_var", "to_var"],
-            },
-        ),
-        Tool(
-            name="save_model",
-            description="Save the current model to a .stmx file",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "filepath": {"type": "string", "description": "Output file path (.stmx)"},
-                },
-                "required": ["filepath"],
-            },
-        ),
-        Tool(
-            name="read_model",
-            description="Read an existing .stmx file and load it as the current model",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "filepath": {"type": "string", "description": "Path to .stmx file"},
-                },
-                "required": ["filepath"],
-            },
-        ),
-        Tool(
-            name="validate_model",
-            description="Validate the current model for errors and warnings",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-            },
-        ),
-        Tool(
-            name="list_variables",
-            description="List all variables (stocks, flows, auxiliaries) in the current model",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-            },
-        ),
-        Tool(
-            name="get_model_xml",
-            description="Get the XMILE XML representation of the current model (for preview)",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-            },
-        ),
-    ]
+    return build_tool_definitions()
 
+
+ToolResponse = list[TextContent] | CallToolResult
+ToolHandler = Callable[[dict[str, Any]], ToolResponse]
+_TOOL_HANDLERS: dict[str, ToolHandler] = {}
+
+
+def _register_tool_handler(name: str):
+    """Register a tool handler function by MCP tool name."""
+    def decorator(func: ToolHandler) -> ToolHandler:
+        _TOOL_HANDLERS[name] = func
+        return func
+
+    return decorator
+
+
+register_tool_handlers(
+    _register_tool_handler,
+    get_model=get_model,
+    set_current_model=_set_current_model,
+    get_session_models=_get_session_models,
+    build_graphical_function=build_graphical_function,
+    compat_warning_suffix=_compat_warning_suffix,
+)
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-    """Handle tool calls."""
-    global _current_model
-
+async def call_tool(name: str, arguments: dict[str, Any]) -> ToolResponse:
+    """Handle tool calls via handler registry."""
     try:
-        if name == "create_model":
-            _current_model = StellaModel(name=arguments["name"])
-            _current_model.sim_specs.start = arguments.get("start", 0)
-            _current_model.sim_specs.stop = arguments.get("stop", 100)
-            _current_model.sim_specs.dt = arguments.get("dt", 0.25)
-            _current_model.sim_specs.method = arguments.get("method", "Euler")
-            _current_model.sim_specs.time_units = arguments.get("time_units", "Years")
-            return [TextContent(
-                type="text",
-                text=f"Created model '{arguments['name']}' with time range {_current_model.sim_specs.start}-{_current_model.sim_specs.stop}, dt={_current_model.sim_specs.dt}"
-            )]
-
-        elif name == "add_stock":
-            model = get_model()
-            model.add_stock(
-                name=arguments["name"],
-                initial_value=arguments["initial_value"],
-                units=arguments.get("units", ""),
-                non_negative=arguments.get("non_negative", True),
-                x=arguments.get("x"),
-                y=arguments.get("y"),
+        handler = _TOOL_HANDLERS.get(name)
+        if handler is None:
+            return _error_result(
+                code="unknown_tool",
+                message=f"Unknown tool: {name}",
+                category="user_input",
             )
-            pos_info = ""
-            if arguments.get("x") is not None and arguments.get("y") is not None:
-                pos_info = f" at position ({arguments['x']}, {arguments['y']})"
-            return [TextContent(
-                type="text",
-                text=f"Added stock '{arguments['name']}' with initial value {arguments['initial_value']}{pos_info}"
-            )]
-
-        elif name == "add_flow":
-            model = get_model()
-            model.add_flow(
-                name=arguments["name"],
-                equation=arguments["equation"],
-                units=arguments.get("units", ""),
-                from_stock=arguments.get("from_stock"),
-                to_stock=arguments.get("to_stock"),
-                non_negative=arguments.get("non_negative", True),
-                x=arguments.get("x"),
-                y=arguments.get("y"),
-                graphical_function=build_graphical_function(arguments.get("graphical_function")),
-            )
-            flow_desc = []
-            if arguments.get("from_stock"):
-                flow_desc.append(f"from {arguments['from_stock']}")
-            if arguments.get("to_stock"):
-                flow_desc.append(f"to {arguments['to_stock']}")
-            flow_str = " ".join(flow_desc) if flow_desc else "(external)"
-            pos_info = ""
-            if arguments.get("x") is not None and arguments.get("y") is not None:
-                pos_info = f" at position ({arguments['x']}, {arguments['y']})"
-            return [TextContent(
-                type="text",
-                text=f"Added flow '{arguments['name']}' {flow_str}: {arguments['equation']}{pos_info}"
-            )]
-
-        elif name == "add_aux":
-            model = get_model()
-            model.add_aux(
-                name=arguments["name"],
-                equation=arguments["equation"],
-                units=arguments.get("units", ""),
-                x=arguments.get("x"),
-                y=arguments.get("y"),
-                graphical_function=build_graphical_function(arguments.get("graphical_function")),
-            )
-            pos_info = ""
-            if arguments.get("x") is not None and arguments.get("y") is not None:
-                pos_info = f" at position ({arguments['x']}, {arguments['y']})"
-            return [TextContent(
-                type="text",
-                text=f"Added auxiliary '{arguments['name']}' = {arguments['equation']}{pos_info}"
-            )]
-
-        elif name == "add_connector":
-            model = get_model()
-            model.add_connector(
-                from_var=arguments["from_var"],
-                to_var=arguments["to_var"],
-            )
-            return [TextContent(
-                type="text",
-                text=f"Added connector from '{arguments['from_var']}' to '{arguments['to_var']}'"
-            )]
-
-        elif name == "save_model":
-            model = get_model()
-            filepath = Path(arguments["filepath"])
-            if not filepath.suffix:
-                filepath = filepath.with_suffix(".stmx")
-            xml_content = model.to_xml()
-            filepath.write_text(xml_content, encoding="utf-8")
-            return [TextContent(
-                type="text",
-                text=f"Saved model to {filepath}"
-            )]
-
-        elif name == "read_model":
-            filepath = Path(arguments["filepath"])
-            _current_model = parse_stmx(str(filepath))
-            n_stocks = len(_current_model.stocks)
-            n_flows = len(_current_model.flows)
-            n_aux = len(_current_model.auxs)
-            return [TextContent(
-                type="text",
-                text=f"Loaded model '{_current_model.name}' with {n_stocks} stocks, {n_flows} flows, {n_aux} auxiliaries"
-            )]
-
-        elif name == "validate_model":
-            model = get_model()
-            errors = validate_model(model)
-            if not errors:
-                return [TextContent(type="text", text="Model validation passed with no errors or warnings.")]
-
-            result_lines = ["Model validation results:"]
-            for err in errors:
-                prefix = "ERROR" if err.severity == "error" else "WARNING"
-                result_lines.append(f"  [{prefix}] {err.category}: {err.message}")
-            return [TextContent(type="text", text="\n".join(result_lines))]
-
-        elif name == "list_variables":
-            model = get_model()
-            lines = [f"Model: {model.name}", ""]
-
-            if model.stocks:
-                lines.append("Stocks:")
-                for name, stock in model.stocks.items():
-                    lines.append(f"  - {stock.name} = {stock.initial_value} [{stock.units}]")
-                lines.append("")
-
-            if model.flows:
-                lines.append("Flows:")
-                for name, flow in model.flows.items():
-                    from_str = flow.from_stock or "external"
-                    to_str = flow.to_stock or "external"
-                    lines.append(f"  - {flow.name}: {from_str} -> {to_str} = {flow.equation}")
-                lines.append("")
-
-            if model.auxs:
-                lines.append("Auxiliaries:")
-                for name, aux in model.auxs.items():
-                    lines.append(f"  - {aux.name} = {aux.equation} [{aux.units}]")
-
-            return [TextContent(type="text", text="\n".join(lines))]
-
-        elif name == "get_model_xml":
-            model = get_model()
-            xml = model.to_xml()
-            # Truncate if too long
-            if len(xml) > 10000:
-                xml = xml[:10000] + "\n... (truncated)"
-            return [TextContent(type="text", text=xml)]
-
-        else:
-            return [TextContent(type="text", text=f"Unknown tool: {name}")]
-
+        return handler(arguments)
     except Exception as e:
-        return [TextContent(type="text", text=f"Error: {str(e)}")]
+        code, category = _classify_error(e)
+        return _error_result(code=code, message=str(e), category=category)
 
 
 async def run_server():

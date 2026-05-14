@@ -95,6 +95,38 @@ class TestUserSpecifiedPositions:
         assert 'x="122.5"' in xml
         assert 'x="477.5"' in xml
 
+    def test_to_xml_auto_layout_flag_false_keeps_default_positions(self):
+        """to_xml(auto_layout=False) should skip layout and keep unset positions at 0."""
+        model = StellaModel("Test")
+        model.add_stock("Population", "100")  # No x, y
+        xml = model.to_xml(auto_layout=False)
+        assert '<stock x="0" y="0"' in xml
+
+    def test_to_xml_auto_layout_false_still_computes_connector_angles(self):
+        """Manual-position exports should derive connector angles, not leave defaults."""
+        model = StellaModel("Test")
+        model.add_stock("A", "100", x=200, y=300)
+        model.add_aux("B", "1", x=200, y=100)
+        model.add_connector("A", "B")
+
+        xml = model.to_xml(auto_layout=False)
+
+        # A (200,300) -> B (200,100) is straight up, angle should be +90.
+        assert 'angle="90.0"' in xml
+
+    def test_to_xml_auto_layout_false_recalculates_flow_points(self):
+        """Manual-position exports should still route unlocked flow point paths."""
+        model = StellaModel("Test")
+        model.add_stock("A", "100", x=100, y=300)
+        model.add_stock("B", "100", x=500, y=300)
+        model.add_flow("transfer", "10", from_stock="A", to_stock="B")
+
+        xml = model.to_xml(auto_layout=False)
+
+        assert "<pts>" in xml
+        assert 'x="122.5"' in xml
+        assert 'x="477.5"' in xml
+
 
 class TestRoundTrip:
     """Tests for position preservation on load/save."""
@@ -145,6 +177,41 @@ class TestRoundTrip:
             model2 = parse_stmx(str(filepath))
             assert model2.flows["transfer"].x is not None
             assert model2.flows["transfer"].y is not None
+
+    def test_round_trip_preserves_imported_connector_angle_when_auto_layout_false(self):
+        """Imported connector angle should be preserved on non-layout export."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "connector_angle.stmx"
+            filepath.write_text(
+                """<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+    <header><name>AngleRoundTrip</name></header>
+    <sim_specs isee:sim_duration="10" isee:simulation_delay="0" isee:restore_on_start="false" method="Euler" time_units="Days">
+        <start>0</start><stop>10</stop><dt reciprocal="4"/>
+    </sim_specs>
+    <model>
+        <variables>
+            <stock name="S"><eqn>100</eqn></stock>
+            <aux name="k"><eqn>1</eqn></aux>
+        </variables>
+        <views>
+            <view type="stock_flow">
+                <stock x="400" y="300" name="S"/>
+                <aux x="200" y="150" name="k"/>
+                <connector uid="1" angle="42">
+                    <from>k</from>
+                    <to>S</to>
+                </connector>
+            </view>
+        </views>
+    </model>
+</xmile>
+""",
+                encoding="utf-8",
+            )
+            model = parse_stmx(str(filepath))
+            xml = model.to_xml(auto_layout=False)
+            assert 'angle="42.0"' in xml
 
 
 class TestSmartLayout:

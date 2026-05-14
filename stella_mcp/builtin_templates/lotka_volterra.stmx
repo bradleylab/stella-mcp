@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+	<header>
+		<smile version="1.0" namespace="std, isee"/>
+		<name>Lotka Volterra</name>
+		<uuid>71e96873-bc03-49b1-a24b-b7b8d5b39cac</uuid>
+		<vendor>isee systems, inc.</vendor>
+		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
+	</header>
+	<sim_specs isee:sim_duration="1.5" isee:simulation_delay="0.0015" isee:restore_on_start="false" method="Euler" time_units="Years" isee:instantaneous_flows="false">
+		<start>0</start>
+		<stop>100</stop>
+		<dt reciprocal="true">4</dt>
+	</sim_specs>
+	<isee:prefs show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true"/>
+	<model>
+		<variables>
+			<stock name="Prey">
+				<eqn>100</eqn>
+				<inflow>prey_births</inflow>
+				<outflow>predation</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="Predator">
+				<eqn>20</eqn>
+				<inflow>predator_births</inflow>
+				<outflow>predator_deaths</outflow>
+				<non_negative/>
+			</stock>
+			<flow name="prey births">
+				<eqn>prey_birth_rate * Prey</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="predation">
+				<eqn>predation_rate * Prey * Predator</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="predator births">
+				<eqn>predator_efficiency * predation_rate * Prey * Predator</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="predator deaths">
+				<eqn>predator_death_rate * Predator</eqn>
+				<non_negative/>
+			</flow>
+			<aux name="prey birth rate">
+				<eqn>0.5</eqn>
+			</aux>
+			<aux name="predation rate">
+				<eqn>0.02</eqn>
+			</aux>
+			<aux name="predator efficiency">
+				<eqn>0.01</eqn>
+			</aux>
+			<aux name="predator death rate">
+				<eqn>0.4</eqn>
+			</aux>
+		</variables>
+		<views>
+			<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+				<text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt"/>
+			</style>
+			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="2" isee:page_rows="2" isee:popup_graphs_are_comparative="true" type="stock_flow">
+				<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+					<stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
+						<shape type="rectangle" width="45" height="35"/>
+					</stock>
+					<flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom"/>
+					<aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+						<shape type="circle" radius="18"/>
+					</aux>
+					<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>
+				</style>
+				<stock x="1015" y="584" width="45" height="35" name="Prey"/>
+				<stock x="564" y="546" width="45" height="35" name="Predator"/>
+				<flow x="925.2863521959129" y="584" name="prey births">
+					<pts>
+						<pt x="855.2863521959129" y="584.7016835006656"/>
+						<pt x="992.7863521959129" y="584.7016835006656"/>
+					</pts>
+				</flow>
+				<flow x="1105.286352195913" y="584" name="predation">
+					<pts>
+						<pt x="1037.786352195913" y="584.7016835006656"/>
+						<pt x="1175.286352195913" y="584.7016835006656"/>
+					</pts>
+				</flow>
+				<flow x="474.94068628559035" y="546" name="predator births">
+					<pts>
+						<pt x="404.94068628559035" y="546.6461921169101"/>
+						<pt x="542.4406862855903" y="546.6461921169101"/>
+					</pts>
+				</flow>
+				<flow x="654.9406862855903" y="546" name="predator deaths">
+					<pts>
+						<pt x="587.4406862855903" y="546.6461921169101"/>
+						<pt x="724.9406862855903" y="546.6461921169101"/>
+					</pts>
+				</flow>
+				<aux x="1550" y="512" name="prey birth rate"/>
+				<aux x="815" y="932" name="predation rate"/>
+				<aux x="314" y="67" name="predator efficiency"/>
+				<aux x="50" y="732" name="predator death rate"/>
+				<connector uid="1" angle="-173.40763043359783">
+					<from>prey_birth_rate</from>
+					<to>prey_births</to>
+				</connector>
+				<connector uid="2" angle="-180.0">
+					<from>Prey</from>
+					<to>prey_births</to>
+				</connector>
+				<connector uid="3" angle="50.267543218297796">
+					<from>predation_rate</from>
+					<to>predation</to>
+				</connector>
+				<connector uid="4" angle="-0.0">
+					<from>Prey</from>
+					<to>predation</to>
+				</connector>
+				<connector uid="5" angle="-4.028578060909155">
+					<from>Predator</from>
+					<to>predation</to>
+				</connector>
+				<connector uid="6" angle="-71.44526593679997">
+					<from>predator_efficiency</from>
+					<to>predator_births</to>
+				</connector>
+				<connector uid="7" angle="131.4553232709443">
+					<from>predation_rate</from>
+					<to>predator_births</to>
+				</connector>
+				<connector uid="8" angle="175.97142193909085">
+					<from>Prey</from>
+					<to>predator_births</to>
+				</connector>
+				<connector uid="9" angle="-180.0">
+					<from>Predator</from>
+					<to>predator_births</to>
+				</connector>
+				<connector uid="10" angle="17.071365447284762">
+					<from>predator_death_rate</from>
+					<to>predator_deaths</to>
+				</connector>
+				<connector uid="11" angle="-0.0">
+					<from>Predator</from>
+					<to>predator_deaths</to>
+				</connector>
+			</view>
+		</views>
+	</model>
+</xmile>

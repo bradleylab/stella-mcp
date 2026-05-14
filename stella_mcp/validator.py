@@ -1,9 +1,9 @@
 """Model validation for Stella system dynamics models."""
 
-import re
 from dataclasses import dataclass
 from typing import Optional
 
+from .equation_parser import extract_variable_references
 from .xmile import StellaModel
 
 
@@ -30,9 +30,11 @@ class ModelValidator:
         self._check_undefined_variables()
         self._check_mass_balance()
         self._check_missing_connections()
+        self._check_connector_endpoints()
         self._check_orphan_flows()
         self._check_stock_inflow_outflow_consistency()
         self._check_circular_dependencies()
+        self._check_modules()
 
         return self.errors
 
@@ -49,45 +51,7 @@ class ModelValidator:
 
     def _extract_variable_references(self, equation: str) -> set[str]:
         """Extract variable names referenced in an equation."""
-        if not equation:
-            return set()
-
-        # Remove string literals
-        equation = re.sub(r'"[^"]*"', '', equation)
-
-        # Remove function names (followed by parentheses)
-        # Common Stella functions
-        functions = [
-            'INIT', 'TIME', 'DT', 'STARTTIME', 'STOPTIME',
-            'ABS', 'MIN', 'MAX', 'SUM', 'MEAN', 'SQRT',
-            'EXP', 'LN', 'LOG10', 'SIN', 'COS', 'TAN',
-            'IF', 'THEN', 'ELSE', 'AND', 'OR', 'NOT',
-            'DELAY', 'DELAY1', 'DELAY3', 'SMTH1', 'SMTH3',
-            'PULSE', 'STEP', 'RAMP', 'RANDOM', 'NORMAL',
-            'GRAPH', 'LOOKUP', 'INTERPOLATE', 'HISTORY',
-            'SAFEDIV', 'FORCST', 'TREND', 'NPV', 'IRR',
-            'ROUND', 'INT', 'MOD', 'COUNTER', 'PREVIOUS'
-        ]
-
-        for func in functions:
-            equation = re.sub(rf'\b{func}\s*\(', '(', equation, flags=re.IGNORECASE)
-
-        # Extract potential variable names (alphanumeric with underscores)
-        # Match words that could be variable names
-        potential_vars = re.findall(r'\b([A-Za-z_][A-Za-z0-9_]*)\b', equation)
-
-        # Filter out numbers and common keywords
-        keywords = {'true', 'false', 'pi', 'e', 'inf', 'nan'}
-        refs = set()
-        for var in potential_vars:
-            if var.lower() not in keywords:
-                # Check if it's not a pure number
-                try:
-                    float(var)
-                except ValueError:
-                    refs.add(var)
-
-        return refs
+        return extract_variable_references(equation)
 
     def _check_undefined_variables(self):
         """Check for references to undefined variables."""
@@ -192,6 +156,31 @@ class ModelValidator:
                     variable=name
                 ))
 
+    def _check_connector_endpoints(self):
+        """Check connectors reference variables that exist in the model."""
+        all_vars = self._get_all_variable_names()
+        for connector in self.model.connectors:
+            if connector.from_var not in all_vars:
+                self.errors.append(ValidationError(
+                    severity="error",
+                    category="connector_endpoint_missing",
+                    message=(
+                        f"Connector uid={connector.uid} references missing source "
+                        f"'{connector.from_var}'"
+                    ),
+                    variable=connector.to_var,
+                ))
+            if connector.to_var not in all_vars:
+                self.errors.append(ValidationError(
+                    severity="error",
+                    category="connector_endpoint_missing",
+                    message=(
+                        f"Connector uid={connector.uid} references missing target "
+                        f"'{connector.to_var}'"
+                    ),
+                    variable=connector.from_var,
+                ))
+
     def _check_stock_inflow_outflow_consistency(self):
         """Check that stock inflows/outflows match flow definitions."""
         for name, stock in self.model.stocks.items():
@@ -269,6 +258,29 @@ class ModelValidator:
                         variable=cycle[0]
                     ))
                     break  # Only report first cycle found
+
+    def _check_modules(self):
+        """Check module integrity (empty modules and stale members)."""
+        all_vars = self._get_all_variable_names()
+
+        for module_key, module in self.model.modules.items():
+            if not module.members:
+                self.errors.append(ValidationError(
+                    severity="warning",
+                    category="module_empty",
+                    message=f"Module '{module.name}' has no members",
+                    variable=module_key,
+                ))
+                continue
+
+            for member in module.members:
+                if member not in all_vars:
+                    self.errors.append(ValidationError(
+                        severity="error",
+                        category="module_member_missing",
+                        message=f"Module '{module.name}' references missing member '{member}'",
+                        variable=module_key,
+                    ))
 
 
 def validate_model(model: StellaModel) -> list[ValidationError]:

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0">
+  <header>
+    <name>Legacy No Namespace</name>
+  </header>
+  <sim_specs method="Euler" time_units="Months">
+    <start>0</start>
+    <stop>12</stop>
+    <dt>1</dt>
+  </sim_specs>
+  <model>
+    <variables>
+      <stock name="Bank Balance">
+        <eqn>1000</eqn>
+        <outflow>expenses</outflow>
+      </stock>
+      <flow name="expenses">
+        <eqn>50</eqn>
+      </flow>
+    </variables>
+    <views>
+      <view type="stock_flow">
+        <stock name="Bank Balance" x="150" y="160" width="45" height="35"/>
+        <flow name="expenses" x="240" y="160"/>
+      </view>
+    </views>
+  </model>
+</xmile>

@@ -95,6 +95,15 @@ If running from source:
 | `read_model` | Load an existing .stmx file |
 | `save_model` | Save model to a .stmx file |
 
+### Templates
+
+| Tool | Description |
+|------|-------------|
+| `list_templates` | List built-in and user-defined templates (supports source/query/tag filters) |
+| `get_template_info` | Get detailed metadata for one template |
+| `load_template` | Load a template as a model in the current session |
+| `save_as_template` | Save the current model as a reusable user template (optional description/tags) |
+
 ### Model Building
 
 | Tool | Description |
@@ -103,14 +112,193 @@ If running from source:
 | `add_flow` | Add a flow between stocks with an equation |
 | `add_aux` | Add an auxiliary variable (parameter or calculation) |
 | `add_connector` | Add a dependency connector between variables |
+| `set_connector_routing` | Set connector angle and explicit waypoint routing metadata |
+| `rename_variable` | Rename a stock/flow/aux and update references in equations/connectors/modules |
+| `delete_variable` | Delete a stock/flow/aux with consistency checks and cleanup |
+| `create_module` | Create a logical module/group of variables |
+| `add_to_module` | Add variables to an existing module/group |
+| `remove_from_module` | Remove variables from a module/group |
+| `rename_module` | Rename a module/group |
+| `delete_module` | Delete a module/group |
+| `set_module_view` | Set explicit module box position/size on the diagram |
+| `set_module_style` | Set module box style (border/background/font/label side) on the diagram |
+| `auto_place_module_boxes` | Auto-place module boxes around their members |
+
+Notes:
+- Tools accept optional `model_id` so one MCP session can manage multiple models safely.
+- `create_model` and `read_model` set the session's current `model_id` and return it.
+- `add_flow` and `add_aux` support optional `graphical_function` payloads (`ypts` plus exactly one of `xscale` or `xpts`).
+- `add_stock`/`add_flow`/`add_aux` reject duplicate variable names across variable types; `add_connector` requires both variables to exist.
+- `set_connector_routing` can target a connector by `connector_uid` or by `from_var` + `to_var`.
+- `save_model` and `get_model_xml` accept `auto_layout` (default `true`) and `resolve_layout_violations` (default `false`).
+- `read_model`, `save_model`, and `get_model_xml` accept `compat_mode`:
+  - `permissive` (default): continue with warnings
+  - `strict`: fail on compatibility issues
+- `set_module_style` updates module view styling and persists those attributes in XMILE view `<group .../>` elements.
+- `save_as_template` writes user templates to `~/.stella-mcp/templates` by default (override via `STELLA_MCP_TEMPLATE_DIR`) and stores metadata in a `.meta.json` sidecar.
+- Tool failures return structured MCP errors with `error.code`, `error.category`, and `error.message`.
 
 ### Model Inspection
 
 | Tool | Description |
 |------|-------------|
+| `list_models` | List available session model IDs and indicate the current model |
+| `list_modules` | List modules/groups in the current model |
+| `list_connectors` | List connector IDs, endpoints, angles, and routing metadata |
 | `list_variables` | List all stocks, flows, and auxiliaries |
 | `validate_model` | Check for errors (undefined variables, missing connections, etc.) |
 | `get_model_xml` | Preview the XMILE XML output |
+
+### Tool Payload Examples
+
+Create and switch between session models:
+
+```json
+{"name":"create_model","arguments":{"name":"Population","model_id":"pop_v1"}}
+```
+
+```json
+{"name":"create_model","arguments":{"name":"Carbon","model_id":"carbon_v1"}}
+```
+
+```json
+{"name":"list_models","arguments":{}}
+```
+
+List and load templates:
+
+```json
+{"name":"list_templates","arguments":{}}
+```
+
+```json
+{"name":"list_templates","arguments":{"source":"builtin","query":"epidem","tags":["epidemiology"]}}
+```
+
+```json
+{"name":"get_template_info","arguments":{"template_name":"sir"}}
+```
+
+```json
+{"name":"load_template","arguments":{"template_name":"sir","model_id":"sir_baseline"}}
+```
+
+Save current model as a user template:
+
+```json
+{"name":"save_as_template","arguments":{"model_id":"pop_v1","template_name":"my_population_template","description":"Baseline single-stock growth starter","tags":["intro","population"]}}
+```
+
+Create and manage modules:
+
+```json
+{"name":"create_module","arguments":{"model_id":"sir_baseline","name":"Disease Dynamics","members":["Susceptible","Infected","Recovered"]}}
+```
+
+```json
+{"name":"add_to_module","arguments":{"model_id":"sir_baseline","module_name":"Disease Dynamics","members":["infection","recovery"]}}
+```
+
+```json
+{"name":"list_modules","arguments":{"model_id":"sir_baseline"}}
+```
+
+```json
+{"name":"remove_from_module","arguments":{"model_id":"sir_baseline","module_name":"Disease Dynamics","members":["recovery"]}}
+```
+
+```json
+{"name":"rename_module","arguments":{"model_id":"sir_baseline","module_name":"Disease Dynamics","new_name":"Disease Core"}}
+```
+
+```json
+{"name":"delete_module","arguments":{"model_id":"sir_baseline","module_name":"Disease Core"}}
+```
+
+Rename and delete variables safely:
+
+```json
+{"name":"rename_variable","arguments":{"model_id":"sir_baseline","old_name":"population_total","new_name":"total_population"}}
+```
+
+```json
+{"name":"delete_variable","arguments":{"model_id":"sir_baseline","name":"recovery"}}
+```
+
+```json
+{"name":"delete_variable","arguments":{"model_id":"sir_baseline","name":"Susceptible","force":true}}
+```
+
+Set module view geometry directly:
+
+```json
+{"name":"set_module_view","arguments":{"model_id":"sir_baseline","module_name":"Disease Dynamics","x":420,"y":280,"width":420,"height":240}}
+```
+
+Set module view style:
+
+```json
+{"name":"set_module_style","arguments":{"model_id":"sir_baseline","module_name":"Disease Dynamics","border_color":"#666666","background":"#FFF7E6","font_color":"#333333","font_size":"10pt","label_side":"top"}}
+```
+
+Auto-place module boxes from current member positions:
+
+```json
+{"name":"auto_place_module_boxes","arguments":{"model_id":"sir_baseline","padding":40,"only_missing":true}}
+```
+
+Target a specific model in later calls:
+
+```json
+{"name":"add_stock","arguments":{"model_id":"pop_v1","name":"Population","initial_value":"100"}}
+```
+
+Read with strict compatibility checks:
+
+```json
+{"name":"read_model","arguments":{"filepath":"./external_model.stmx","model_id":"imported","compat_mode":"strict"}}
+```
+
+Preview XML in permissive mode (default) and return compatibility warnings when present:
+
+```json
+{"name":"get_model_xml","arguments":{"model_id":"imported","compat_mode":"permissive"}}
+```
+
+Valid graphical function payload:
+
+```json
+{
+  "name": "add_aux",
+  "arguments": {
+    "model_id": "pop_v1",
+    "name": "lookup_rate",
+    "equation": "GRAPH(Time)",
+    "graphical_function": {
+      "xscale": {"min": 0, "max": 100},
+      "ypts": [0.1, 0.2, 0.4, 0.6],
+      "type": "continuous"
+    }
+  }
+}
+```
+
+Invalid graphical function payload (rejected):
+
+```json
+{
+  "name": "add_aux",
+  "arguments": {
+    "name": "bad_lookup",
+    "equation": "GRAPH(Time)",
+    "graphical_function": {
+      "xscale": {"min": 0, "max": 100},
+      "xpts": [0, 10, 20, 30],
+      "ypts": [0.1, 0.2, 0.4, 0.6]
+    }
+  }
+}
+```
 
 ## Example Usage
 
@@ -154,8 +342,10 @@ The `validate_model` tool checks for:
 - **Undefined variables** - References to variables that don't exist
 - **Mass balance issues** - Stocks without flows, flows referencing non-existent stocks
 - **Missing connections** - Equations using variables without connectors (warning)
+- **Connector endpoint integrity** - Connectors pointing at missing variables (error)
 - **Orphan flows** - Flows not connected to any stock
 - **Circular dependencies** - Infinite loops in auxiliary calculations
+- **Module integrity** - Empty modules (warning) and modules referencing missing members (error)
 
 ## XMILE Compatibility
 
@@ -163,6 +353,11 @@ The `validate_model` tool checks for:
 - Compatible with **Stella Professional 1.9+** and **Stella Architect**
 - Auto-layout positions elements reasonably; adjust manually in Stella if needed
 - Variable names with spaces are converted to underscores internally
+- Parser normalizes imported stock inflow/outflow and connector endpoint references
+- Time-step export avoids lossy reciprocal rounding (non-exact reciprocals are exported as plain `dt`)
+- Import/export preserves unknown attrs/elements on supported sections (header, sim_specs, variables, views/model extras) to reduce round-trip data loss
+- Compatibility corpus regression tests live in `tests/fixtures/compat_corpus/` and run in CI
+- Maintainer helper: `python scripts/sync_compat_corpus_manifest.py --check` validates corpus manifest sync
 
 ## Project Structure
 
@@ -173,14 +368,29 @@ stella-mcp/
 ├── pyproject.toml
 └── stella_mcp/
     ├── __init__.py
-    ├── server.py      # MCP server implementation
-    ├── xmile.py       # XMILE XML generation and parsing
+    ├── server.py      # MCP server wiring + schemas
+    ├── tool_handlers.py # Tool handler implementations/registration
+    ├── tool_schemas.py  # MCP tool schema definitions
+    ├── xmile.py       # Core model types + layout logic
+    ├── xmile_io.py    # XMILE parsing/export helpers
     └── validator.py   # Model validation logic
 ```
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## Maintainer Release
+
+PyPI publishing is handled by `.github/workflows/publish.yml` using PyPI Trusted
+Publishing. To release a new version:
+
+1. Update the version in `pyproject.toml` and `stella_mcp/__init__.py`.
+2. Merge the release changes to `main`.
+3. Create and publish a GitHub release with a matching tag, for example `v0.5.0`.
+
+The GitHub release event builds the source distribution and wheel, then publishes
+them to PyPI through the configured trusted publisher.
 
 ## License
 

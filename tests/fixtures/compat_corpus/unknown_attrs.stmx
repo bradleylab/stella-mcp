@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+  <header>
+    <smile version="1.0" namespace="std, isee"/>
+    <name>Unknown Attrs</name>
+    <uuid>22222222-2222-2222-2222-222222222222</uuid>
+    <vendor>isee systems, inc.</vendor>
+    <product version="1.9.3">Stella Professional</product>
+    <notes priority="high">marker_header_notes</notes>
+  </header>
+  <sim_specs method="Euler" time_units="Years" custom_attr="sim_marker">
+    <start>0</start>
+    <stop>5</stop>
+    <dt>1</dt>
+    <custom_node>marker_custom_node</custom_node>
+  </sim_specs>
+  <isee:prefs keep="true" foo="prefs_marker"/>
+  <model>
+    <variables>
+      <stock name="S" custom_stock="stock_marker"><eqn>100</eqn><stock_extra>marker_stock_extra</stock_extra></stock>
+      <aux name="k" custom_aux="aux_marker"><eqn>0.1</eqn><aux_extra>marker_aux_extra</aux_extra></aux>
+      <group name="G" custom_group="group_marker"><entity name="S"/><group_extra>marker_group_extra</group_extra></group>
+    </variables>
+    <views>
+      <style color="orange"/>
+      <view type="stock_flow" custom_view="view_marker">
+        <style color="red"/>
+        <group name="G" x="120" y="120" width="200" height="100" custom_group_view="group_view_marker"><gv_extra>marker_gv_extra</gv_extra></group>
+        <stock name="S" x="120" y="150" width="45" height="35" custom_stock_view="stock_view_marker"/>
+        <aux name="k" x="220" y="150" custom_aux_view="aux_view_marker"/>
+        <connector uid="3" angle="0" custom_conn="conn_marker"><from>k</from><to>S</to><conn_extra>marker_conn_extra</conn_extra></connector>
+        <view_extra>marker_view_extra</view_extra>
+      </view>
+      <view type="table"><table_extra>marker_table_extra</table_extra></view>
+    </views>
+    <model_extra>marker_model_extra</model_extra>
+  </model>
+</xmile>

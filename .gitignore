@@ -55,3 +55,8 @@ Thumbs.db
 
 # Test outputs
 *.stmx
+!stella_mcp/builtin_templates/
+!stella_mcp/builtin_templates/*.stmx
+!tests/fixtures/
+!tests/fixtures/compat_corpus/
+!tests/fixtures/compat_corpus/*.stmx

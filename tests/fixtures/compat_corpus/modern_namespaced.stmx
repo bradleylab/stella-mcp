@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+  <header>
+    <smile version="1.0" namespace="std, isee"/>
+    <name>Modern Namespaced</name>
+    <uuid>11111111-1111-1111-1111-111111111111</uuid>
+    <vendor>isee systems, inc.</vendor>
+    <product version="1.9.3">Stella Professional</product>
+  </header>
+  <sim_specs method="Euler" time_units="Years">
+    <start>0</start>
+    <stop>20</stop>
+    <dt reciprocal="true">4</dt>
+  </sim_specs>
+  <isee:prefs keep="false"/>
+  <model>
+    <variables>
+      <stock name="Population">
+        <eqn>100</eqn>
+        <inflow>growth</inflow>
+      </stock>
+      <flow name="growth">
+        <eqn>rate * Population</eqn>
+      </flow>
+      <aux name="rate">
+        <eqn>0.1</eqn>
+      </aux>
+    </variables>
+    <views>
+      <view type="stock_flow">
+        <stock name="Population" x="120" y="200" width="45" height="35"/>
+        <flow name="growth" x="220" y="200"/>
+        <aux name="rate" x="220" y="300"/>
+        <connector uid="1" angle="0"><from>rate</from><to>growth</to></connector>
+      </view>
+    </views>
+  </model>
+</xmile>

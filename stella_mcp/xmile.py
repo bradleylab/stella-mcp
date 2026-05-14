@@ -2,7 +2,6 @@
 
 import math
 import re
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from typing import Optional
 import uuid
@@ -14,27 +13,12 @@ from stella_mcp.layout import (
     segment_intersects_box,
     force_directed_layout,
 )
+from stella_mcp.equation_parser import extract_variable_references
 
 
 # XML namespaces
 XMILE_NS = "http://docs.oasis-open.org/xmile/ns/XMILE/v1.0"
 ISEE_NS = "http://iseesystems.com/XMILE"
-
-# Stella/XMILE built-in functions (not variable names)
-STELLA_FUNCTIONS = {
-    'IF', 'THEN', 'ELSE', 'AND', 'OR', 'NOT',
-    'MIN', 'MAX', 'ABS', 'SIN', 'COS', 'TAN',
-    'EXP', 'LN', 'LOG', 'LOG10', 'SQRT', 'INT',
-    'ROUND', 'MOD', 'TIME', 'DT', 'STARTTIME', 'STOPTIME',
-    'DELAY', 'DELAY1', 'DELAY3', 'DELAYN',
-    'SMOOTH', 'SMOOTH3', 'SMOOTHN', 'SMTH1', 'SMTH3', 'SMTHN',
-    'TREND', 'FORCST', 'PULSE', 'STEP', 'RAMP',
-    'RANDOM', 'NORMAL', 'POISSON', 'EXPRND',
-    'PREVIOUS', 'INIT', 'SELF', 'SUM', 'MEAN',
-    'GRAPH', 'LOOKUP', 'INTERPOLATE', 'HISTORY',
-    'SAFEDIV', 'NPV', 'IRR', 'COUNTER',
-    'TRUE', 'FALSE', 'PI', 'E', 'INF', 'NAN',
-}
 
 # Layout constants
 AUX_RADIUS = 18  # Default aux circle radius in pixels
@@ -54,6 +38,10 @@ class Stock:
     y: Optional[float] = None  # None means auto-position
     width: int = 45  # Default stock width
     height: int = 35  # Default stock height
+    size_locked: bool = False  # Preserve imported/user-defined size
+    extra_attrs: dict[str, str] = field(default_factory=dict)
+    extra_children_xml: list[str] = field(default_factory=list)
+    view_extra_attrs: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -68,7 +56,12 @@ class Flow:
     x: Optional[float] = None  # None means auto-position
     y: Optional[float] = None  # None means auto-position
     points: list[tuple[float, float]] = field(default_factory=list)
+    points_locked: bool = False  # Preserve imported/user-defined routing points
     graphical_function: Optional["GraphicalFunction"] = None
+    extra_attrs: dict[str, str] = field(default_factory=dict)
+    extra_children_xml: list[str] = field(default_factory=list)
+    view_extra_attrs: dict[str, str] = field(default_factory=dict)
+    view_extra_children_xml: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -80,6 +73,9 @@ class Aux:
     x: Optional[float] = None  # None means auto-position
     y: Optional[float] = None  # None means auto-position
     graphical_function: Optional["GraphicalFunction"] = None
+    extra_attrs: dict[str, str] = field(default_factory=dict)
+    extra_children_xml: list[str] = field(default_factory=list)
+    view_extra_attrs: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -99,6 +95,31 @@ class Connector:
     from_var: str
     to_var: str
     angle: float = 0
+    angle_locked: bool = False  # Preserve imported/user-defined connector angle
+    points: list[tuple[float, float]] = field(default_factory=list)
+    points_locked: bool = False  # Preserve imported/user-defined routing points
+    extra_attrs: dict[str, str] = field(default_factory=dict)
+    extra_children_xml: list[str] = field(default_factory=list)
+
+
+@dataclass
+class Module:
+    """Represents a logical module/group of model variables."""
+    name: str
+    members: list[str] = field(default_factory=list)
+    x: Optional[float] = None  # Module box center X in view
+    y: Optional[float] = None  # Module box center Y in view
+    width: Optional[float] = None
+    height: Optional[float] = None
+    border_color: Optional[str] = None
+    background: Optional[str] = None
+    font_color: Optional[str] = None
+    font_size: Optional[str] = None
+    label_side: Optional[str] = None
+    extra_attrs: dict[str, str] = field(default_factory=dict)
+    extra_children_xml: list[str] = field(default_factory=list)
+    view_extra_attrs: dict[str, str] = field(default_factory=dict)
+    view_extra_children_xml: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -109,6 +130,8 @@ class SimSpecs:
     dt: float = 0.25
     method: str = "Euler"
     time_units: str = "Years"
+    extra_attrs: dict[str, str] = field(default_factory=dict)
+    extra_children_xml: list[str] = field(default_factory=list)
 
 
 class StellaModel:
@@ -121,8 +144,113 @@ class StellaModel:
         self.stocks: dict[str, Stock] = {}
         self.flows: dict[str, Flow] = {}
         self.auxs: dict[str, Aux] = {}
+        self.modules: dict[str, Module] = {}
         self.connectors: list[Connector] = []
         self._connector_uid = 0
+        self.compatibility_warnings: list[str] = []
+        self.last_export_warnings: list[str] = []
+        self.header_extra_children_xml: list[str] = []
+        self.model_extra_children_xml: list[str] = []
+        self.views_extra_children_xml: list[str] = []
+        self.view_extra_children_xml: list[str] = []
+        self.view_extra_attrs: dict[str, str] = {}
+        self.prefs_xml: Optional[str] = None
+        self.views_style_xml: Optional[str] = None
+        self.inner_view_style_xml: Optional[str] = None
+        self._export_ns_prefix_by_uri: dict[str, str] = {}
+
+    @staticmethod
+    def _validate_compat_mode(compat_mode: str) -> str:
+        """Validate compatibility mode."""
+        mode = str(compat_mode or "").strip().lower()
+        if mode not in {"permissive", "strict"}:
+            raise ValueError("compat_mode must be one of: permissive, strict")
+        return mode
+
+    @staticmethod
+    def _xml_local_name(tag: str) -> str:
+        """Extract local XML tag name from namespaced or plain tags."""
+        if "}" in tag:
+            return tag.split("}", 1)[1]
+        return tag
+
+    @staticmethod
+    def _xml_attr_parts(attr_key: str) -> tuple[Optional[str], str]:
+        """Split ElementTree attr key into (namespace_uri, local_name)."""
+        if attr_key.startswith("{") and "}" in attr_key:
+            namespace, local = attr_key[1:].split("}", 1)
+            return namespace, local
+        return None, attr_key
+
+    def _xml_attr_name(self, attr_key: str) -> str:
+        """Convert ElementTree attribute key to output-safe name."""
+        namespace, local = self._xml_attr_parts(attr_key)
+        if namespace is None or namespace == XMILE_NS:
+            return local
+        if namespace == ISEE_NS:
+            return f"isee:{local}"
+        prefix = self._export_ns_prefix_by_uri.get(namespace)
+        if prefix:
+            return f"{prefix}:{local}"
+        # Fallback for robustness; prefix should normally be precomputed.
+        return local
+
+    def _iter_all_extra_attrs(self):
+        """Iterate over all preserved extra-attribute dictionaries."""
+        yield self.sim_specs.extra_attrs
+        yield self.view_extra_attrs
+        for stock in self.stocks.values():
+            yield stock.extra_attrs
+            yield stock.view_extra_attrs
+        for flow in self.flows.values():
+            yield flow.extra_attrs
+            yield flow.view_extra_attrs
+        for aux in self.auxs.values():
+            yield aux.extra_attrs
+            yield aux.view_extra_attrs
+        for module in self.modules.values():
+            yield module.extra_attrs
+            yield module.view_extra_attrs
+        for conn in self.connectors:
+            yield conn.extra_attrs
+
+    def _build_export_ns_prefixes(self) -> dict[str, str]:
+        """Build deterministic XML namespace prefixes for unknown attr namespaces."""
+        uris: set[str] = set()
+        for attrs in self._iter_all_extra_attrs():
+            for raw_key in attrs:
+                namespace, _ = self._xml_attr_parts(raw_key)
+                if namespace and namespace not in {XMILE_NS, ISEE_NS}:
+                    uris.add(namespace)
+        prefix_by_uri: dict[str, str] = {}
+        for index, uri in enumerate(sorted(uris), start=1):
+            prefix_by_uri[uri] = f"ns{index}"
+        return prefix_by_uri
+
+    def _format_extra_attrs(
+        self,
+        attrs: dict[str, str],
+        reserved_names: Optional[set[str]] = None,
+    ) -> str:
+        """Format preserved extra XML attrs while avoiding known fields."""
+        if not attrs:
+            return ""
+        reserved = reserved_names or set()
+        rendered: list[str] = []
+        for raw_key in sorted(attrs):
+            key = self._xml_attr_name(raw_key)
+            if key in reserved:
+                continue
+            rendered.append(f'{key}="{escape(attrs[raw_key])}"')
+        return (" " + " ".join(rendered)) if rendered else ""
+
+    def _append_xml_fragment(self, lines: list[str], fragment: str, indent: str):
+        """Append a preserved XML fragment with target indentation."""
+        text = fragment.strip()
+        if not text:
+            return
+        for line in text.splitlines():
+            lines.append(f"{indent}{line}")
 
     def _next_connector_uid(self) -> int:
         """Get the next unique connector ID."""
@@ -143,26 +271,29 @@ class StellaModel:
         Returns normalized variable names (spaces converted to underscores).
         Filters out Stella built-in functions and keywords.
         """
-        if not equation:
-            return set()
+        refs = extract_variable_references(equation)
+        return {self._normalize_name(token) for token in refs}
 
-        # Extract potential variable names (alphanumeric with underscores only)
-        # Note: Stella allows spaces in variable names, but in equations they should
-        # be written with underscores or quoted. We extract standard identifiers.
-        tokens = re.findall(r'\b([A-Za-z_][A-Za-z0-9_]*)\b', equation)
+    @staticmethod
+    def _format_number(value: float) -> str:
+        """Format numbers for XMILE with stable precision."""
+        return f"{value:.12g}"
 
-        refs = set()
-        for token in tokens:
-            # Check if it's a function or keyword (case-insensitive)
-            if token.upper() not in STELLA_FUNCTIONS:
-                # Try to filter out pure numbers
-                try:
-                    float(token)
-                except ValueError:
-                    # Normalize (in case there are any spaces, though regex won't match them)
-                    refs.add(self._normalize_name(token))
+    def _dt_xml(self, dt: Optional[float] = None) -> str:
+        """Format dt for XMILE with compatibility-safe reciprocal usage.
 
-        return refs
+        Stella commonly uses reciprocal dt when dt is an exact inverse integer
+        (e.g., 0.25 -> reciprocal 4). For non-exact values, writing reciprocal
+        with truncation can change dt on round-trip, so export plain dt instead.
+        """
+        dt = float(self.sim_specs.dt if dt is None else dt)
+        if dt <= 0:
+            raise ValueError("sim_specs.dt must be > 0")
+        reciprocal = 1.0 / dt
+        nearest = round(reciprocal)
+        if dt < 1.0 and abs(reciprocal - nearest) < 1e-9 and nearest >= 1:
+            return f'<dt reciprocal="true">{int(nearest)}</dt>'
+        return f"<dt>{self._format_number(dt)}</dt>"
 
     def _build_dependency_graph(self) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
         """Build bidirectional adjacency lists from connectors and flow-stock relationships.
@@ -406,6 +537,7 @@ class StellaModel:
         y: Optional[float] = None
     ) -> Stock:
         """Add a stock to the model."""
+        self._validate_new_variable_name(name)
         stock = Stock(
             name=name,
             initial_value=initial_value,
@@ -432,33 +564,34 @@ class StellaModel:
         graphical_function: Optional[GraphicalFunction] = None
     ) -> Flow:
         """Add a flow to the model."""
+        self._validate_new_variable_name(name)
+        from_key = self._normalize_name(from_stock) if from_stock else None
+        to_key = self._normalize_name(to_stock) if to_stock else None
+        if from_key is not None and from_key not in self.stocks:
+            raise ValueError(f"from_stock '{from_stock}' is not a known stock")
+        if to_key is not None and to_key not in self.stocks:
+            raise ValueError(f"to_stock '{to_stock}' is not a known stock")
+
         flow = Flow(
             name=name,
             equation=equation,
             units=units,
-            from_stock=self._normalize_name(from_stock) if from_stock else None,
-            to_stock=self._normalize_name(to_stock) if to_stock else None,
+            from_stock=from_key,
+            to_stock=to_key,
             non_negative=non_negative,
             x=x,
             y=y,
             graphical_function=graphical_function,
         )
-        self.flows[self._normalize_name(name)] = flow
+        flow_key = self._normalize_name(name)
+        self.flows[flow_key] = flow
 
         # Update stock inflows/outflows
-        if from_stock:
-            from_key = self._normalize_name(from_stock)
-            if from_key in self.stocks:
-                flow_key = self._normalize_name(name)
-                if flow_key not in self.stocks[from_key].outflows:
-                    self.stocks[from_key].outflows.append(flow_key)
+        if from_key is not None and flow_key not in self.stocks[from_key].outflows:
+            self.stocks[from_key].outflows.append(flow_key)
 
-        if to_stock:
-            to_key = self._normalize_name(to_stock)
-            if to_key in self.stocks:
-                flow_key = self._normalize_name(name)
-                if flow_key not in self.stocks[to_key].inflows:
-                    self.stocks[to_key].inflows.append(flow_key)
+        if to_key is not None and flow_key not in self.stocks[to_key].inflows:
+            self.stocks[to_key].inflows.append(flow_key)
 
         return flow
 
@@ -472,6 +605,7 @@ class StellaModel:
         graphical_function: Optional[GraphicalFunction] = None
     ) -> Aux:
         """Add an auxiliary variable to the model."""
+        self._validate_new_variable_name(name)
         aux = Aux(
             name=name,
             equation=equation,
@@ -485,13 +619,501 @@ class StellaModel:
 
     def add_connector(self, from_var: str, to_var: str) -> Connector:
         """Add a connector (dependency) between variables."""
+        norm_from = self._normalize_name(from_var)
+        norm_to = self._normalize_name(to_var)
+        if not self._has_variable(norm_from):
+            raise ValueError(f"Connector source '{from_var}' is not a known variable")
+        if not self._has_variable(norm_to):
+            raise ValueError(f"Connector target '{to_var}' is not a known variable")
         connector = Connector(
             uid=self._next_connector_uid(),
-            from_var=self._normalize_name(from_var),
-            to_var=self._normalize_name(to_var)
+            from_var=norm_from,
+            to_var=norm_to
         )
         self.connectors.append(connector)
         return connector
+
+    def _resolve_connector(
+        self,
+        connector_uid: Optional[int] = None,
+        from_var: Optional[str] = None,
+        to_var: Optional[str] = None,
+    ) -> Connector:
+        """Resolve one connector by uid or endpoint pair."""
+        if connector_uid is not None:
+            try:
+                uid = int(connector_uid)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("connector_uid must be an integer") from exc
+            matches = [conn for conn in self.connectors if conn.uid == uid]
+            if not matches:
+                raise ValueError(f"No connector found with uid={uid}")
+            if len(matches) > 1:
+                raise ValueError(f"Multiple connectors found with uid={uid}")
+            connector = matches[0]
+            if from_var is not None and self._normalize_name(from_var) != connector.from_var:
+                raise ValueError(
+                    f"Connector uid={uid} source is '{connector.from_var}', not '{from_var}'"
+                )
+            if to_var is not None and self._normalize_name(to_var) != connector.to_var:
+                raise ValueError(
+                    f"Connector uid={uid} target is '{connector.to_var}', not '{to_var}'"
+                )
+            return connector
+
+        if from_var is None or to_var is None:
+            raise ValueError("Provide connector_uid, or both from_var and to_var")
+
+        norm_from = self._normalize_name(from_var)
+        norm_to = self._normalize_name(to_var)
+        matches = [
+            conn for conn in self.connectors
+            if conn.from_var == norm_from and conn.to_var == norm_to
+        ]
+        if not matches:
+            raise ValueError(f"No connector found from '{from_var}' to '{to_var}'")
+        if len(matches) > 1:
+            raise ValueError(
+                f"Multiple connectors found from '{from_var}' to '{to_var}'; "
+                "specify connector_uid"
+            )
+        return matches[0]
+
+    def set_connector_routing(
+        self,
+        connector_uid: Optional[int] = None,
+        from_var: Optional[str] = None,
+        to_var: Optional[str] = None,
+        angle: Optional[float] = None,
+        angle_locked: Optional[bool] = None,
+        points: Optional[list[tuple[float, float]]] = None,
+        points_locked: Optional[bool] = None,
+    ) -> Connector:
+        """Set connector visual routing metadata (angle and optional waypoints)."""
+        if angle is None and angle_locked is None and points is None and points_locked is None:
+            raise ValueError("Provide at least one of angle, angle_locked, points, or points_locked")
+
+        connector = self._resolve_connector(
+            connector_uid=connector_uid,
+            from_var=from_var,
+            to_var=to_var,
+        )
+
+        if angle is not None:
+            parsed_angle = float(angle)
+            if not math.isfinite(parsed_angle):
+                raise ValueError("connector angle must be a finite number")
+            connector.angle = parsed_angle
+            if angle_locked is None:
+                connector.angle_locked = True
+
+        if angle_locked is not None:
+            connector.angle_locked = bool(angle_locked)
+
+        if points is not None:
+            parsed_points: list[tuple[float, float]] = []
+            for index, point in enumerate(points):
+                px = float(point[0])
+                py = float(point[1])
+                if not (math.isfinite(px) and math.isfinite(py)):
+                    raise ValueError(
+                        f"connector points[{index}] must contain finite coordinates"
+                    )
+                parsed_points.append((px, py))
+            connector.points = parsed_points
+            if points_locked is None:
+                connector.points_locked = bool(parsed_points)
+
+        if points_locked is not None:
+            connector.points_locked = bool(points_locked)
+
+        return connector
+
+    def _has_variable(self, name: str) -> bool:
+        """Check if a normalized variable name exists in the model."""
+        return name in self.stocks or name in self.flows or name in self.auxs
+
+    def _variable_kind(self, norm_name: str) -> Optional[str]:
+        """Get variable kind by normalized name."""
+        if norm_name in self.stocks:
+            return "stock"
+        if norm_name in self.flows:
+            return "flow"
+        if norm_name in self.auxs:
+            return "aux"
+        return None
+
+    def _validate_new_variable_name(self, name: str):
+        """Ensure a new variable name is valid and does not collide."""
+        norm_name = self._normalize_name(name)
+        if not norm_name:
+            raise ValueError("Variable name cannot be empty")
+        if self._has_variable(norm_name):
+            raise ValueError(f"Variable '{name}' already exists")
+
+    def _replace_equation_identifier(self, equation: str, old_name: str, new_name: str) -> str:
+        """Replace exact identifier tokens in equations."""
+        if not equation or old_name == new_name:
+            return equation
+        pattern = re.compile(rf"\b{re.escape(old_name)}\b")
+        return pattern.sub(new_name, equation)
+
+    @staticmethod
+    def _dedupe_preserve_order(items: list[str]) -> list[str]:
+        """Deduplicate while preserving order."""
+        deduped: list[str] = []
+        for item in items:
+            if item not in deduped:
+                deduped.append(item)
+        return deduped
+
+    def _replace_variable_everywhere(self, old_norm: str, new_norm: str):
+        """Replace a variable identifier across model relationships and equations."""
+        for flow in self.flows.values():
+            if flow.from_stock == old_norm:
+                flow.from_stock = new_norm
+            if flow.to_stock == old_norm:
+                flow.to_stock = new_norm
+
+            flow.equation = self._replace_equation_identifier(flow.equation, old_norm, new_norm)
+
+        for stock in self.stocks.values():
+            stock.inflows = self._dedupe_preserve_order([
+                new_norm if flow_name == old_norm else flow_name for flow_name in stock.inflows
+            ])
+            stock.outflows = self._dedupe_preserve_order([
+                new_norm if flow_name == old_norm else flow_name for flow_name in stock.outflows
+            ])
+            stock.initial_value = self._replace_equation_identifier(stock.initial_value, old_norm, new_norm)
+
+        for aux in self.auxs.values():
+            aux.equation = self._replace_equation_identifier(aux.equation, old_norm, new_norm)
+
+        for connector in self.connectors:
+            if connector.from_var == old_norm:
+                connector.from_var = new_norm
+            if connector.to_var == old_norm:
+                connector.to_var = new_norm
+
+        for module in self.modules.values():
+            module.members = self._dedupe_preserve_order([
+                new_norm if member == old_norm else member for member in module.members
+            ])
+
+    def rename_variable(self, old_name: str, new_name: str) -> tuple[str, str]:
+        """Rename a stock/flow/aux and update all dependent references."""
+        old_norm = self._normalize_name(old_name)
+        new_norm = self._normalize_name(new_name)
+        kind = self._variable_kind(old_norm)
+        if kind is None:
+            raise ValueError(f"Variable '{old_name}' does not exist")
+        if not new_norm:
+            raise ValueError("new_name cannot be empty")
+        if old_norm != new_norm and self._has_variable(new_norm):
+            raise ValueError(f"Variable '{new_name}' already exists")
+
+        if kind == "stock":
+            var = self.stocks.pop(old_norm)
+            var.name = new_name
+            self.stocks[new_norm] = var
+        elif kind == "flow":
+            var = self.flows.pop(old_norm)
+            var.name = new_name
+            self.flows[new_norm] = var
+        else:
+            var = self.auxs.pop(old_norm)
+            var.name = new_name
+            self.auxs[new_norm] = var
+
+        self._replace_variable_everywhere(old_norm, new_norm)
+        return kind, new_norm
+
+    def _equation_reference_sites(self, norm_name: str) -> list[str]:
+        """Find equations (or initial values) referencing a variable."""
+        sites: list[str] = []
+        for flow in self.flows.values():
+            refs = self._extract_variable_refs(flow.equation)
+            if norm_name in refs:
+                sites.append(f"flow '{flow.name}'")
+        for aux in self.auxs.values():
+            refs = self._extract_variable_refs(aux.equation)
+            if norm_name in refs:
+                sites.append(f"aux '{aux.name}'")
+        for stock in self.stocks.values():
+            refs = self._extract_variable_refs(stock.initial_value)
+            if norm_name in refs:
+                sites.append(f"stock '{stock.name}'")
+        return sites
+
+    def delete_variable(self, name: str, force: bool = False) -> dict[str, int | str]:
+        """Delete a stock/flow/aux while keeping references consistent.
+
+        Rules:
+        - equation references must be removed manually before deletion
+        - connected stock->flow structural links require force=True for stock deletion
+        """
+        norm_name = self._normalize_name(name)
+        kind = self._variable_kind(norm_name)
+        if kind is None:
+            raise ValueError(f"Variable '{name}' does not exist")
+
+        refs = self._equation_reference_sites(norm_name)
+        if refs:
+            ref_str = ", ".join(refs[:3])
+            suffix = "..." if len(refs) > 3 else ""
+            raise ValueError(
+                f"Cannot delete variable '{name}' because it is referenced in equations: {ref_str}{suffix}"
+            )
+
+        detached_flows = 0
+        if kind == "stock":
+            connected_flows = sorted({
+                *self.stocks[norm_name].inflows,
+                *self.stocks[norm_name].outflows,
+            })
+            if connected_flows and not force:
+                display_flows = ", ".join(self._display_name(f) for f in connected_flows[:4])
+                suffix = "..." if len(connected_flows) > 4 else ""
+                raise ValueError(
+                    f"Cannot delete stock '{name}' with connected flows ({display_flows}{suffix}); use force=true to detach flows first"
+                )
+            for flow_name in connected_flows:
+                flow = self.flows.get(flow_name)
+                if flow is None:
+                    continue
+                if flow.from_stock == norm_name:
+                    flow.from_stock = None
+                if flow.to_stock == norm_name:
+                    flow.to_stock = None
+                detached_flows += 1
+            del self.stocks[norm_name]
+        elif kind == "flow":
+            for stock in self.stocks.values():
+                stock.inflows = [fname for fname in stock.inflows if fname != norm_name]
+                stock.outflows = [fname for fname in stock.outflows if fname != norm_name]
+            del self.flows[norm_name]
+        else:
+            del self.auxs[norm_name]
+
+        connectors_before = len(self.connectors)
+        self.connectors = [
+            conn for conn in self.connectors
+            if conn.from_var != norm_name and conn.to_var != norm_name
+        ]
+        removed_connectors = connectors_before - len(self.connectors)
+
+        removed_module_memberships = 0
+        for module in self.modules.values():
+            before = len(module.members)
+            module.members = [member for member in module.members if member != norm_name]
+            removed_module_memberships += before - len(module.members)
+
+        return {
+            "kind": kind,
+            "removed_connectors": removed_connectors,
+            "removed_module_memberships": removed_module_memberships,
+            "detached_flows": detached_flows,
+        }
+
+    def create_module(self, name: str, members: Optional[list[str]] = None) -> Module:
+        """Create a logical module/group."""
+        norm_name = self._normalize_name(name)
+        if norm_name in self.modules:
+            raise ValueError(f"Module '{name}' already exists")
+
+        normalized_members: list[str] = []
+        for member in members or []:
+            norm_member = self._normalize_name(member)
+            if not self._has_variable(norm_member):
+                raise ValueError(f"Module member '{member}' is not a known stock, flow, or auxiliary")
+            if norm_member not in normalized_members:
+                normalized_members.append(norm_member)
+
+        module = Module(name=name, members=normalized_members)
+        self.modules[norm_name] = module
+        return module
+
+    def add_to_module(self, module_name: str, members: list[str]) -> Module:
+        """Add variables to an existing module."""
+        norm_module_name = self._normalize_name(module_name)
+        module = self.modules.get(norm_module_name)
+        if module is None:
+            raise ValueError(f"Module '{module_name}' does not exist")
+
+        for member in members:
+            norm_member = self._normalize_name(member)
+            if not self._has_variable(norm_member):
+                raise ValueError(f"Module member '{member}' is not a known stock, flow, or auxiliary")
+            if norm_member not in module.members:
+                module.members.append(norm_member)
+        return module
+
+    def remove_from_module(self, module_name: str, members: list[str]) -> Module:
+        """Remove variables from an existing module."""
+        norm_module_name = self._normalize_name(module_name)
+        module = self.modules.get(norm_module_name)
+        if module is None:
+            raise ValueError(f"Module '{module_name}' does not exist")
+
+        remove_set = {self._normalize_name(member) for member in members}
+        module.members = [member for member in module.members if member not in remove_set]
+        return module
+
+    def rename_module(self, module_name: str, new_name: str) -> Module:
+        """Rename an existing module."""
+        old_norm = self._normalize_name(module_name)
+        new_norm = self._normalize_name(new_name)
+        module = self.modules.get(old_norm)
+        if module is None:
+            raise ValueError(f"Module '{module_name}' does not exist")
+        if new_norm != old_norm and new_norm in self.modules:
+            raise ValueError(f"Module '{new_name}' already exists")
+
+        module.name = new_name
+        if new_norm != old_norm:
+            self.modules[new_norm] = module
+            del self.modules[old_norm]
+        return module
+
+    def delete_module(self, module_name: str) -> Module:
+        """Delete a module."""
+        norm_module_name = self._normalize_name(module_name)
+        module = self.modules.get(norm_module_name)
+        if module is None:
+            raise ValueError(f"Module '{module_name}' does not exist")
+        del self.modules[norm_module_name]
+        return module
+
+    def set_module_view(
+        self,
+        module_name: str,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+    ) -> Module:
+        """Set explicit view box geometry for a module."""
+        norm_module_name = self._normalize_name(module_name)
+        module = self.modules.get(norm_module_name)
+        if module is None:
+            raise ValueError(f"Module '{module_name}' does not exist")
+        if width <= 0 or height <= 0:
+            raise ValueError("Module width and height must be > 0")
+        module.x = float(x)
+        module.y = float(y)
+        module.width = float(width)
+        module.height = float(height)
+        return module
+
+    def set_module_style(
+        self,
+        module_name: str,
+        border_color: Optional[str] = None,
+        background: Optional[str] = None,
+        font_color: Optional[str] = None,
+        font_size: Optional[str] = None,
+        label_side: Optional[str] = None,
+    ) -> Module:
+        """Set display style for a module box in the view."""
+        norm_module_name = self._normalize_name(module_name)
+        module = self.modules.get(norm_module_name)
+        if module is None:
+            raise ValueError(f"Module '{module_name}' does not exist")
+
+        if all(
+            value is None
+            for value in (border_color, background, font_color, font_size, label_side)
+        ):
+            raise ValueError("At least one module style field must be provided")
+
+        if label_side is not None and label_side not in {"top", "bottom", "left", "right"}:
+            raise ValueError("module label_side must be one of: top, bottom, left, right")
+
+        if border_color is not None:
+            module.border_color = border_color
+        if background is not None:
+            module.background = background
+        if font_color is not None:
+            module.font_color = font_color
+        if font_size is not None:
+            module.font_size = font_size
+        if label_side is not None:
+            module.label_side = label_side
+
+        return module
+
+    def _member_bounds(self, member: str) -> Optional[tuple[float, float, float, float]]:
+        """Get member bounds as (left, top, right, bottom)."""
+        if member in self.stocks:
+            stock = self.stocks[member]
+            if stock.x is None or stock.y is None:
+                return None
+            half_w = stock.width / 2
+            half_h = stock.height / 2
+            return (stock.x - half_w, stock.y - half_h, stock.x + half_w, stock.y + half_h)
+
+        if member in self.auxs:
+            aux = self.auxs[member]
+            if aux.x is None or aux.y is None:
+                return None
+            return (
+                aux.x - AUX_RADIUS,
+                aux.y - AUX_RADIUS,
+                aux.x + AUX_RADIUS,
+                aux.y + AUX_RADIUS,
+            )
+
+        if member in self.flows:
+            flow = self.flows[member]
+            if flow.x is None or flow.y is None:
+                return None
+            left = flow.x - 10
+            right = flow.x + 10
+            top = flow.y - 10
+            bottom = flow.y + 10
+            if flow.points:
+                xs = [p[0] for p in flow.points]
+                ys = [p[1] for p in flow.points]
+                left = min(left, min(xs))
+                right = max(right, max(xs))
+                top = min(top, min(ys))
+                bottom = max(bottom, max(ys))
+            return (left, top, right, bottom)
+        return None
+
+    def auto_place_module_boxes(
+        self,
+        padding: float = 40.0,
+        min_width: float = 180.0,
+        min_height: float = 120.0,
+        only_missing: bool = False,
+    ):
+        """Auto-place module boxes around member elements."""
+        for module in self.modules.values():
+            if only_missing and None not in (module.x, module.y, module.width, module.height):
+                continue
+            if not module.members:
+                continue
+
+            bounds: list[tuple[float, float, float, float]] = []
+            for member in module.members:
+                b = self._member_bounds(member)
+                if b is not None:
+                    bounds.append(b)
+            if not bounds:
+                continue
+
+            left = min(b[0] for b in bounds) - padding
+            top = min(b[1] for b in bounds) - padding
+            right = max(b[2] for b in bounds) + padding
+            bottom = max(b[3] for b in bounds) + padding
+
+            width = max(min_width, right - left)
+            height = max(min_height, bottom - top)
+            module.width = width
+            module.height = height
+            module.x = left + width / 2
+            module.y = top + height / 2
 
     def _calculate_stock_sizes(self):
         """Calculate appropriate width/height for each stock based on connectivity.
@@ -507,6 +1129,8 @@ class StellaModel:
         ASPECT_RATIO = 1.3  # width:height ratio
 
         for stock in self.stocks.values():
+            if stock.size_locked:
+                continue
             num_flows = len(stock.inflows) + len(stock.outflows)
 
             # Start at minimum, add width for extra flows
@@ -558,7 +1182,7 @@ class StellaModel:
         self._recalculate_flow_points()
 
         # Calculate connector angles based on final positions
-        self._calculate_connector_angles()
+        self._calculate_connector_angles(force=True)
 
     def _calculate_flow_offset(self, index: int, total: int) -> float:
         """Calculate vertical offset for flow attachment point.
@@ -639,6 +1263,8 @@ class StellaModel:
             inflows_by_stock[stock_name].sort()
 
         for name, flow in self.flows.items():
+            if flow.points_locked and flow.points:
+                continue
             from_stock = self.stocks.get(flow.from_stock) if flow.from_stock else None
             to_stock = self.stocks.get(flow.to_stock) if flow.to_stock else None
 
@@ -746,7 +1372,7 @@ class StellaModel:
                     (to_x - to_hw, to_y + to_offset),
                 ]
 
-    def _calculate_connector_angles(self):
+    def _calculate_connector_angles(self, force: bool = False):
         """Calculate connector angles based on source and target positions.
 
         Uses atan2 to compute the angle from source to target.
@@ -766,6 +1392,8 @@ class StellaModel:
                 positions[name] = (aux.x, aux.y)
 
         for conn in self.connectors:
+            if conn.angle_locked and not force:
+                continue
             from_pos = positions.get(conn.from_var)
             to_pos = positions.get(conn.to_var)
 
@@ -1178,136 +1806,25 @@ class StellaModel:
                 processed_flow_stock.add((flow_name, stock_name))
 
             # Recalculate connector angles after moving auxs
-            self._calculate_connector_angles()
+            self._calculate_connector_angles(force=True)
 
         # If we hit max iterations, layout is best-effort (some violations may remain)
 
-    def to_xml(self) -> str:
+    def to_xml(
+        self,
+        auto_layout: bool = True,
+        resolve_layout_violations: bool = False,
+        compat_mode: str = "permissive",
+    ) -> str:
         """Generate XMILE XML string for the model."""
-        self._auto_layout()
+        from .xmile_io import model_to_xml
 
-        lines = []
-        lines.append('<?xml version="1.0" encoding="utf-8"?>')
-        lines.append(f'<xmile version="1.0" xmlns="{XMILE_NS}" xmlns:isee="{ISEE_NS}">')
-
-        # Header
-        lines.append('\t<header>')
-        lines.append('\t\t<smile version="1.0" namespace="std, isee"/>')
-        lines.append(f'\t\t<name>{escape(self.name)}</name>')
-        lines.append(f'\t\t<uuid>{self.uuid}</uuid>')
-        lines.append('\t\t<vendor>isee systems, inc.</vendor>')
-        lines.append('\t\t<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>')
-        lines.append('\t</header>')
-
-        # Sim specs
-        if self.sim_specs.dt < 1:
-            dt_str = f'<dt reciprocal="true">{int(1/self.sim_specs.dt)}</dt>'
-        else:
-            dt_str = f'<dt>{self.sim_specs.dt}</dt>'
-        lines.append(f'\t<sim_specs isee:sim_duration="1.5" isee:simulation_delay="0.0015" isee:restore_on_start="false" method="{self.sim_specs.method}" time_units="{self.sim_specs.time_units}" isee:instantaneous_flows="false">')
-        lines.append(f'\t\t<start>{self.sim_specs.start}</start>')
-        lines.append(f'\t\t<stop>{self.sim_specs.stop}</stop>')
-        lines.append(f'\t\t{dt_str}')
-        lines.append('\t</sim_specs>')
-
-        # Preferences
-        lines.append('\t<isee:prefs show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true"/>')
-
-        # Model
-        lines.append('\t<model>')
-        lines.append('\t\t<variables>')
-
-        # Stocks
-        for name, stock in self.stocks.items():
-            display = escape(self._display_name(stock.name))
-            lines.append(f'\t\t\t<stock name="{display}">')
-            lines.append(f'\t\t\t\t<eqn>{escape(stock.initial_value)}</eqn>')
-            for inflow in stock.inflows:
-                lines.append(f'\t\t\t\t<inflow>{inflow}</inflow>')
-            for outflow in stock.outflows:
-                lines.append(f'\t\t\t\t<outflow>{outflow}</outflow>')
-            if stock.non_negative:
-                lines.append('\t\t\t\t<non_negative/>')
-            if stock.units:
-                lines.append(f'\t\t\t\t<units>{escape(stock.units)}</units>')
-            lines.append('\t\t\t</stock>')
-
-        # Flows
-        for name, flow in self.flows.items():
-            display = escape(self._display_name(flow.name))
-            lines.append(f'\t\t\t<flow name="{display}">')
-            lines.append(f'\t\t\t\t<eqn>{escape(flow.equation)}</eqn>')
-            if flow.graphical_function is not None:
-                self._add_graphical_function_str(lines, flow.graphical_function)
-            if flow.non_negative:
-                lines.append('\t\t\t\t<non_negative/>')
-            if flow.units:
-                lines.append(f'\t\t\t\t<units>{escape(flow.units)}</units>')
-            lines.append('\t\t\t</flow>')
-
-        # Auxiliaries
-        for name, aux in self.auxs.items():
-            display = escape(self._display_name(aux.name))
-            lines.append(f'\t\t\t<aux name="{display}">')
-            lines.append(f'\t\t\t\t<eqn>{escape(aux.equation)}</eqn>')
-            if aux.graphical_function is not None:
-                self._add_graphical_function_str(lines, aux.graphical_function)
-            if aux.units:
-                lines.append(f'\t\t\t\t<units>{escape(aux.units)}</units>')
-            lines.append('\t\t\t</aux>')
-
-        lines.append('\t\t</variables>')
-
-        # Views
-        lines.append('\t\t<views>')
-        self._add_view_styles_str(lines)
-
-        # Main view
-        lines.append('\t\t\t<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="2" isee:page_rows="2" isee:popup_graphs_are_comparative="true" type="stock_flow">')
-        self._add_inner_view_styles_str(lines)
-
-        # Stock visuals (positions guaranteed by _auto_layout)
-        for name, stock in self.stocks.items():
-            display = escape(self._display_name(stock.name))
-            sx = int(stock.x) if stock.x is not None else 0
-            sy = int(stock.y) if stock.y is not None else 0
-            lines.append(f'\t\t\t\t<stock x="{sx}" y="{sy}" width="{stock.width}" height="{stock.height}" name="{display}"/>')
-
-        # Flow visuals (positions guaranteed by _auto_layout)
-        for name, flow in self.flows.items():
-            display = escape(self._display_name(flow.name))
-            fx = flow.x if flow.x is not None else 0
-            fy = int(flow.y) if flow.y is not None else 0
-            if flow.points:
-                lines.append(f'\t\t\t\t<flow x="{fx}" y="{fy}" name="{display}">')
-                lines.append('\t\t\t\t\t<pts>')
-                for px, py in flow.points:
-                    lines.append(f'\t\t\t\t\t\t<pt x="{px}" y="{py}"/>')
-                lines.append('\t\t\t\t\t</pts>')
-                lines.append('\t\t\t\t</flow>')
-            else:
-                lines.append(f'\t\t\t\t<flow x="{fx}" y="{fy}" name="{display}"/>')
-
-        # Aux visuals (positions guaranteed by _auto_layout)
-        for name, aux in self.auxs.items():
-            display = escape(self._display_name(aux.name))
-            ax = int(aux.x) if aux.x is not None else 0
-            ay = int(aux.y) if aux.y is not None else 0
-            lines.append(f'\t\t\t\t<aux x="{ax}" y="{ay}" name="{display}"/>')
-
-        # Connector visuals
-        for conn in self.connectors:
-            lines.append(f'\t\t\t\t<connector uid="{conn.uid}" angle="{conn.angle}">')
-            lines.append(f'\t\t\t\t\t<from>{conn.from_var}</from>')
-            lines.append(f'\t\t\t\t\t<to>{conn.to_var}</to>')
-            lines.append('\t\t\t\t</connector>')
-
-        lines.append('\t\t\t</view>')
-        lines.append('\t\t</views>')
-        lines.append('\t</model>')
-        lines.append('</xmile>')
-
-        return '\n'.join(lines)
+        return model_to_xml(
+            self,
+            auto_layout=auto_layout,
+            resolve_layout_violations=resolve_layout_violations,
+            compat_mode=compat_mode,
+        )
 
     def _add_view_styles_str(self, lines: list[str]):
         """Add the default view styles as strings."""
@@ -1325,6 +1842,7 @@ class StellaModel:
         lines.append('\t\t\t\t\t<aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">')
         lines.append('\t\t\t\t\t\t<shape type="circle" radius="18"/>')
         lines.append('\t\t\t\t\t</aux>')
+        lines.append('\t\t\t\t\t<group color="#666666" background="#F5F5F5" font_color="black" font_size="9pt" label_side="top"/>')
         lines.append('\t\t\t\t\t<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>')
         lines.append('\t\t\t\t</style>')
 
@@ -1344,251 +1862,8 @@ class StellaModel:
         lines.append('\t\t\t\t</gf>')
 
 
-def parse_stmx(filepath: str) -> StellaModel:
+def parse_stmx(filepath: str, compat_mode: str = "permissive") -> StellaModel:
     """Parse an existing .stmx file and return a StellaModel."""
-    tree = ET.parse(filepath)
-    root = tree.getroot()
+    from .xmile_io import parse_stmx_file
 
-    # Handle namespaces with full Clark notation
-    xmile = f"{{{XMILE_NS}}}"
-    isee = f"{{{ISEE_NS}}}"
-
-    def find_elem(parent, *tags):
-        """Find element trying both namespaced and non-namespaced tags."""
-        for tag in tags:
-            # Try with XMILE namespace
-            elem = parent.find(f".//{xmile}{tag}")
-            if elem is not None:
-                return elem
-            # Try without namespace
-            elem = parent.find(f".//{tag}")
-            if elem is not None:
-                return elem
-        return None
-
-    def find_child(parent, tag):
-        """Find direct child element."""
-        elem = parent.find(f"{xmile}{tag}")
-        if elem is None:
-            elem = parent.find(tag)
-        return elem
-
-    def findall_children(parent, tag):
-        """Find all direct children with given tag."""
-        elems = parent.findall(f"{xmile}{tag}")
-        if not elems:
-            elems = parent.findall(tag)
-        return elems
-
-    def parse_point_list(text: Optional[str]) -> list[float]:
-        if not text:
-            return []
-        return [float(val) for val in text.split()]
-
-    def parse_gf(elem: Optional[ET.Element]) -> Optional[GraphicalFunction]:
-        if elem is None:
-            return None
-        gf_type = elem.get("type")
-        xpts_elem = find_child(elem, "xpts")
-        xscale_elem = find_child(elem, "xscale")
-        yscale_elem = find_child(elem, "yscale")
-        ypts_elem = find_child(elem, "ypts")
-
-        xpts = parse_point_list(xpts_elem.text) if xpts_elem is not None else None
-        xscale = None
-        if xscale_elem is not None:
-            xscale = (
-                float(xscale_elem.get("min", "0")),
-                float(xscale_elem.get("max", "0")),
-            )
-        yscale = None
-        if yscale_elem is not None:
-            yscale = (
-                float(yscale_elem.get("min", "0")),
-                float(yscale_elem.get("max", "0")),
-            )
-        ypts = parse_point_list(ypts_elem.text if ypts_elem is not None else None)
-        if not ypts:
-            return None
-        return GraphicalFunction(
-            ypts=ypts,
-            xscale=xscale,
-            xpts=xpts,
-            yscale=yscale,
-            gf_type=gf_type if gf_type else None,
-        )
-
-    # Get model name
-    header = find_child(root, "header")
-    name_elem = find_child(header, "name") if header is not None else None
-    model_name = name_elem.text if name_elem is not None else "Untitled"
-    model = StellaModel(name=model_name)
-
-    # Parse sim_specs
-    sim_specs = find_child(root, "sim_specs")
-    if sim_specs is not None:
-        start = find_child(sim_specs, "start")
-        if start is not None and start.text:
-            model.sim_specs.start = float(start.text)
-
-        stop = find_child(sim_specs, "stop")
-        if stop is not None and stop.text:
-            model.sim_specs.stop = float(stop.text)
-
-        dt = find_child(sim_specs, "dt")
-        if dt is not None and dt.text:
-            if dt.get("reciprocal") == "true":
-                model.sim_specs.dt = 1.0 / float(dt.text)
-            else:
-                model.sim_specs.dt = float(dt.text)
-
-        method = sim_specs.get("method")
-        if method:
-            model.sim_specs.method = method
-
-        time_units = sim_specs.get("time_units")
-        if time_units:
-            model.sim_specs.time_units = time_units
-
-    # Find variables section
-    model_elem = find_child(root, "model")
-    variables = find_child(model_elem, "variables") if model_elem is not None else None
-
-    if variables is not None:
-        # Parse stocks
-        for stock_elem in findall_children(variables, "stock"):
-            name = stock_elem.get("name")
-            eqn = find_child(stock_elem, "eqn")
-            initial_value = eqn.text if eqn is not None else "0"
-
-            units_elem = find_child(stock_elem, "units")
-            units = units_elem.text if units_elem is not None else ""
-
-            inflows = [inf.text for inf in findall_children(stock_elem, "inflow") if inf.text]
-            outflows = [outf.text for outf in findall_children(stock_elem, "outflow") if outf.text]
-
-            non_negative = find_child(stock_elem, "non_negative") is not None
-
-            stock = Stock(
-                name=name,
-                initial_value=initial_value,
-                units=units,
-                inflows=inflows,
-                outflows=outflows,
-                non_negative=non_negative
-            )
-            model.stocks[model._normalize_name(name)] = stock
-
-        # Parse flows
-        for flow_elem in findall_children(variables, "flow"):
-            name = flow_elem.get("name")
-            eqn = find_child(flow_elem, "eqn")
-            equation = eqn.text if eqn is not None else "0"
-            gf = parse_gf(find_child(flow_elem, "gf"))
-
-            units_elem = find_child(flow_elem, "units")
-            units = units_elem.text if units_elem is not None else ""
-
-            non_negative = find_child(flow_elem, "non_negative") is not None
-
-            flow = Flow(
-                name=name,
-                equation=equation,
-                units=units,
-                non_negative=non_negative,
-                graphical_function=gf,
-            )
-            model.flows[model._normalize_name(name)] = flow
-
-        # Parse auxiliaries
-        for aux_elem in findall_children(variables, "aux"):
-            name = aux_elem.get("name")
-            eqn = find_child(aux_elem, "eqn")
-            equation = eqn.text if eqn is not None else "0"
-            gf = parse_gf(find_child(aux_elem, "gf"))
-
-            units_elem = find_child(aux_elem, "units")
-            units = units_elem.text if units_elem is not None else ""
-
-            aux = Aux(
-                name=name,
-                equation=equation,
-                units=units,
-                graphical_function=gf,
-            )
-            model.auxs[model._normalize_name(name)] = aux
-
-    # Determine flow from/to stocks based on stock inflows/outflows
-    for stock_name, stock in model.stocks.items():
-        for inflow in stock.inflows:
-            norm_inflow = model._normalize_name(inflow)
-            if norm_inflow in model.flows:
-                model.flows[norm_inflow].to_stock = stock_name
-        for outflow in stock.outflows:
-            norm_outflow = model._normalize_name(outflow)
-            if norm_outflow in model.flows:
-                model.flows[norm_outflow].from_stock = stock_name
-
-    # Parse visual positions and connectors from views
-    views = find_child(model_elem, "views") if model_elem is not None else None
-    view = find_child(views, "view") if views is not None else None
-
-    if view is not None:
-        # Extract stock positions from view
-        for stock_elem in findall_children(view, "stock"):
-            name = stock_elem.get("name")
-            x_attr = stock_elem.get("x")
-            y_attr = stock_elem.get("y")
-            if name:
-                norm_name = model._normalize_name(name)
-                if norm_name in model.stocks:
-                    if x_attr is not None:
-                        model.stocks[norm_name].x = float(x_attr)
-                    if y_attr is not None:
-                        model.stocks[norm_name].y = float(y_attr)
-
-        # Extract flow positions from view
-        for flow_elem in findall_children(view, "flow"):
-            name = flow_elem.get("name")
-            x_attr = flow_elem.get("x")
-            y_attr = flow_elem.get("y")
-            if name:
-                norm_name = model._normalize_name(name)
-                if norm_name in model.flows:
-                    if x_attr is not None:
-                        model.flows[norm_name].x = float(x_attr)
-                    if y_attr is not None:
-                        model.flows[norm_name].y = float(y_attr)
-
-        # Extract aux positions from view
-        for aux_elem in findall_children(view, "aux"):
-            name = aux_elem.get("name")
-            x_attr = aux_elem.get("x")
-            y_attr = aux_elem.get("y")
-            if name:
-                norm_name = model._normalize_name(name)
-                if norm_name in model.auxs:
-                    if x_attr is not None:
-                        model.auxs[norm_name].x = float(x_attr)
-                    if y_attr is not None:
-                        model.auxs[norm_name].y = float(y_attr)
-
-        # Extract connectors
-        for conn_elem in findall_children(view, "connector"):
-            uid = int(conn_elem.get("uid", 0))
-            angle = float(conn_elem.get("angle", 0))
-
-            from_elem = find_child(conn_elem, "from")
-            to_elem = find_child(conn_elem, "to")
-
-            if from_elem is not None and to_elem is not None and from_elem.text and to_elem.text:
-                connector = Connector(
-                    uid=uid,
-                    from_var=from_elem.text,
-                    to_var=to_elem.text,
-                    angle=angle
-                )
-                model.connectors.append(connector)
-                model._connector_uid = max(model._connector_uid, uid)
-
-    return model
+    return parse_stmx_file(filepath, compat_mode=compat_mode)

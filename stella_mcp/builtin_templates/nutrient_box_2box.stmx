@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+	<header>
+		<smile version="1.0" namespace="std, isee"/>
+		<name>Nutrient Box 2 Box</name>
+		<uuid>66619c48-037d-4b73-a737-8c3be30c52e5</uuid>
+		<vendor>isee systems, inc.</vendor>
+		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
+	</header>
+	<sim_specs isee:sim_duration="1.5" isee:simulation_delay="0.0015" isee:restore_on_start="false" method="Euler" time_units="Years" isee:instantaneous_flows="false">
+		<start>0</start>
+		<stop>100</stop>
+		<dt reciprocal="true">4</dt>
+	</sim_specs>
+	<isee:prefs show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true"/>
+	<model>
+		<variables>
+			<stock name="Surface N">
+				<eqn>100</eqn>
+				<inflow>upwelling</inflow>
+				<outflow>downwelling</outflow>
+				<outflow>uptake</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="Deep N">
+				<eqn>1000</eqn>
+				<inflow>downwelling</inflow>
+				<inflow>remin</inflow>
+				<outflow>upwelling</outflow>
+				<non_negative/>
+			</stock>
+			<flow name="upwelling">
+				<eqn>upwelling_rate * Deep_N</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="downwelling">
+				<eqn>downwelling_rate * Surface_N</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="uptake">
+				<eqn>uptake_rate * Surface_N</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="remin">
+				<eqn>remin_rate * Deep_N</eqn>
+				<non_negative/>
+			</flow>
+			<aux name="upwelling rate">
+				<eqn>0.03</eqn>
+			</aux>
+			<aux name="downwelling rate">
+				<eqn>0.03</eqn>
+			</aux>
+			<aux name="uptake rate">
+				<eqn>0.04</eqn>
+			</aux>
+			<aux name="remin rate">
+				<eqn>0.02</eqn>
+			</aux>
+		</variables>
+		<views>
+			<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+				<text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt"/>
+			</style>
+			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="2" isee:page_rows="2" isee:popup_graphs_are_comparative="true" type="stock_flow">
+				<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+					<stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
+						<shape type="rectangle" width="45" height="35"/>
+					</stock>
+					<flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom"/>
+					<aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+						<shape type="circle" radius="18"/>
+					</aux>
+					<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>
+				</style>
+				<stock x="841" y="455" width="60" height="46" name="Surface N"/>
+				<stock x="794" y="654" width="60" height="46" name="Deep N"/>
+				<flow x="817.8317068167228" y="555" name="upwelling">
+					<pts>
+						<pt x="794.3737196495061" y="631.8947137174504"/>
+						<pt x="841.2896939839395" y="478.4347003236941"/>
+					</pts>
+				</flow>
+				<flow x="817.8317068167228" y="555" name="downwelling">
+					<pts>
+						<pt x="841.2896939839395" y="478.4347003236941"/>
+						<pt x="841.2896939839395" y="518.4347003236941"/>
+						<pt x="794.3737196495061" y="518.4347003236941"/>
+						<pt x="794.3737196495061" y="677.8947137174504"/>
+					</pts>
+				</flow>
+				<flow x="931.2896939839395" y="455" name="uptake">
+					<pts>
+						<pt x="871.2896939839395" y="465.4347003236941"/>
+						<pt x="1001.2896939839395" y="465.4347003236941"/>
+					</pts>
+				</flow>
+				<flow x="704.3737196495061" y="654" name="remin">
+					<pts>
+						<pt x="634.3737196495061" y="664.8947137174504"/>
+						<pt x="764.3737196495061" y="664.8947137174504"/>
+					</pts>
+				</flow>
+				<aux x="1123" y="430" name="upwelling rate"/>
+				<aux x="1034" y="804" name="downwelling rate"/>
+				<aux x="689" y="50" name="uptake rate"/>
+				<aux x="476" y="950" name="remin rate"/>
+				<connector uid="1" angle="-157.72363228420855">
+					<from>upwelling_rate</from>
+					<to>upwelling</to>
+				</connector>
+				<connector uid="2" angle="76.76377892671151">
+					<from>Deep_N</from>
+					<to>upwelling</to>
+				</connector>
+				<connector uid="3" angle="131.09157825492946">
+					<from>downwelling_rate</from>
+					<to>downwelling</to>
+				</connector>
+				<connector uid="4" angle="-103.23622107328855">
+					<from>Surface_N</from>
+					<to>downwelling</to>
+				</connector>
+				<connector uid="5" angle="-59.17975181761737">
+					<from>uptake_rate</from>
+					<to>uptake</to>
+				</connector>
+				<connector uid="6" angle="-0.0">
+					<from>Surface_N</from>
+					<to>uptake</to>
+				</connector>
+				<connector uid="7" angle="52.360912376333104">
+					<from>remin_rate</from>
+					<to>remin</to>
+				</connector>
+				<connector uid="8" angle="-180.0">
+					<from>Deep_N</from>
+					<to>remin</to>
+				</connector>
+			</view>
+		</views>
+	</model>
+</xmile>

@@ -1,0 +1,47 @@
+{
+  "exponential_growth": {
+    "description": "Single-stock reinforcing loop with constant fractional growth.",
+    "tags": [
+      "population",
+      "intro",
+      "growth"
+    ],
+    "title": "Exponential Growth"
+  },
+  "sir": {
+    "description": "Classic susceptible-infected-recovered epidemic dynamics.",
+    "tags": [
+      "epidemiology",
+      "compartment",
+      "disease"
+    ],
+    "title": "SIR"
+  },
+  "lotka_volterra": {
+    "description": "Predator-prey oscillation model with coupled nonlinear feedbacks.",
+    "tags": [
+      "ecology",
+      "predator_prey",
+      "oscillation"
+    ],
+    "title": "Lotka-Volterra"
+  },
+  "carbon_cycle_2box": {
+    "description": "Two-box carbon exchange between atmosphere and ocean reservoirs.",
+    "tags": [
+      "climate",
+      "carbon",
+      "box_model"
+    ],
+    "title": "Carbon Cycle 2-Box"
+  },
+  "nutrient_box_2box": {
+    "description": "Two-box nutrient transport and exchange example for ocean systems.",
+    "tags": [
+      "ocean",
+      "nutrient",
+      "box_model"
+    ],
+    "title": "Nutrient Box 2-Box"
+  }
+}

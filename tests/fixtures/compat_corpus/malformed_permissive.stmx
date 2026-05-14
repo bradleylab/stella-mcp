@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+  <header>
+    <name>Malformed Permissive</name>
+  </header>
+  <sim_specs method="Euler" time_units="Days">
+    <start>0</start>
+    <stop>10</stop>
+    <dt reciprocal="true">0</dt>
+  </sim_specs>
+  <model>
+    <variables>
+      <stock name="S">
+        <eqn>10</eqn>
+      </stock>
+    </variables>
+    <views>
+      <view type="stock_flow">
+        <stock name="S" x="100" y="100" width="45" height="35"/>
+        <connector uid="2" angle="10"><from>S</from></connector>
+      </view>
+    </views>
+  </model>
+</xmile>

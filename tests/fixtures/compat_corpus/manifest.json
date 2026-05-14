@@ -1,0 +1,46 @@
+{
+  "fixtures": [
+    {
+      "file": "legacy_no_namespace.stmx",
+      "strict_import": true
+    },
+    {
+      "file": "malformed_permissive.stmx",
+      "strict_import": false,
+      "expected_warning_contains": [
+        "sim_specs.dt reciprocal value must be > 0",
+        "missing from/to endpoint"
+      ]
+    },
+    {
+      "file": "modern_namespaced.stmx",
+      "strict_import": true
+    },
+    {
+      "file": "unknown_attrs.stmx",
+      "strict_import": true,
+      "preserve_markers": [
+        "marker_header_notes",
+        "sim_marker",
+        "marker_custom_node",
+        "prefs_marker",
+        "stock_marker",
+        "marker_stock_extra",
+        "aux_marker",
+        "marker_aux_extra",
+        "group_marker",
+        "marker_group_extra",
+        "view_marker",
+        "group_view_marker",
+        "marker_gv_extra",
+        "stock_view_marker",
+        "aux_view_marker",
+        "conn_marker",
+        "marker_conn_extra",
+        "marker_view_extra",
+        "marker_table_extra",
+        "marker_model_extra"
+      ]
+    }
+  ]
+}
