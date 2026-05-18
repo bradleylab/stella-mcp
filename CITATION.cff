@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "stella-mcp: Model Context Protocol server for Stella system dynamics models"
+authors:
+  - family-names: Bradley
+    given-names: Alex
+    orcid: "https://orcid.org/0000-0002-4044-2802"
+    affiliation: "Department of Earth, Environmental, and Planetary Sciences, Washington University in St. Louis"
+    email: abradley@wustl.edu
+abstract: >-
+  A Model Context Protocol (MCP) server that lets AI assistants
+  programmatically create, read, validate, and modify Stella system
+  dynamics models in the XMILE (.stmx) format. Supports building
+  stock-and-flow diagrams from scratch, parsing existing models,
+  checking for structural errors (undefined variables, missing
+  connections), and exporting valid XMILE files that open in Stella
+  Professional. Designed for teaching system dynamics, rapid
+  prototyping via natural language, and batch model creation.
+keywords:
+  - Model Context Protocol
+  - MCP
+  - system dynamics
+  - Stella
+  - XMILE
+  - stock and flow
+  - simulation
+  - biogeochemistry
+  - teaching
+license: MIT
+version: "0.5.0"
+date-released: "2026-05-13"
+repository-code: "https://github.com/bradleylab/stella-mcp"
+url: "https://github.com/bradleylab/stella-mcp"
