@@ -1,17 +1,18 @@
 """MCP server for Stella system dynamics models."""
 
 import math
-from typing import Any, Callable
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import CallToolResult, Tool, TextContent
+from mcp.types import CallToolResult, TextContent, Tool
 
-from .xmile import GraphicalFunction, StellaModel
 from .tool_handlers import register_tool_handlers
 from .tool_schemas import build_tool_definitions
+from .xmile import GraphicalFunction, StellaModel
 
 
 @dataclass

@@ -1,17 +1,16 @@
 """Template management for Stella model starters."""
 
+import json
+import os
+import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
-import json
-import os
 from pathlib import Path
-import re
 from typing import Any
-import xml.etree.ElementTree as ET
 
 from .xmile import StellaModel, parse_stmx
-
 
 _XMILE_NS = "http://docs.oasis-open.org/xmile/ns/XMILE/v1.0"
 _TEMPLATE_NAME_CLEANER = re.compile(r"[^A-Za-z0-9._-]+")

@@ -10,6 +10,13 @@ import stella_mcp.server as server_mod
 from stella_mcp.xmile import StellaModel
 
 
+def _tool_text(result):
+    """Return first text content from either legacy list or CallToolResult responses."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result[0].text
+
+
 def test_session_scoped_models_are_isolated(monkeypatch):
     """Models with the same model_id in different sessions should not collide."""
     server_mod._session_models.clear()
@@ -83,7 +90,7 @@ def test_list_models_reports_current(monkeypatch):
     server_mod._set_current_model(StellaModel("Second"), model_id="m2")
 
     result = asyncio.run(server_mod.call_tool("list_models", {}))
-    text = result[0].text
+    text = _tool_text(result)
     assert "m1: First" in text
     assert "m2: Second (current)" in text
 
@@ -94,7 +101,7 @@ def test_list_models_empty_session(monkeypatch):
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 404)
 
     result = asyncio.run(server_mod.call_tool("list_models", {}))
-    assert result[0].text == "No models created in this session."
+    assert _tool_text(result) == "No models created in this session."
 
 
 def test_get_model_xml_respects_auto_layout_flag(monkeypatch):
@@ -111,7 +118,7 @@ def test_get_model_xml_respects_auto_layout_flag(monkeypatch):
             {"model_id": model_id, "auto_layout": False},
         )
     )
-    text = result[0].text
+    text = _tool_text(result)
     assert '<stock x="0" y="0"' in text
 
 
@@ -206,29 +213,29 @@ def test_call_tool_session_isolation_end_to_end(monkeypatch):
     result1 = asyncio.run(
         server_mod.call_tool("create_model", {"name": "SessionOneModel", "model_id": "shared"})
     )
-    assert "model_id=shared" in result1[0].text
+    assert "model_id=shared" in _tool_text(result1)
     list1 = asyncio.run(server_mod.call_tool("list_models", {}))
-    assert "shared: SessionOneModel (current)" in list1[0].text
+    assert "shared: SessionOneModel (current)" in _tool_text(list1)
 
     # Session 2 with same model_id should be independent
     state["session_key"] = 2
     result2 = asyncio.run(
         server_mod.call_tool("create_model", {"name": "SessionTwoModel", "model_id": "shared"})
     )
-    assert "model_id=shared" in result2[0].text
+    assert "model_id=shared" in _tool_text(result2)
     list2 = asyncio.run(server_mod.call_tool("list_models", {}))
-    assert "shared: SessionTwoModel (current)" in list2[0].text
+    assert "shared: SessionTwoModel (current)" in _tool_text(list2)
 
     # Back to Session 1, original model should still be present
     state["session_key"] = 1
     list1_again = asyncio.run(server_mod.call_tool("list_models", {}))
-    assert "shared: SessionOneModel (current)" in list1_again[0].text
+    assert "shared: SessionOneModel (current)" in _tool_text(list1_again)
 
 
 def test_list_templates_tool_includes_builtin():
     """list_templates tool should expose built-in templates."""
     result = asyncio.run(server_mod.call_tool("list_templates", {}))
-    text = result[0].text
+    text = _tool_text(result)
     assert "exponential_growth [builtin]" in text
     assert "sir [builtin]" in text
 
@@ -274,7 +281,7 @@ def test_set_connector_routing_tool_updates_connector_points(monkeypatch):
             },
         )
     )
-    assert "Updated connector uid=" in updated[0].text
+    assert "Updated connector uid=" in _tool_text(updated)
     _, model = server_mod.get_model("m1")
     assert len(model.connectors) == 1
     conn = model.connectors[0]
@@ -289,7 +296,7 @@ def test_set_connector_routing_tool_updates_connector_points(monkeypatch):
             {"model_id": "m1", "auto_layout": False},
         )
     )
-    xml_text = xml_result[0].text
+    xml_text = _tool_text(xml_result)
     assert 'angle="-20.0"' in xml_text
 
 
@@ -317,7 +324,7 @@ def test_list_connectors_empty(monkeypatch):
     asyncio.run(server_mod.call_tool("create_model", {"name": "NoConn", "model_id": "m1"}))
 
     result = asyncio.run(server_mod.call_tool("list_connectors", {"model_id": "m1"}))
-    assert result[0].text == "No connectors in model_id=m1."
+    assert _tool_text(result) == "No connectors in model_id=m1."
 
 
 def test_list_connectors_includes_routing_metadata(monkeypatch):
@@ -356,7 +363,7 @@ def test_list_connectors_includes_routing_metadata(monkeypatch):
     )
 
     listed = asyncio.run(server_mod.call_tool("list_connectors", {"model_id": "m1"}))
-    text = listed[0].text
+    text = _tool_text(listed)
     assert "uid=1" in text
     assert "k -> S" in text
     assert "angle=-12.0 (locked=True)" in text
@@ -372,7 +379,7 @@ def test_save_and_load_template_tools(monkeypatch, tmp_path):
     create = asyncio.run(
         server_mod.call_tool("create_model", {"name": "Template Source", "model_id": "source"})
     )
-    assert "model_id=source" in create[0].text
+    assert "model_id=source" in _tool_text(create)
 
     asyncio.run(
         server_mod.call_tool(
@@ -387,10 +394,10 @@ def test_save_and_load_template_tools(monkeypatch, tmp_path):
             {"model_id": "source", "template_name": "custom_pop"},
         )
     )
-    assert "template 'custom_pop'" in saved[0].text
+    assert "template 'custom_pop'" in _tool_text(saved)
 
     listed = asyncio.run(server_mod.call_tool("list_templates", {}))
-    assert "custom_pop [user]" in listed[0].text
+    assert "custom_pop [user]" in _tool_text(listed)
 
     loaded = asyncio.run(
         server_mod.call_tool(
@@ -398,7 +405,7 @@ def test_save_and_load_template_tools(monkeypatch, tmp_path):
             {"template_name": "custom_pop", "model_id": "loaded"},
         )
     )
-    assert "as model_id=loaded" in loaded[0].text
+    assert "as model_id=loaded" in _tool_text(loaded)
 
 
 def test_read_model_reports_compatibility_warnings(monkeypatch, tmp_path):
@@ -420,7 +427,7 @@ def test_read_model_reports_compatibility_warnings(monkeypatch, tmp_path):
     result = asyncio.run(
         server_mod.call_tool("read_model", {"filepath": str(path), "model_id": "m1"})
     )
-    assert "compatibility warnings: 1" in result[0].text
+    assert "compatibility warnings: 1" in _tool_text(result)
 
 
 def test_read_model_strict_returns_invalid_input(monkeypatch, tmp_path):
@@ -465,3 +472,125 @@ def test_get_model_xml_strict_mode_returns_invalid_input(monkeypatch):
     assert isinstance(result, CallToolResult)
     assert result.isError is True
     assert result.structuredContent["error"]["code"] == "invalid_input"
+
+
+def test_list_models_returns_structured_content(monkeypatch):
+    """list_models should return a machine-readable model list."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2101)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "M1", "model_id": "m1"}))
+    result = asyncio.run(server_mod.call_tool("list_models", {}))
+
+    assert isinstance(result, CallToolResult)
+    assert result.structuredContent["models"] == [
+        {"model_id": "m1", "name": "M1", "current": True}
+    ]
+
+
+def test_validate_model_returns_structured_issues(monkeypatch):
+    """validate_model should expose validation issues as dictionaries."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2102)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "Broken", "model_id": "m1"}))
+    asyncio.run(
+        server_mod.call_tool(
+            "add_stock",
+            {"model_id": "m1", "name": "S", "initial_value": "100"},
+        )
+    )
+    result = asyncio.run(server_mod.call_tool("validate_model", {"model_id": "m1"}))
+
+    assert isinstance(result, CallToolResult)
+    assert result.structuredContent["model_id"] == "m1"
+    assert result.structuredContent["issues"][0]["category"] == "mass_balance"
+
+
+def test_inspect_model_returns_complete_structured_summary(monkeypatch):
+    """inspect_model should be the primary structured model introspection tool."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2103)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "Inspect", "model_id": "m1"}))
+    asyncio.run(
+        server_mod.call_tool("add_stock", {"model_id": "m1", "name": "S", "initial_value": "100"})
+    )
+    asyncio.run(server_mod.call_tool("add_aux", {"model_id": "m1", "name": "k", "equation": "0.1"}))
+    asyncio.run(
+        server_mod.call_tool(
+            "add_flow",
+            {"model_id": "m1", "name": "loss", "equation": "S * k", "from_stock": "S"},
+        )
+    )
+    asyncio.run(server_mod.call_tool("add_connector", {"model_id": "m1", "from_var": "S", "to_var": "loss"}))
+    asyncio.run(server_mod.call_tool("add_connector", {"model_id": "m1", "from_var": "k", "to_var": "loss"}))
+
+    result = asyncio.run(
+        server_mod.call_tool("inspect_model", {"model_id": "m1", "include_validation": True})
+    )
+
+    assert isinstance(result, CallToolResult)
+    assert result.structuredContent["model"]["model_id"] == "m1"
+    assert result.structuredContent["model"]["counts"]["stocks"] == 1
+    assert result.structuredContent["validation"]["passed"] is True
+
+
+def test_update_tools_return_structured_content(monkeypatch):
+    """Update tools should mutate model fields and return structured payloads."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2104)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "Update", "model_id": "m1"}))
+    asyncio.run(
+        server_mod.call_tool("add_stock", {"model_id": "m1", "name": "S", "initial_value": "100"})
+    )
+    asyncio.run(server_mod.call_tool("add_aux", {"model_id": "m1", "name": "k", "equation": "0.1"}))
+    asyncio.run(
+        server_mod.call_tool(
+            "add_flow",
+            {"model_id": "m1", "name": "loss", "equation": "S * k", "from_stock": "S"},
+        )
+    )
+
+    specs = asyncio.run(
+        server_mod.call_tool("set_sim_specs", {"model_id": "m1", "stop": 20, "dt": 0.5})
+    )
+    stock = asyncio.run(
+        server_mod.call_tool("update_stock", {"model_id": "m1", "name": "S", "initial_value": "200"})
+    )
+    aux = asyncio.run(
+        server_mod.call_tool("update_aux", {"model_id": "m1", "name": "k", "equation": "0.2"})
+    )
+    flow = asyncio.run(
+        server_mod.call_tool(
+            "update_flow",
+            {"model_id": "m1", "name": "loss", "equation": "S * k * 2"},
+        )
+    )
+
+    assert specs.structuredContent["sim_specs"]["stop"] == 20
+    assert stock.structuredContent["stock"]["initial_value"] == "200"
+    assert aux.structuredContent["auxiliary"]["equation"] == "0.2"
+    assert flow.structuredContent["flow"]["equation"] == "S * k * 2"
+
+
+def test_sync_connectors_from_equations_tool(monkeypatch):
+    """Tool should add missing equation connectors and report counts."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2105)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "Sync", "model_id": "m1"}))
+    asyncio.run(
+        server_mod.call_tool("add_stock", {"model_id": "m1", "name": "S", "initial_value": "100"})
+    )
+    asyncio.run(server_mod.call_tool("add_aux", {"model_id": "m1", "name": "k", "equation": "0.1"}))
+    asyncio.run(
+        server_mod.call_tool(
+            "add_flow",
+            {"model_id": "m1", "name": "loss", "equation": "S * k", "from_stock": "S"},
+        )
+    )
+
+    result = asyncio.run(
+        server_mod.call_tool("sync_connectors_from_equations", {"model_id": "m1"})
+    )
+
+    assert result.structuredContent["added"] == 2
+    listed = asyncio.run(server_mod.call_tool("list_connectors", {"model_id": "m1"}))
+    assert len(listed.structuredContent["connectors"]) == 2

@@ -13,6 +13,13 @@ from stella_mcp.templates import (
 from stella_mcp.xmile import StellaModel
 
 
+def _tool_text(result):
+    """Return first text content from either legacy list or CallToolResult responses."""
+    if hasattr(result, "content"):
+        return result.content[0].text
+    return result[0].text
+
+
 def test_builtin_templates_are_available():
     """Built-in templates should be discoverable."""
     names = {info.name for info in list_templates() if info.source == "builtin"}
@@ -129,11 +136,21 @@ def test_server_template_discovery_tools(monkeypatch, tmp_path):
             {"source": "user", "query": "alpha", "tags": ["demo"]},
         )
     )
-    assert "alpha_template [user]" in listed[0].text
-    assert "vars=1S/0F/0A" in listed[0].text
+    assert "alpha_template [user]" in _tool_text(listed)
+    assert "vars=1S/0F/0A" in _tool_text(listed)
 
     details = asyncio.run(
         server_mod.call_tool("get_template_info", {"template_name": "alpha_template"})
     )
-    assert "description: Alpha template for discovery tests." in details[0].text
-    assert "tags: demo, smoke" in details[0].text
+    assert "description: Alpha template for discovery tests." in _tool_text(details)
+    assert "tags: demo, smoke" in _tool_text(details)
+
+
+def test_list_templates_tool_returns_structured_templates(monkeypatch, tmp_path):
+    """Template discovery should expose structured template metadata."""
+    monkeypatch.setenv("STELLA_MCP_TEMPLATE_DIR", str(tmp_path))
+    result = asyncio.run(server_mod.call_tool("list_templates", {"source": "builtin"}))
+
+    assert result.structuredContent["templates"]
+    first = result.structuredContent["templates"][0]
+    assert {"name", "source", "title", "stocks", "flows", "auxiliaries"}.issubset(first)

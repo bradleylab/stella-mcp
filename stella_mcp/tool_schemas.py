@@ -76,6 +76,21 @@ def build_tool_definitions() -> list[Tool]:
             },
         ),
         Tool(
+            name="set_sim_specs",
+            description="Update simulation time settings on an existing model",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "start": {"type": "number", "description": "Simulation start time"},
+                    "stop": {"type": "number", "description": "Simulation stop time"},
+                    "dt": {"type": "number", "description": "Time step"},
+                    "method": {"type": "string", "description": "Integration method (Euler or RK4)"},
+                    "time_units": {"type": "string", "description": "Time units"},
+                },
+            },
+        ),
+        Tool(
             name="add_stock",
             description="Add a stock (reservoir) to the current model",
             inputSchema={
@@ -90,6 +105,23 @@ def build_tool_definitions() -> list[Tool]:
                     "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
                 },
                 "required": ["name", "initial_value"],
+            },
+        ),
+        Tool(
+            name="update_stock",
+            description="Update stock fields while preserving relationships",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "name": {"type": "string", "description": "Stock name"},
+                    "initial_value": {"type": "string", "description": "Initial value"},
+                    "units": {"type": "string", "description": "Units"},
+                    "non_negative": {"type": "boolean", "description": "Prevent negative values"},
+                    "x": {"type": "number", "description": "X position"},
+                    "y": {"type": "number", "description": "Y position"},
+                },
+                "required": ["name"],
             },
         ),
         Tool(
@@ -113,6 +145,24 @@ def build_tool_definitions() -> list[Tool]:
             },
         ),
         Tool(
+            name="update_flow",
+            description="Update flow fields while preserving structural stock links",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "name": {"type": "string", "description": "Flow name"},
+                    "equation": {"type": "string", "description": "Flow rate equation"},
+                    "units": {"type": "string", "description": "Units"},
+                    "non_negative": {"type": "boolean", "description": "Prevent negative values"},
+                    "x": {"type": "number", "description": "X position"},
+                    "y": {"type": "number", "description": "Y position"},
+                    "graphical_function": graphical_function_schema,
+                },
+                "required": ["name"],
+            },
+        ),
+        Tool(
             name="add_aux",
             description="Add an auxiliary variable (parameter or intermediate calculation) to the current model",
             inputSchema={
@@ -130,6 +180,23 @@ def build_tool_definitions() -> list[Tool]:
             },
         ),
         Tool(
+            name="update_aux",
+            description="Update auxiliary variable fields",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "name": {"type": "string", "description": "Variable name"},
+                    "equation": {"type": "string", "description": "Equation or constant value"},
+                    "units": {"type": "string", "description": "Units"},
+                    "x": {"type": "number", "description": "X position"},
+                    "y": {"type": "number", "description": "Y position"},
+                    "graphical_function": graphical_function_schema,
+                },
+                "required": ["name"],
+            },
+        ),
+        Tool(
             name="add_connector",
             description="Add a connector (dependency arrow) between variables",
             inputSchema={
@@ -140,6 +207,16 @@ def build_tool_definitions() -> list[Tool]:
                     "to_var": {"type": "string", "description": "Target variable name (the one using from_var)"},
                 },
                 "required": ["from_var", "to_var"],
+            },
+        ),
+        Tool(
+            name="sync_connectors_from_equations",
+            description="Add missing dependency connectors inferred from flow and auxiliary equations",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                },
             },
         ),
         Tool(
@@ -485,6 +562,21 @@ def build_tool_definitions() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {},
+            },
+        ),
+        Tool(
+            name="inspect_model",
+            description="Return a structured summary of the current model for agent inspection",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "include_validation": {
+                        "type": "boolean",
+                        "description": "Include validation issues in structured output",
+                        "default": True,
+                    },
+                },
             },
         ),
         Tool(

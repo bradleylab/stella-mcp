@@ -3,9 +3,6 @@
 import tempfile
 from pathlib import Path
 
-import pytest
-
-from stella_mcp.layout import BoundingBox, segments_intersect, segment_intersects_box
 from stella_mcp.xmile import StellaModel, parse_stmx
 
 
@@ -766,7 +763,7 @@ class TestGeneralLayoutAlgorithms:
 
     def test_segment_box_intersection(self):
         """Segment-box intersection detection works correctly."""
-        from stella_mcp.layout import segment_intersects_box, BoundingBox
+        from stella_mcp.layout import BoundingBox, segment_intersects_box
 
         box = BoundingBox(100, 100, 50, 50)
 
@@ -825,7 +822,7 @@ class TestGeneralLayoutAlgorithms:
 
     def test_connector_stock_crossing_detection(self):
         """Connector-stock crossing detection should identify crossings."""
-        from stella_mcp.layout import segment_intersects_box, BoundingBox
+        from stella_mcp.layout import BoundingBox, segment_intersects_box
 
         # Simulate a connector passing through a stock
         model = StellaModel("Test")
@@ -845,9 +842,8 @@ class TestGeneralLayoutAlgorithms:
 
         # After layout, connector should not cross stock B
         if rate_pos[0] is not None and rate_pos[1] is not None:
-            crosses = segment_intersects_box(rate_pos, flow_pos, stock_b_box)
-            # Note: may still cross in some cases - this tests detection works
-            # The important thing is the detection method exists and works
+            # The assertion is on the helper behavior, not on the current best-effort layout.
+            assert isinstance(segment_intersects_box(rate_pos, flow_pos, stock_b_box), bool)
 
     def test_proportional_clearance_with_large_stock(self):
         """Flow rerouting should use proportional clearance for larger stocks."""
@@ -869,7 +865,7 @@ class TestGeneralLayoutAlgorithms:
         blocker = model.stocks["Blocker"]
 
         # Check that flow doesn't pass through the blocker
-        from stella_mcp.layout import segment_intersects_box, BoundingBox
+        from stella_mcp.layout import BoundingBox, segment_intersects_box
         box = BoundingBox(blocker.x, blocker.y, blocker.width, blocker.height)
 
         for i in range(len(flow.points) - 1):

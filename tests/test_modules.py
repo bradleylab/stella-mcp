@@ -7,6 +7,13 @@ from stella_mcp.validator import validate_model
 from stella_mcp.xmile import StellaModel, parse_stmx
 
 
+def _tool_text(result):
+    """Return first text content from either legacy list or CallToolResult responses."""
+    if hasattr(result, "content"):
+        return result.content[0].text
+    return result[0].text
+
+
 def test_create_module_and_add_members():
     """Model can create modules and add members."""
     model = StellaModel("ModuleTest")
@@ -112,7 +119,7 @@ def test_server_module_tools(monkeypatch):
             {"model_id": "m1", "name": "Core", "members": ["S"]},
         )
     )
-    assert "Created module 'Core'" in created[0].text
+    assert "Created module 'Core'" in _tool_text(created)
 
     updated = asyncio.run(
         server_mod.call_tool(
@@ -120,10 +127,10 @@ def test_server_module_tools(monkeypatch):
             {"model_id": "m1", "module_name": "Core", "members": ["k"]},
         )
     )
-    assert "total members: 2" in updated[0].text
+    assert "total members: 2" in _tool_text(updated)
 
     listed = asyncio.run(server_mod.call_tool("list_modules", {"model_id": "m1"}))
-    assert "Core: S, k" in listed[0].text
+    assert "Core: S, k" in _tool_text(listed)
 
 
 def test_server_set_and_auto_module_view_tools(monkeypatch):
@@ -141,7 +148,7 @@ def test_server_set_and_auto_module_view_tools(monkeypatch):
             {"model_id": "m1", "module_name": "Core", "x": 300, "y": 250, "width": 200, "height": 120},
         )
     )
-    assert "Set module view for 'Core'" in manual[0].text
+    assert "Set module view for 'Core'" in _tool_text(manual)
 
     auto = asyncio.run(
         server_mod.call_tool(
@@ -149,7 +156,7 @@ def test_server_set_and_auto_module_view_tools(monkeypatch):
             {"model_id": "m1", "only_missing": True},
         )
     )
-    assert "Auto-placed module boxes" in auto[0].text
+    assert "Auto-placed module boxes" in _tool_text(auto)
 
 
 def test_server_set_module_style_tool(monkeypatch):
@@ -175,10 +182,10 @@ def test_server_set_module_style_tool(monkeypatch):
             },
         )
     )
-    assert "Set module style for 'Core'" in styled[0].text
+    assert "Set module style for 'Core'" in _tool_text(styled)
 
     listed = asyncio.run(server_mod.call_tool("list_modules", {"model_id": "m1"}))
-    assert "style=(border_color=#666666" in listed[0].text
+    assert "style=(border_color=#666666" in _tool_text(listed)
 
 
 def test_module_lifecycle_methods():
@@ -221,7 +228,7 @@ def test_server_module_lifecycle_tools(monkeypatch):
             {"model_id": "m1", "module_name": "Core", "members": ["k"]},
         )
     )
-    assert "total members: 1" in removed[0].text
+    assert "total members: 1" in _tool_text(removed)
 
     renamed = asyncio.run(
         server_mod.call_tool(
@@ -229,10 +236,10 @@ def test_server_module_lifecycle_tools(monkeypatch):
             {"model_id": "m1", "module_name": "Core", "new_name": "Renamed Core"},
         )
     )
-    assert "Renamed module 'Core' to 'Renamed Core'" in renamed[0].text
+    assert "Renamed module 'Core' to 'Renamed Core'" in _tool_text(renamed)
 
     listed = asyncio.run(server_mod.call_tool("list_modules", {"model_id": "m1"}))
-    assert "Renamed Core: S" in listed[0].text
+    assert "Renamed Core: S" in _tool_text(listed)
 
     deleted = asyncio.run(
         server_mod.call_tool(
@@ -240,7 +247,7 @@ def test_server_module_lifecycle_tools(monkeypatch):
             {"model_id": "m1", "module_name": "Renamed Core"},
         )
     )
-    assert "Deleted module 'Renamed Core'" in deleted[0].text
+    assert "Deleted module 'Renamed Core'" in _tool_text(deleted)
 
 
 def test_validator_detects_empty_and_stale_modules():
@@ -265,12 +272,12 @@ def test_set_module_style_validation():
 
     try:
         model.set_module_style("Core")
-        assert False, "Expected ValueError when no style fields are provided"
+        raise AssertionError("Expected ValueError when no style fields are provided")
     except ValueError as exc:
         assert "At least one module style field" in str(exc)
 
     try:
         model.set_module_style("Core", label_side="diagonal")
-        assert False, "Expected ValueError for invalid label_side"
+        raise AssertionError("Expected ValueError for invalid label_side")
     except ValueError as exc:
         assert "label_side" in str(exc)

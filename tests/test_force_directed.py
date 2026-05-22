@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from stella_mcp.layout import BoundingBox, force_directed_layout
+from stella_mcp.layout import force_directed_layout
 from stella_mcp.xmile import StellaModel
 
 

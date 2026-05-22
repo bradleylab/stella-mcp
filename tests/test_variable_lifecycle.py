@@ -2,11 +2,18 @@
 
 import asyncio
 
-from mcp.types import CallToolResult
 import pytest
+from mcp.types import CallToolResult
 
 import stella_mcp.server as server_mod
 from stella_mcp.xmile import StellaModel
+
+
+def _tool_text(result):
+    """Return first text content from either legacy list or CallToolResult responses."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result[0].text
 
 
 def test_rename_stock_updates_equations_connectors_and_modules():
@@ -135,11 +142,11 @@ def test_server_rename_and_delete_variable_tools(monkeypatch):
             {"model_id": "m1", "old_name": "S1", "new_name": "Source"},
         )
     )
-    assert "Renamed stock 'S1' to 'Source'" in renamed[0].text
+    assert "Renamed stock 'S1' to 'Source'" in _tool_text(renamed)
 
     listed = asyncio.run(server_mod.call_tool("list_variables", {"model_id": "m1"}))
-    assert "Source = 100" in listed[0].text
-    assert "f: Source -> S2" in listed[0].text
+    assert "Source = 100" in _tool_text(listed)
+    assert "f: Source -> S2" in _tool_text(listed)
 
     deleted = asyncio.run(
         server_mod.call_tool(
@@ -147,7 +154,7 @@ def test_server_rename_and_delete_variable_tools(monkeypatch):
             {"model_id": "m1", "name": "f"},
         )
     )
-    assert "Deleted flow 'f'" in deleted[0].text
+    assert "Deleted flow 'f'" in _tool_text(deleted)
 
 
 def test_server_delete_variable_requires_force(monkeypatch):
@@ -171,3 +178,26 @@ def test_server_delete_variable_requires_force(monkeypatch):
     assert isinstance(result, CallToolResult)
     assert result.isError is True
     assert result.structuredContent["error"]["code"] == "invalid_input"
+
+
+def test_update_stock_flow_aux_and_sim_specs():
+    """Model update methods should change only provided fields."""
+    model = StellaModel("Update")
+    model.add_stock("S", "100", units="people")
+    model.add_aux("k", "0.1")
+    model.add_flow("loss", "S * k", from_stock="S")
+
+    model.set_sim_specs(start=1, stop=50, dt=0.5, method="RK4", time_units="Days")
+    model.update_stock("S", initial_value="200", units="GtC", non_negative=False, x=10, y=20)
+    model.update_aux("k", equation="0.2", units="1/day", x=30, y=40)
+    model.update_flow("loss", equation="S * k * 2", units="GtC/day", non_negative=False, x=50, y=60)
+
+    assert model.sim_specs.start == 1
+    assert model.sim_specs.stop == 50
+    assert model.sim_specs.dt == 0.5
+    assert model.sim_specs.method == "RK4"
+    assert model.sim_specs.time_units == "Days"
+    assert model.stocks["S"].initial_value == "200"
+    assert model.stocks["S"].non_negative is False
+    assert model.auxs["k"].equation == "0.2"
+    assert model.flows["loss"].equation == "S * k * 2"

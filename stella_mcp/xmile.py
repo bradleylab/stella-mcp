@@ -2,19 +2,18 @@
 
 import math
 import re
-from dataclasses import dataclass, field
-from typing import Optional
 import uuid
+from dataclasses import dataclass, field
 from html import escape
+from typing import Optional
 
+from stella_mcp.equation_parser import extract_variable_references
 from stella_mcp.layout import (
     BoundingBox,
-    segments_intersect,
-    segment_intersects_box,
     force_directed_layout,
+    segment_intersects_box,
+    segments_intersect,
 )
-from stella_mcp.equation_parser import extract_variable_references
-
 
 # XML namespaces
 XMILE_NS = "http://docs.oasis-open.org/xmile/ns/XMILE/v1.0"
@@ -34,8 +33,8 @@ class Stock:
     inflows: list[str] = field(default_factory=list)
     outflows: list[str] = field(default_factory=list)
     non_negative: bool = True
-    x: Optional[float] = None  # None means auto-position
-    y: Optional[float] = None  # None means auto-position
+    x: float | None = None  # None means auto-position
+    y: float | None = None  # None means auto-position
     width: int = 45  # Default stock width
     height: int = 35  # Default stock height
     size_locked: bool = False  # Preserve imported/user-defined size
@@ -50,11 +49,11 @@ class Flow:
     name: str
     equation: str
     units: str = ""
-    from_stock: Optional[str] = None  # None means external source
-    to_stock: Optional[str] = None    # None means external sink
+    from_stock: str | None = None  # None means external source
+    to_stock: str | None = None    # None means external sink
     non_negative: bool = True
-    x: Optional[float] = None  # None means auto-position
-    y: Optional[float] = None  # None means auto-position
+    x: float | None = None  # None means auto-position
+    y: float | None = None  # None means auto-position
     points: list[tuple[float, float]] = field(default_factory=list)
     points_locked: bool = False  # Preserve imported/user-defined routing points
     graphical_function: Optional["GraphicalFunction"] = None
@@ -70,8 +69,8 @@ class Aux:
     name: str
     equation: str
     units: str = ""
-    x: Optional[float] = None  # None means auto-position
-    y: Optional[float] = None  # None means auto-position
+    x: float | None = None  # None means auto-position
+    y: float | None = None  # None means auto-position
     graphical_function: Optional["GraphicalFunction"] = None
     extra_attrs: dict[str, str] = field(default_factory=dict)
     extra_children_xml: list[str] = field(default_factory=list)
@@ -82,10 +81,10 @@ class Aux:
 class GraphicalFunction:
     """Represents a graphical function (lookup table) definition."""
     ypts: list[float]
-    xscale: Optional[tuple[float, float]] = None
-    xpts: Optional[list[float]] = None
-    yscale: Optional[tuple[float, float]] = None
-    gf_type: Optional[str] = None
+    xscale: tuple[float, float] | None = None
+    xpts: list[float] | None = None
+    yscale: tuple[float, float] | None = None
+    gf_type: str | None = None
 
 
 @dataclass
@@ -107,15 +106,15 @@ class Module:
     """Represents a logical module/group of model variables."""
     name: str
     members: list[str] = field(default_factory=list)
-    x: Optional[float] = None  # Module box center X in view
-    y: Optional[float] = None  # Module box center Y in view
-    width: Optional[float] = None
-    height: Optional[float] = None
-    border_color: Optional[str] = None
-    background: Optional[str] = None
-    font_color: Optional[str] = None
-    font_size: Optional[str] = None
-    label_side: Optional[str] = None
+    x: float | None = None  # Module box center X in view
+    y: float | None = None  # Module box center Y in view
+    width: float | None = None
+    height: float | None = None
+    border_color: str | None = None
+    background: str | None = None
+    font_color: str | None = None
+    font_size: str | None = None
+    label_side: str | None = None
     extra_attrs: dict[str, str] = field(default_factory=dict)
     extra_children_xml: list[str] = field(default_factory=list)
     view_extra_attrs: dict[str, str] = field(default_factory=dict)
@@ -154,9 +153,9 @@ class StellaModel:
         self.views_extra_children_xml: list[str] = []
         self.view_extra_children_xml: list[str] = []
         self.view_extra_attrs: dict[str, str] = {}
-        self.prefs_xml: Optional[str] = None
-        self.views_style_xml: Optional[str] = None
-        self.inner_view_style_xml: Optional[str] = None
+        self.prefs_xml: str | None = None
+        self.views_style_xml: str | None = None
+        self.inner_view_style_xml: str | None = None
         self._export_ns_prefix_by_uri: dict[str, str] = {}
 
     @staticmethod
@@ -175,7 +174,7 @@ class StellaModel:
         return tag
 
     @staticmethod
-    def _xml_attr_parts(attr_key: str) -> tuple[Optional[str], str]:
+    def _xml_attr_parts(attr_key: str) -> tuple[str | None, str]:
         """Split ElementTree attr key into (namespace_uri, local_name)."""
         if attr_key.startswith("{") and "}" in attr_key:
             namespace, local = attr_key[1:].split("}", 1)
@@ -230,7 +229,7 @@ class StellaModel:
     def _format_extra_attrs(
         self,
         attrs: dict[str, str],
-        reserved_names: Optional[set[str]] = None,
+        reserved_names: set[str] | None = None,
     ) -> str:
         """Format preserved extra XML attrs while avoiding known fields."""
         if not attrs:
@@ -279,7 +278,7 @@ class StellaModel:
         """Format numbers for XMILE with stable precision."""
         return f"{value:.12g}"
 
-    def _dt_xml(self, dt: Optional[float] = None) -> str:
+    def _dt_xml(self, dt: float | None = None) -> str:
         """Format dt for XMILE with compatibility-safe reciprocal usage.
 
         Stella commonly uses reciprocal dt when dt is an exact inverse integer
@@ -530,11 +529,11 @@ class StellaModel:
         name: str,
         initial_value: str,
         units: str = "",
-        inflows: Optional[list[str]] = None,
-        outflows: Optional[list[str]] = None,
+        inflows: list[str] | None = None,
+        outflows: list[str] | None = None,
         non_negative: bool = True,
-        x: Optional[float] = None,
-        y: Optional[float] = None
+        x: float | None = None,
+        y: float | None = None
     ) -> Stock:
         """Add a stock to the model."""
         self._validate_new_variable_name(name)
@@ -556,12 +555,12 @@ class StellaModel:
         name: str,
         equation: str,
         units: str = "",
-        from_stock: Optional[str] = None,
-        to_stock: Optional[str] = None,
+        from_stock: str | None = None,
+        to_stock: str | None = None,
         non_negative: bool = True,
-        x: Optional[float] = None,
-        y: Optional[float] = None,
-        graphical_function: Optional[GraphicalFunction] = None
+        x: float | None = None,
+        y: float | None = None,
+        graphical_function: GraphicalFunction | None = None
     ) -> Flow:
         """Add a flow to the model."""
         self._validate_new_variable_name(name)
@@ -600,9 +599,9 @@ class StellaModel:
         name: str,
         equation: str,
         units: str = "",
-        x: Optional[float] = None,
-        y: Optional[float] = None,
-        graphical_function: Optional[GraphicalFunction] = None
+        x: float | None = None,
+        y: float | None = None,
+        graphical_function: GraphicalFunction | None = None
     ) -> Aux:
         """Add an auxiliary variable to the model."""
         self._validate_new_variable_name(name)
@@ -633,11 +632,37 @@ class StellaModel:
         self.connectors.append(connector)
         return connector
 
+    def sync_connectors_from_equations(self) -> dict[str, int]:
+        """Add missing connectors for equation references on flows and auxiliaries."""
+        existing = {(conn.from_var, conn.to_var) for conn in self.connectors}
+        added = 0
+        already_present = 0
+
+        targets: list[tuple[str, str]] = []
+        for name, flow in self.flows.items():
+            for ref in sorted(self._extract_variable_refs(flow.equation)):
+                if ref != name and self._has_variable(ref):
+                    targets.append((ref, name))
+        for name, aux in self.auxs.items():
+            for ref in sorted(self._extract_variable_refs(aux.equation)):
+                if ref != name and self._has_variable(ref):
+                    targets.append((ref, name))
+
+        for from_var, to_var in targets:
+            if (from_var, to_var) in existing:
+                already_present += 1
+                continue
+            self.add_connector(from_var, to_var)
+            existing.add((from_var, to_var))
+            added += 1
+
+        return {"added": added, "existing": already_present}
+
     def _resolve_connector(
         self,
-        connector_uid: Optional[int] = None,
-        from_var: Optional[str] = None,
-        to_var: Optional[str] = None,
+        connector_uid: int | None = None,
+        from_var: str | None = None,
+        to_var: str | None = None,
     ) -> Connector:
         """Resolve one connector by uid or endpoint pair."""
         if connector_uid is not None:
@@ -681,13 +706,13 @@ class StellaModel:
 
     def set_connector_routing(
         self,
-        connector_uid: Optional[int] = None,
-        from_var: Optional[str] = None,
-        to_var: Optional[str] = None,
-        angle: Optional[float] = None,
-        angle_locked: Optional[bool] = None,
-        points: Optional[list[tuple[float, float]]] = None,
-        points_locked: Optional[bool] = None,
+        connector_uid: int | None = None,
+        from_var: str | None = None,
+        to_var: str | None = None,
+        angle: float | None = None,
+        angle_locked: bool | None = None,
+        points: list[tuple[float, float]] | None = None,
+        points_locked: bool | None = None,
     ) -> Connector:
         """Set connector visual routing metadata (angle and optional waypoints)."""
         if angle is None and angle_locked is None and points is None and points_locked is None:
@@ -733,7 +758,7 @@ class StellaModel:
         """Check if a normalized variable name exists in the model."""
         return name in self.stocks or name in self.flows or name in self.auxs
 
-    def _variable_kind(self, norm_name: str) -> Optional[str]:
+    def _variable_kind(self, norm_name: str) -> str | None:
         """Get variable kind by normalized name."""
         if norm_name in self.stocks:
             return "stock"
@@ -915,7 +940,113 @@ class StellaModel:
             "detached_flows": detached_flows,
         }
 
-    def create_module(self, name: str, members: Optional[list[str]] = None) -> Module:
+    def set_sim_specs(
+        self,
+        start: float | None = None,
+        stop: float | None = None,
+        dt: float | None = None,
+        method: str | None = None,
+        time_units: str | None = None,
+    ) -> SimSpecs:
+        """Update simulation specs while preserving omitted fields."""
+        new_start = self.sim_specs.start if start is None else float(start)
+        new_stop = self.sim_specs.stop if stop is None else float(stop)
+        new_dt = self.sim_specs.dt if dt is None else float(dt)
+        if new_dt <= 0:
+            raise ValueError("dt must be > 0")
+        if new_stop <= new_start:
+            raise ValueError("stop must be greater than start")
+        self.sim_specs.start = new_start
+        self.sim_specs.stop = new_stop
+        self.sim_specs.dt = new_dt
+        if method is not None:
+            self.sim_specs.method = str(method)
+        if time_units is not None:
+            self.sim_specs.time_units = str(time_units)
+        return self.sim_specs
+
+    def update_stock(
+        self,
+        name: str,
+        initial_value: str | None = None,
+        units: str | None = None,
+        non_negative: bool | None = None,
+        x: float | None = None,
+        y: float | None = None,
+    ) -> Stock:
+        """Update stock fields while preserving relationships."""
+        norm_name = self._normalize_name(name)
+        stock = self.stocks.get(norm_name)
+        if stock is None:
+            raise ValueError(f"Stock '{name}' does not exist")
+        if initial_value is not None:
+            stock.initial_value = str(initial_value)
+        if units is not None:
+            stock.units = str(units)
+        if non_negative is not None:
+            stock.non_negative = bool(non_negative)
+        if x is not None:
+            stock.x = float(x)
+        if y is not None:
+            stock.y = float(y)
+        return stock
+
+    def update_flow(
+        self,
+        name: str,
+        equation: str | None = None,
+        units: str | None = None,
+        non_negative: bool | None = None,
+        x: float | None = None,
+        y: float | None = None,
+        graphical_function: GraphicalFunction | None = None,
+    ) -> Flow:
+        """Update flow fields while preserving structural stock links."""
+        norm_name = self._normalize_name(name)
+        flow = self.flows.get(norm_name)
+        if flow is None:
+            raise ValueError(f"Flow '{name}' does not exist")
+        if equation is not None:
+            flow.equation = str(equation)
+        if units is not None:
+            flow.units = str(units)
+        if non_negative is not None:
+            flow.non_negative = bool(non_negative)
+        if x is not None:
+            flow.x = float(x)
+        if y is not None:
+            flow.y = float(y)
+        if graphical_function is not None:
+            flow.graphical_function = graphical_function
+        return flow
+
+    def update_aux(
+        self,
+        name: str,
+        equation: str | None = None,
+        units: str | None = None,
+        x: float | None = None,
+        y: float | None = None,
+        graphical_function: GraphicalFunction | None = None,
+    ) -> Aux:
+        """Update auxiliary fields."""
+        norm_name = self._normalize_name(name)
+        aux = self.auxs.get(norm_name)
+        if aux is None:
+            raise ValueError(f"Auxiliary '{name}' does not exist")
+        if equation is not None:
+            aux.equation = str(equation)
+        if units is not None:
+            aux.units = str(units)
+        if x is not None:
+            aux.x = float(x)
+        if y is not None:
+            aux.y = float(y)
+        if graphical_function is not None:
+            aux.graphical_function = graphical_function
+        return aux
+
+    def create_module(self, name: str, members: list[str] | None = None) -> Module:
         """Create a logical module/group."""
         norm_name = self._normalize_name(name)
         if norm_name in self.modules:
@@ -1008,11 +1139,11 @@ class StellaModel:
     def set_module_style(
         self,
         module_name: str,
-        border_color: Optional[str] = None,
-        background: Optional[str] = None,
-        font_color: Optional[str] = None,
-        font_size: Optional[str] = None,
-        label_side: Optional[str] = None,
+        border_color: str | None = None,
+        background: str | None = None,
+        font_color: str | None = None,
+        font_size: str | None = None,
+        label_side: str | None = None,
     ) -> Module:
         """Set display style for a module box in the view."""
         norm_module_name = self._normalize_name(module_name)
@@ -1042,7 +1173,7 @@ class StellaModel:
 
         return module
 
-    def _member_bounds(self, member: str) -> Optional[tuple[float, float, float, float]]:
+    def _member_bounds(self, member: str) -> tuple[float, float, float, float] | None:
         """Get member bounds as (left, top, right, bottom)."""
         if member in self.stocks:
             stock = self.stocks[member]
@@ -1412,7 +1543,7 @@ class StellaModel:
     # Layout Collision/Crossing Detection and Resolution
     # =========================================================================
 
-    def _get_element_box(self, name: str) -> Optional[BoundingBox]:
+    def _get_element_box(self, name: str) -> BoundingBox | None:
         """Get bounding box for any model element."""
         if name in self.stocks:
             stock = self.stocks[name]
@@ -1534,7 +1665,7 @@ class StellaModel:
 
         for flow_name, segments in flow_segs.items():
             flow = self.flows[flow_name]
-            for stock_name, stock in self.stocks.items():
+            for stock_name in self.stocks:
                 # Skip source and destination stocks
                 if stock_name in (flow.from_stock, flow.to_stock):
                     continue
@@ -1566,7 +1697,7 @@ class StellaModel:
 
         for conn_uid, (cp1, cp2) in connector_segs.items():
             from_var, to_var = conn_endpoints.get(conn_uid, ("", ""))
-            for stock_name, stock in self.stocks.items():
+            for stock_name in self.stocks:
                 # Skip if this stock is the source or target of the connector
                 if stock_name in (from_var, to_var):
                     continue
@@ -1635,7 +1766,7 @@ class StellaModel:
             return
 
         # Get target position and size for proportional offsets
-        target_pos: Optional[tuple[float, float]] = None
+        target_pos: tuple[float, float] | None = None
         target_size = 45  # Default size for offset calculation
         if conn.to_var in self.stocks:
             stock = self.stocks[conn.to_var]
@@ -1771,7 +1902,7 @@ class StellaModel:
         processed_connector_flow: set[tuple[int, str]] = set()
         processed_connector_stock: set[tuple[int, str]] = set()
 
-        for iteration in range(max_iterations):
+        for _iteration in range(max_iterations):
             # Detect all violations
             aux_collisions = self._detect_aux_collisions()
             connector_flow_crossings = self._detect_connector_flow_crossings()
