@@ -7,7 +7,6 @@ import pytest
 
 from stella_mcp.xmile import parse_stmx
 
-
 _CORPUS_DIR = Path(__file__).resolve().parent / "fixtures" / "compat_corpus"
 _MANIFEST_PATH = _CORPUS_DIR / "manifest.json"
 _MANIFEST = json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))

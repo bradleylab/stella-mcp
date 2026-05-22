@@ -1,7 +1,6 @@
 """Model validation for Stella system dynamics models."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .equation_parser import extract_variable_references
 from .xmile import StellaModel
@@ -13,7 +12,7 @@ class ValidationError:
     severity: str  # "error" or "warning"
     category: str  # e.g., "undefined_variable", "mass_balance", "missing_connection"
     message: str
-    variable: Optional[str] = None
+    variable: str | None = None
 
 
 class ModelValidator:

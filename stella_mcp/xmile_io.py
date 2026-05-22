@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from html import escape
-from typing import Optional
 
 from .xmile import (
-    XMILE_NS,
     ISEE_NS,
+    XMILE_NS,
     Aux,
     Connector,
     Flow,
@@ -47,7 +46,7 @@ def model_to_xml(
             f"sim_specs.dt={model.sim_specs.dt} is invalid; exporting with default dt=0.25"
         )
 
-    for flow_name, flow in model.flows.items():
+    for flow in model.flows.values():
         if flow.from_stock is not None and flow.from_stock not in model.stocks:
             compat_issue(
                 f"Flow '{flow.name}' references missing from_stock '{flow.from_stock}'"
@@ -57,7 +56,7 @@ def model_to_xml(
                 f"Flow '{flow.name}' references missing to_stock '{flow.to_stock}'"
             )
 
-    for stock_name, stock in model.stocks.items():
+    for stock in model.stocks.values():
         for inflow in stock.inflows:
             if inflow not in model.flows:
                 compat_issue(
@@ -79,7 +78,7 @@ def model_to_xml(
                 f"Connector uid={connector.uid} target '{connector.to_var}' is missing"
             )
 
-    for module_name, module in model.modules.items():
+    for module in model.modules.values():
         for member in module.members:
             if member not in model.stocks and member not in model.flows and member not in model.auxs:
                 compat_issue(
@@ -459,7 +458,7 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             extras.append(ET.tostring(child, encoding="unicode"))
         return extras
 
-    def parse_point_list(text: Optional[str], context: str) -> list[float]:
+    def parse_point_list(text: str | None, context: str) -> list[float]:
         if not text:
             return []
         values: list[float] = []
@@ -471,7 +470,7 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                 return []
         return values
 
-    def parse_optional_float(value: Optional[str], context: str) -> Optional[float]:
+    def parse_optional_float(value: str | None, context: str) -> float | None:
         if value is None:
             return None
         try:
@@ -480,7 +479,7 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             compat_issue(f"Invalid numeric value '{value}' for {context}")
             return None
 
-    def parse_gf(elem: Optional[ET.Element], context: str) -> Optional[GraphicalFunction]:
+    def parse_gf(elem: ET.Element | None, context: str) -> GraphicalFunction | None:
         if elem is None:
             return None
         gf_type = elem.get("type")
@@ -514,7 +513,7 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             gf_type=gf_type if gf_type else None,
         )
 
-    def parse_required_name(elem: ET.Element, context: str) -> Optional[tuple[str, str]]:
+    def parse_required_name(elem: ET.Element, context: str) -> tuple[str, str] | None:
         raw_name = elem.get("name")
         if raw_name is None or not raw_name.strip():
             compat_issue(f"{context} is missing required name attribute and was skipped")

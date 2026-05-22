@@ -85,6 +85,23 @@ If running from source:
 }
 ```
 
+## Recommended Agent Workflow
+
+For a new model:
+
+1. `create_model` with a stable `model_id`.
+2. Add stocks, flows, and auxiliaries.
+3. Run `sync_connectors_from_equations`.
+4. Run `inspect_model` with `include_validation=true`.
+5. Fix validation errors with `update_*`, `rename_variable`, or `delete_variable`.
+6. Save with `save_model`.
+
+For imported models:
+
+1. `read_model` with `compat_mode="permissive"` to inspect warnings.
+2. Run `inspect_model` to understand model structure.
+3. Use `compat_mode="strict"` before final save when round-trip fidelity matters.
+
 ## Available Tools
 
 ### Model Creation & I/O
@@ -92,6 +109,7 @@ If running from source:
 | Tool | Description |
 |------|-------------|
 | `create_model` | Create a new model with name and time settings (start, stop, dt, method) |
+| `set_sim_specs` | Update simulation time settings on an existing model |
 | `read_model` | Load an existing .stmx file |
 | `save_model` | Save model to a .stmx file |
 
@@ -111,7 +129,11 @@ If running from source:
 | `add_stock` | Add a stock (reservoir) with initial value and units |
 | `add_flow` | Add a flow between stocks with an equation |
 | `add_aux` | Add an auxiliary variable (parameter or calculation) |
+| `update_stock` | Update stock fields while preserving relationships |
+| `update_flow` | Update flow fields while preserving stock links |
+| `update_aux` | Update auxiliary variable fields |
 | `add_connector` | Add a dependency connector between variables |
+| `sync_connectors_from_equations` | Add missing dependency connectors inferred from equations |
 | `set_connector_routing` | Set connector angle and explicit waypoint routing metadata |
 | `rename_variable` | Rename a stock/flow/aux and update references in equations/connectors/modules |
 | `delete_variable` | Delete a stock/flow/aux with consistency checks and cleanup |
@@ -143,6 +165,7 @@ Notes:
 | Tool | Description |
 |------|-------------|
 | `list_models` | List available session model IDs and indicate the current model |
+| `inspect_model` | Return a structured model summary for agent inspection |
 | `list_modules` | List modules/groups in the current model |
 | `list_connectors` | List connector IDs, endpoints, angles, and routing metadata |
 | `list_variables` | List all stocks, flows, and auxiliaries |
@@ -163,6 +186,10 @@ Create and switch between session models:
 
 ```json
 {"name":"list_models","arguments":{}}
+```
+
+```json
+{"name":"inspect_model","arguments":{"model_id":"sir_baseline","include_validation":true}}
 ```
 
 List and load templates:
@@ -227,6 +254,18 @@ Rename and delete variables safely:
 
 ```json
 {"name":"delete_variable","arguments":{"model_id":"sir_baseline","name":"Susceptible","force":true}}
+```
+
+Update an existing variable:
+
+```json
+{"name":"update_flow","arguments":{"model_id":"pop_v1","name":"growth","equation":"Population * growth_rate * stress_modifier"}}
+```
+
+Infer missing connectors from equations:
+
+```json
+{"name":"sync_connectors_from_equations","arguments":{"model_id":"pop_v1"}}
 ```
 
 Set module view geometry directly:

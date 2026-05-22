@@ -1,8 +1,9 @@
 """Compatibility hardening tests for XMILE import/export edge cases."""
 
+import pytest
+
 from stella_mcp.validator import validate_model
 from stella_mcp.xmile import Connector, StellaModel, parse_stmx
-import pytest
 
 
 def test_dt_export_uses_safe_reciprocal_only_when_exact():

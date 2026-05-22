@@ -11,7 +11,6 @@ import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-
 # =============================================================================
 # Geometry Primitives
 # =============================================================================

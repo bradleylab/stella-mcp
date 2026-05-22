@@ -3,20 +3,33 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 from mcp.types import CallToolResult, TextContent
 
+from .model_snapshot import (
+    aux_to_dict,
+    connector_to_dict,
+    flow_to_dict,
+    model_to_summary,
+    module_to_dict,
+    stock_to_dict,
+    template_info_to_dict,
+    validation_issue_to_dict,
+)
 from .templates import (
     get_template_info,
-    list_templates as list_available_templates,
     load_template_model,
     save_user_template,
 )
+from .templates import (
+    list_templates as list_available_templates,
+)
+from .tool_results import success_result
 from .validator import validate_model
 from .xmile import GraphicalFunction, StellaModel, parse_stmx
-
 
 ToolResponse = list[TextContent] | CallToolResult
 ToolHandler = Callable[[dict[str, Any]], ToolResponse]
@@ -64,6 +77,30 @@ def register_tool_handlers(
             ),
         )]
 
+    @register("set_sim_specs")
+    def _handle_set_sim_specs(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        specs = model.set_sim_specs(
+            start=arguments.get("start"),
+            stop=arguments.get("stop"),
+            dt=arguments.get("dt"),
+            method=arguments.get("method"),
+            time_units=arguments.get("time_units"),
+        )
+        return success_result(
+            f"Updated simulation specs for model_id={model_id}",
+            {
+                "model_id": model_id,
+                "sim_specs": {
+                    "start": specs.start,
+                    "stop": specs.stop,
+                    "dt": specs.dt,
+                    "method": specs.method,
+                    "time_units": specs.time_units,
+                },
+            },
+        )
+
     @register("add_stock")
     def _handle_add_stock(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
@@ -85,6 +122,23 @@ def register_tool_handlers(
                 f"with initial value {arguments['initial_value']}{pos_info}"
             ),
         )]
+
+    @register("update_stock")
+    def _handle_update_stock(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        stock = model.update_stock(
+            name=arguments["name"],
+            initial_value=arguments.get("initial_value"),
+            units=arguments.get("units"),
+            non_negative=arguments.get("non_negative"),
+            x=arguments.get("x"),
+            y=arguments.get("y"),
+        )
+        key = model._normalize_name(arguments["name"])
+        return success_result(
+            f"Updated stock '{stock.name}' in model_id={model_id}",
+            {"model_id": model_id, "stock": stock_to_dict(key, stock)},
+        )
 
     @register("add_flow")
     def _handle_add_flow(arguments: dict[str, Any]) -> ToolResponse:
@@ -114,6 +168,24 @@ def register_tool_handlers(
             text=f"Added flow '{arguments['name']}' to model_id={model_id} {flow_str}: {arguments['equation']}{pos_info}"
         )]
 
+    @register("update_flow")
+    def _handle_update_flow(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        flow = model.update_flow(
+            name=arguments["name"],
+            equation=arguments.get("equation"),
+            units=arguments.get("units"),
+            non_negative=arguments.get("non_negative"),
+            x=arguments.get("x"),
+            y=arguments.get("y"),
+            graphical_function=build_graphical_function(arguments.get("graphical_function")),
+        )
+        key = model._normalize_name(arguments["name"])
+        return success_result(
+            f"Updated flow '{flow.name}' in model_id={model_id}",
+            {"model_id": model_id, "flow": flow_to_dict(model, key, flow)},
+        )
+
     @register("add_aux")
     def _handle_add_aux(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
@@ -133,6 +205,23 @@ def register_tool_handlers(
             text=f"Added auxiliary '{arguments['name']}' to model_id={model_id} = {arguments['equation']}{pos_info}"
         )]
 
+    @register("update_aux")
+    def _handle_update_aux(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        aux = model.update_aux(
+            name=arguments["name"],
+            equation=arguments.get("equation"),
+            units=arguments.get("units"),
+            x=arguments.get("x"),
+            y=arguments.get("y"),
+            graphical_function=build_graphical_function(arguments.get("graphical_function")),
+        )
+        key = model._normalize_name(arguments["name"])
+        return success_result(
+            f"Updated auxiliary '{aux.name}' in model_id={model_id}",
+            {"model_id": model_id, "auxiliary": aux_to_dict(key, aux)},
+        )
+
     @register("add_connector")
     def _handle_add_connector(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
@@ -144,6 +233,18 @@ def register_tool_handlers(
             type="text",
             text=f"Added connector in model_id={model_id} from '{arguments['from_var']}' to '{arguments['to_var']}'"
         )]
+
+    @register("sync_connectors_from_equations")
+    def _handle_sync_connectors_from_equations(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        summary = model.sync_connectors_from_equations()
+        return success_result(
+            (
+                f"Synced connectors for model_id={model_id}: "
+                f"added={summary['added']}, existing={summary['existing']}"
+            ),
+            {"model_id": model_id, **summary},
+        )
 
     @register("set_connector_routing")
     def _handle_set_connector_routing(arguments: dict[str, Any]) -> ToolResponse:
@@ -397,7 +498,7 @@ def register_tool_handlers(
             tags=arguments.get("tags"),
         )
         if not templates:
-            return [TextContent(type="text", text="No templates available.")]
+            return success_result("No templates available.", {"templates": []})
         lines = ["Available templates:"]
         for info in templates:
             counts = f"{info.stocks}S/{info.flows}F/{info.auxiliaries}A"
@@ -407,7 +508,10 @@ def register_tool_handlers(
             )
             if info.description:
                 lines.append(f"    {info.description}")
-        return [TextContent(type="text", text="\n".join(lines))]
+        return success_result(
+            "\n".join(lines),
+            {"templates": [template_info_to_dict(info) for info in templates]},
+        )
 
     @register("get_template_info")
     def _handle_get_template_info(arguments: dict[str, Any]) -> ToolResponse:
@@ -423,7 +527,7 @@ def register_tool_handlers(
             f"updated_at: {info.updated_at or '-'}",
             f"path: {info.path}",
         ]
-        return [TextContent(type="text", text="\n".join(lines))]
+        return success_result("\n".join(lines), {"template": template_info_to_dict(info)})
 
     @register("load_template")
     def _handle_load_template(arguments: dict[str, Any]) -> ToolResponse:
@@ -432,13 +536,17 @@ def register_tool_handlers(
         n_stocks = len(model.stocks)
         n_flows = len(model.flows)
         n_aux = len(model.auxs)
-        return [TextContent(
-            type="text",
-            text=(
+        return success_result(
+            (
                 f"Loaded template '{info.name}' [{info.source}] as model_id={model_id} "
                 f"with {n_stocks} stocks, {n_flows} flows, {n_aux} auxiliaries"
             ),
-        )]
+            {
+                "model_id": model_id,
+                "template": template_info_to_dict(info),
+                "model": model_to_summary(model_id, model),
+            },
+        )
 
     @register("save_as_template")
     def _handle_save_as_template(arguments: dict[str, Any]) -> ToolResponse:
@@ -450,28 +558,60 @@ def register_tool_handlers(
             description=arguments.get("description", ""),
             tags=arguments.get("tags"),
         )
-        return [TextContent(
-            type="text",
-            text=f"Saved model_id={model_id} as template '{info.name}' at {info.path}",
-        )]
+        return success_result(
+            f"Saved model_id={model_id} as template '{info.name}' at {info.path}",
+            {"template": template_info_to_dict(info)},
+        )
 
     @register("list_models")
     def _handle_list_models(arguments: dict[str, Any]) -> ToolResponse:
         session_models = get_session_models()
         if not session_models.models:
-            return [TextContent(type="text", text="No models created in this session.")]
+            return success_result("No models created in this session.", {"models": []})
 
         lines = ["Session models:"]
         for mid, model in sorted(session_models.models.items()):
             current = " (current)" if mid == session_models.current_model_id else ""
             lines.append(f"  - {mid}: {model.name}{current}")
-        return [TextContent(type="text", text="\n".join(lines))]
+        models_payload = [
+            {
+                "model_id": mid,
+                "name": model.name,
+                "current": mid == session_models.current_model_id,
+            }
+            for mid, model in sorted(session_models.models.items())
+        ]
+        return success_result("\n".join(lines), {"models": models_payload})
+
+    @register("inspect_model")
+    def _handle_inspect_model(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        summary = model_to_summary(model_id, model)
+        payload: dict[str, Any] = {"model": summary}
+        include_validation = arguments.get("include_validation", True)
+        if include_validation:
+            issues = validate_model(model)
+            payload["validation"] = {
+                "passed": not any(issue.severity == "error" for issue in issues),
+                "issues": [validation_issue_to_dict(issue) for issue in issues],
+            }
+        return success_result(
+            (
+                f"Model {model_id}: {model.name} "
+                f"({len(model.stocks)} stocks, {len(model.flows)} flows, "
+                f"{len(model.auxs)} auxiliaries)"
+            ),
+            payload,
+        )
 
     @register("list_modules")
     def _handle_list_modules(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
         if not model.modules:
-            return [TextContent(type="text", text=f"No modules in model_id={model_id}.")]
+            return success_result(
+                f"No modules in model_id={model_id}.",
+                {"model_id": model_id, "modules": []},
+            )
 
         lines = [f"Modules for model_id={model_id}:"]
         for module_name in sorted(model.modules):
@@ -498,13 +638,25 @@ def register_tool_handlers(
                 )
             else:
                 lines.append(f"  - {module.name}: {members}{style_suffix}")
-        return [TextContent(type="text", text="\n".join(lines))]
+        return success_result(
+            "\n".join(lines),
+            {
+                "model_id": model_id,
+                "modules": [
+                    module_to_dict(model, key, model.modules[key])
+                    for key in sorted(model.modules)
+                ],
+            },
+        )
 
     @register("list_connectors")
     def _handle_list_connectors(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
         if not model.connectors:
-            return [TextContent(type="text", text=f"No connectors in model_id={model_id}.")]
+            return success_result(
+                f"No connectors in model_id={model_id}.",
+                {"model_id": model_id, "connectors": []},
+            )
 
         lines = [f"Connectors for model_id={model_id}:"]
         for conn in sorted(model.connectors, key=lambda c: c.uid):
@@ -521,20 +673,39 @@ def register_tool_handlers(
                     preview += ", ..."
                 line += f" | pts={preview}"
             lines.append(line)
-        return [TextContent(type="text", text="\n".join(lines))]
+        return success_result(
+            "\n".join(lines),
+            {
+                "model_id": model_id,
+                "connectors": [
+                    connector_to_dict(model, conn)
+                    for conn in sorted(model.connectors, key=lambda c: c.uid)
+                ],
+            },
+        )
 
     @register("validate_model")
     def _handle_validate_model(arguments: dict[str, Any]) -> ToolResponse:
-        _, model = get_model(arguments.get("model_id"))
+        model_id, model = get_model(arguments.get("model_id"))
         errors = validate_model(model)
         if not errors:
-            return [TextContent(type="text", text="Model validation passed with no errors or warnings.")]
+            return success_result(
+                "Model validation passed with no errors or warnings.",
+                {"model_id": model_id, "passed": True, "issues": []},
+            )
 
         result_lines = ["Model validation results:"]
         for err in errors:
             prefix = "ERROR" if err.severity == "error" else "WARNING"
             result_lines.append(f"  [{prefix}] {err.category}: {err.message}")
-        return [TextContent(type="text", text="\n".join(result_lines))]
+        return success_result(
+            "\n".join(result_lines),
+            {
+                "model_id": model_id,
+                "passed": not any(err.severity == "error" for err in errors),
+                "issues": [validation_issue_to_dict(err) for err in errors],
+            },
+        )
 
     @register("list_variables")
     def _handle_list_variables(arguments: dict[str, Any]) -> ToolResponse:
@@ -545,13 +716,13 @@ def register_tool_handlers(
 
         if model.stocks:
             lines.append("Stocks:")
-            for name, stock in model.stocks.items():
+            for stock in model.stocks.values():
                 lines.append(f"  - {stock.name} = {stock.initial_value} [{stock.units}]")
             lines.append("")
 
         if model.flows:
             lines.append("Flows:")
-            for name, flow in model.flows.items():
+            for flow in model.flows.values():
                 from_str = flow.from_stock or "external"
                 to_str = flow.to_stock or "external"
                 lines.append(f"  - {flow.name}: {from_str} -> {to_str} = {flow.equation}")
@@ -559,7 +730,7 @@ def register_tool_handlers(
 
         if model.auxs:
             lines.append("Auxiliaries:")
-            for name, aux in model.auxs.items():
+            for aux in model.auxs.values():
                 lines.append(f"  - {aux.name} = {aux.equation} [{aux.units}]")
             lines.append("")
 
@@ -573,7 +744,13 @@ def register_tool_handlers(
                 )
                 lines.append(f"  - {module.name}: {members}")
 
-        return [TextContent(type="text", text="\n".join(lines))]
+        return success_result(
+            "\n".join(lines),
+            {
+                "model_id": model_id,
+                "variables": model_to_summary(model_id, model)["variables"],
+            },
+        )
 
     @register("get_model_xml")
     def _handle_get_model_xml(arguments: dict[str, Any]) -> ToolResponse:
