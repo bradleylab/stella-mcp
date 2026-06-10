@@ -707,3 +707,48 @@ def test_simulate_without_pysd_is_structured_error(monkeypatch):
     err = result.structuredContent["error"]
     assert err["code"] == "sim_dependency_missing"
     assert "stella-mcp[sim]" in err["message"]
+
+
+def test_gf_equation_exports_spec_form_without_graph_wrapper():
+    """GRAPH(input) is tool-input convention; spec XMILE wants only the input
+    expression in <eqn> when a <gf> is present (Stella and PySD both reject
+    the wrapper)."""
+    from stella_mcp.xmile import GraphicalFunction, StellaModel
+
+    model = StellaModel("GF")
+    model.add_aux(
+        "seasonal",
+        "GRAPH(TIME)",
+        graphical_function=GraphicalFunction(ypts=[1.0, 1.2], xscale=(0, 10)),
+    )
+    model.add_aux("plain", "GRAPH(TIME)")  # no gf: equation exported verbatim
+
+    xml = model.to_xml()
+
+    assert "<eqn>TIME</eqn>" in xml
+    assert xml.count("GRAPH(TIME)") == 1  # only the gf-less aux keeps the text
+    # In-memory equation (tool input) is untouched.
+    assert model.auxs["seasonal"].equation == "GRAPH(TIME)"
+
+
+def test_gf_equation_without_graph_wrapper_exports_verbatim():
+    from stella_mcp.xmile import GraphicalFunction, StellaModel
+
+    model = StellaModel("GF")
+    model.add_aux(
+        "effect",
+        "Population / 2",
+        graphical_function=GraphicalFunction(ypts=[0.0, 1.0], xscale=(0, 100)),
+    )
+    model.add_stock("Population", "100")
+
+    assert "<eqn>Population / 2</eqn>" in model.to_xml()
+
+
+def test_gf_equation_nested_parens_stripped_correctly():
+    from stella_mcp.xmile_io import gf_eqn_text
+
+    assert gf_eqn_text("GRAPH(TIME)") == "TIME"
+    assert gf_eqn_text("graph( x * (y + 1) )") == "x * (y + 1)"
+    assert gf_eqn_text("GRAPH(TIME) * 2") == "GRAPH(TIME) * 2"  # not a pure wrapper
+    assert gf_eqn_text("Population / 2") == "Population / 2"

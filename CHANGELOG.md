@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sep` attribute, and the legacy space-separated form — real Stella
   files with comma-separated `ypts` previously lost their graphical
   functions silently on import.
+- Graphical-function equations written as `GRAPH(input)` (the documented
+  tool-input convention) are exported in spec form — only the input
+  expression in `<eqn>` — since both Stella and PySD reject the
+  `GRAPH()` wrapper. The in-memory equation and tool input are
+  unchanged; only the XMILE output differs.
 
 ### Changed
 

@@ -2,16 +2,14 @@
 
 PySD is the established open-source XMILE runner; it is deliberately an
 optional extra (``stella-mcp[sim]``) so the core package keeps its single
-``mcp`` dependency. Everything here operates on a deep copy of the model:
-``to_xml()`` mutates layout state, and the GRAPH-equation shim below must
-never leak into the session model.
+``mcp`` dependency. Everything here operates on a deep copy of the model
+because ``to_xml()`` mutates layout state.
 """
 
 from __future__ import annotations
 
 import copy
 import math
-import re
 import tempfile
 import warnings
 from pathlib import Path
@@ -20,11 +18,6 @@ from typing import Any
 from .xmile import StellaModel
 
 DEFAULT_MAX_POINTS = 101
-
-# Stella's textual convention writes gf-bearing equations as GRAPH(input).
-# Spec XMILE puts only the input expression in <eqn> when a <gf> is present,
-# and PySD implements the spec form, so the simulation copy is rewritten.
-_GRAPH_CALL = re.compile(r"^\s*GRAPH\s*\((.*)\)\s*$", re.IGNORECASE | re.DOTALL)
 
 
 class SimulationDependencyError(RuntimeError):
@@ -148,12 +141,9 @@ def run_simulation(
             "Euler only; results will differ from Stella for stiff systems."
         )
 
+    # The XMILE writer handles the GRAPH(input) -> spec-form rewrite for
+    # gf-bearing equations; the copy exists because export mutates layout.
     sim_model = copy.deepcopy(model)
-    for var in [*sim_model.auxs.values(), *sim_model.flows.values()]:
-        if var.graphical_function is not None:
-            match = _GRAPH_CALL.match(var.equation)
-            if match:
-                var.equation = match.group(1)
 
     handle = tempfile.NamedTemporaryFile(
         suffix=".stmx", mode="w", delete=False, encoding="utf-8"

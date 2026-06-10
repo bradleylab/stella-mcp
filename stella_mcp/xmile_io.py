@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET
 from html import escape
 
@@ -16,6 +17,18 @@ from .xmile import (
     StellaModel,
     Stock,
 )
+
+# This package's tool input accepts the Stella textual convention
+# GRAPH(input) for graphical-function equations, but spec XMILE puts only
+# the input expression in <eqn> when a <gf> is present — Stella and PySD
+# both reject the GRAPH() wrapper on import.
+_GRAPH_CALL = re.compile(r"^\s*GRAPH\s*\((.*)\)\s*$", re.IGNORECASE | re.DOTALL)
+
+
+def gf_eqn_text(equation: str) -> str:
+    """Equation text to export for a gf-bearing variable (spec form)."""
+    match = _GRAPH_CALL.match(equation)
+    return match.group(1).strip() if match else equation
 
 
 def model_to_xml(
@@ -190,9 +203,11 @@ def model_to_xml(
             reserved_names={"name"},
         )
         lines.append(f'\t\t\t<flow name="{display}"{flow_extra_attrs}>')
-        lines.append(f'\t\t\t\t<eqn>{escape(flow.equation)}</eqn>')
         if flow.graphical_function is not None:
+            lines.append(f'\t\t\t\t<eqn>{escape(gf_eqn_text(flow.equation))}</eqn>')
             model._add_graphical_function_str(lines, flow.graphical_function)
+        else:
+            lines.append(f'\t\t\t\t<eqn>{escape(flow.equation)}</eqn>')
         if flow.non_negative:
             lines.append('\t\t\t\t<non_negative/>')
         if flow.units:
@@ -210,9 +225,11 @@ def model_to_xml(
             reserved_names={"name"},
         )
         lines.append(f'\t\t\t<aux name="{display}"{aux_extra_attrs}>')
-        lines.append(f'\t\t\t\t<eqn>{escape(aux.equation)}</eqn>')
         if aux.graphical_function is not None:
+            lines.append(f'\t\t\t\t<eqn>{escape(gf_eqn_text(aux.equation))}</eqn>')
             model._add_graphical_function_str(lines, aux.graphical_function)
+        else:
+            lines.append(f'\t\t\t\t<eqn>{escape(aux.equation)}</eqn>')
         if aux.units:
             lines.append(f'\t\t\t\t<units>{escape(aux.units)}</units>')
         for fragment in aux.extra_children_xml:
