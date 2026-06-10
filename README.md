@@ -41,6 +41,22 @@ pip install -e .
 
 ## Configuration
 
+### Via uvx (no install required)
+
+If you have [uv](https://docs.astral.sh/uv/) installed, the lowest-friction
+configuration runs the published package directly:
+
+```json
+{
+  "mcpServers": {
+    "stella": {
+      "command": "uvx",
+      "args": ["stella-mcp"]
+    }
+  }
+}
+```
+
 ### Claude Desktop
 
 Add to your `claude_desktop_config.json`:
@@ -424,7 +440,9 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 PyPI publishing is handled by `.github/workflows/publish.yml` using PyPI Trusted
 Publishing. To release a new version:
 
-1. Update the version in `pyproject.toml` and `stella_mcp/__init__.py`.
+1. Update the version in `pyproject.toml` and `stella_mcp/__init__.py`, and
+   move the `[Unreleased]` items in `CHANGELOG.md` under the new version
+   heading.
 2. Merge the release changes to `main`.
 3. Create and publish a GitHub release with a matching tag, for example `v0.5.0`.
 
