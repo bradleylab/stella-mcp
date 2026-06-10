@@ -159,3 +159,20 @@ def test_simulate_include_selects_variables(monkeypatch):
 
     names = [s["name"] for s in result.structuredContent["series"]]
     assert names == ["growth"]
+
+
+def test_series_summary_excludes_non_finite_values():
+    """Summaries must not silently absorb NaN/inf (min/max are NaN-order-dependent)."""
+    from stella_mcp.simulate import _series_summary
+
+    summary, flagged = _series_summary([1.0, float("nan"), 5.0, float("inf"), 2.0])
+    assert flagged is True
+    assert summary == {"initial": 1.0, "final": 2.0, "min": 1.0, "max": 5.0}
+
+    summary, flagged = _series_summary([float("nan"), float("nan")])
+    assert flagged is True
+    assert summary == {"initial": None, "final": None, "min": None, "max": None}
+
+    summary, flagged = _series_summary([3.0, 4.0])
+    assert flagged is False
+    assert summary == {"initial": 3.0, "final": 4.0, "min": 3.0, "max": 4.0}

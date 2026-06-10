@@ -146,7 +146,10 @@ def _error_result(
         "category": category,
     }
     if details:
-        error.update(details)
+        # Detail keys must never clobber the classified envelope fields.
+        for key, value in details.items():
+            if key not in error:
+                error[key] = value
     return CallToolResult(
         isError=True,
         content=[TextContent(type="text", text=f"[{code}] {message}")],

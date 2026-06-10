@@ -92,15 +92,16 @@ def test_sync_connectors_handles_quoted_refs():
 
 def test_xmile_and_validator_use_same_reference_extraction():
     model = StellaModel("ParserConsistency")
-    equation = 'MAX(Stock_A, LOOKUP("label", input_var)) + aux_1'
+    equation = 'MAX(Stock_A, "net growth rate") + aux_1'
 
     xmile_refs = model._extract_variable_refs(equation)
     validator_refs = ModelValidator(model)._extract_variable_references(equation)
 
-    # Both layers see identical candidates, including the quoted span
-    # ("label" — unresolved quoted candidates are filtered downstream).
-    # xmile normalizes names; these refs are already underscore-friendly.
-    assert xmile_refs == validator_refs == {"Stock_A", "input_var", "aux_1", "label"}
+    # Both layers see the same candidates; the xmile layer normalizes
+    # quoted display names to internal keys, the validator returns raw
+    # refs and normalizes at membership-check time.
+    assert xmile_refs == {"Stock_A", "net_growth_rate", "aux_1"}
+    assert validator_refs == {"Stock_A", "net growth rate", "aux_1"}
 
 
 def test_sync_connectors_from_equations_adds_missing_and_preserves_existing():

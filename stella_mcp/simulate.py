@@ -46,6 +46,31 @@ def _json_safe(value: float) -> float | None:
     return None if (math.isnan(value) or math.isinf(value)) else float(value)
 
 
+def _series_summary(values: list[float]) -> tuple[dict[str, float | None], bool]:
+    """Summarize a series over its finite values only.
+
+    Python's min/max are order-dependent in the presence of NaN, so
+    summaries computed over raw values could look finite while hiding bad
+    points. Returns (summary, had_non_finite).
+    """
+    finite = [v for v in values if math.isfinite(v)]
+    had_non_finite = len(finite) != len(values)
+    if not finite:
+        return (
+            {"initial": None, "final": None, "min": None, "max": None},
+            had_non_finite,
+        )
+    return (
+        {
+            "initial": _json_safe(values[0]),
+            "final": _json_safe(values[-1]),
+            "min": min(finite),
+            "max": max(finite),
+        },
+        had_non_finite,
+    )
+
+
 def _downsample_indices(n: int, max_points: int) -> list[int]:
     """Evenly strided indices keeping the first and last point."""
     if n <= max_points:
@@ -130,13 +155,13 @@ def run_simulation(
             if match:
                 var.equation = match.group(1)
 
-    with tempfile.NamedTemporaryFile(
+    handle = tempfile.NamedTemporaryFile(
         suffix=".stmx", mode="w", delete=False, encoding="utf-8"
-    ) as handle:
-        handle.write(sim_model.to_xml())
-        tmp_path = Path(handle.name)
-
+    )
+    tmp_path = Path(handle.name)
     try:
+        with handle:
+            handle.write(sim_model.to_xml())
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             runner = pysd.read_xmile(str(tmp_path))
@@ -160,17 +185,18 @@ def run_simulation(
             continue
         column = results[display]
         values = [float(v) for v in column]
+        summary, had_non_finite = _series_summary(values)
+        if had_non_finite:
+            sim_warnings.append(
+                f"Series '{display}' contains non-finite values (NaN/inf); "
+                "summary covers finite points only"
+            )
         series.append({
             "name": display,
             "points": [
                 {"t": times[i], "value": _json_safe(values[i])} for i in indices
             ],
-            "summary": {
-                "initial": _json_safe(values[0]),
-                "final": _json_safe(values[-1]),
-                "min": _json_safe(min(values)),
-                "max": _json_safe(max(values)),
-            },
+            "summary": summary,
         })
 
     return {

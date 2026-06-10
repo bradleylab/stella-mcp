@@ -225,3 +225,80 @@ def test_build_model_module_view_and_style_applied(monkeypatch):
     assert module["box"] == {"x": 100, "y": 100, "width": 300, "height": 200}
     assert module["style"]["background"] == "#FFF7E6"
     assert module["style"]["label_side"] == "top"
+
+
+def test_build_model_non_string_equation_fails_atomically(monkeypatch):
+    """A non-string equation must fail at item validation, before registration.
+
+    Regression: connector sync previously ran after registration, so a
+    value that only exploded during sync left the broken model in the
+    session with an internal_error.
+    """
+    _fresh_session(monkeypatch, 3009)
+    args = {
+        "name": "BadEq",
+        "model_id": "badeq",
+        "stocks": [{"name": "S", "initial_value": "1"}],
+        "auxs": [{"name": "k", "equation": ["not", "a", "string"]}],
+    }
+
+    result = _call("build_model", args)
+
+    assert result.isError
+    err = result.structuredContent["error"]
+    assert err["code"] == "invalid_input"
+    assert err["stage"] == "auxs"
+    assert err["index"] == 0
+    listed = _call("list_models", {})
+    assert listed.structuredContent["models"] == []
+
+
+def test_add_variables_non_string_equation_leaves_model_unchanged(monkeypatch):
+    _fresh_session(monkeypatch, 3010)
+    _call("create_model", {"name": "Pop", "model_id": "pop"})
+    _call("add_stock", {"model_id": "pop", "name": "Population", "initial_value": "100"})
+
+    result = _call("add_variables", {
+        "model_id": "pop",
+        "auxs": [{"name": "k", "equation": {"bad": True}}],
+    })
+
+    assert result.isError
+    assert result.structuredContent["error"]["stage"] == "auxs"
+    inspected = _call("inspect_model", {"model_id": "pop", "include_validation": False})
+    assert inspected.structuredContent["model"]["counts"]["auxiliaries"] == 0
+
+
+def test_build_model_numeric_equation_coerced(monkeypatch):
+    """Plain numbers are common for constant parameters; coerce, don't reject."""
+    _fresh_session(monkeypatch, 3011)
+    args = {
+        "name": "Num",
+        "model_id": "num",
+        "stocks": [{"name": "S", "initial_value": 100}],
+        "auxs": [{"name": "k", "equation": 0.1}],
+    }
+
+    result = _call("build_model", args)
+
+    assert not result.isError
+    model = result.structuredContent["model"]
+    assert model["variables"]["stocks"][0]["initial_value"] == "100"
+    assert model["variables"]["auxiliaries"][0]["equation"] == "0.1"
+
+
+def test_error_details_cannot_clobber_envelope_keys():
+    """Exception .details with reserved keys must not corrupt the envelope."""
+    from stella_mcp.server import _error_result
+
+    result = _error_result(
+        code="invalid_input",
+        message="real message",
+        category="user_input",
+        details={"code": "spoofed", "message": "spoofed", "stage": "flows"},
+    )
+
+    err = result.structuredContent["error"]
+    assert err["code"] == "invalid_input"
+    assert err["message"] == "real message"
+    assert err["stage"] == "flows"

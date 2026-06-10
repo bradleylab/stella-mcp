@@ -55,13 +55,33 @@ def _apply_batch_items(
         message = (
             f"missing required field {exc}" if isinstance(exc, KeyError) else str(exc)
         )
-        return BatchItemError(stage, index, item.get("name") or item.get("to_var"), message)
+        name = item.get("name") if isinstance(item.get("name"), str) else item.get("to_var")
+        return BatchItemError(stage, index, name, message)
+
+    def name_field(item: dict[str, Any], field: str = "name") -> str:
+        value = item[field]
+        if not isinstance(value, str):
+            raise ValueError(f"field '{field}' must be a string")
+        return value
+
+    def text_field(item: dict[str, Any], field: str) -> str:
+        # Schema says string, but inputs are not schema-enforced at the
+        # server; numbers are common for constant equations and unambiguous.
+        # Anything else must fail HERE, before the item lands in the model —
+        # a bad value that only explodes later (export, connector sync) would
+        # break batch atomicity.
+        value = item[field]
+        if isinstance(value, str):
+            return value
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return f"{value:g}" if isinstance(value, float) else str(value)
+        raise ValueError(f"field '{field}' must be a string (or number)")
 
     for index, item in enumerate(arguments.get("stocks") or []):
         try:
             model.add_stock(
-                name=item["name"],
-                initial_value=item["initial_value"],
+                name=name_field(item),
+                initial_value=text_field(item, "initial_value"),
                 units=item.get("units", ""),
                 non_negative=item.get("non_negative", True),
                 x=item.get("x"),
@@ -74,8 +94,8 @@ def _apply_batch_items(
     for index, item in enumerate(arguments.get("auxs") or []):
         try:
             model.add_aux(
-                name=item["name"],
-                equation=item["equation"],
+                name=name_field(item),
+                equation=text_field(item, "equation"),
                 units=item.get("units", ""),
                 x=item.get("x"),
                 y=item.get("y"),
@@ -88,8 +108,8 @@ def _apply_batch_items(
     for index, item in enumerate(arguments.get("flows") or []):
         try:
             model.add_flow(
-                name=item["name"],
-                equation=item["equation"],
+                name=name_field(item),
+                equation=text_field(item, "equation"),
                 units=item.get("units", ""),
                 from_stock=item.get("from_stock"),
                 to_stock=item.get("to_stock"),
@@ -180,26 +200,37 @@ def register_tool_handlers(
             ),
         )]
 
+    def _finalize_batch(model: StellaModel, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Run connector sync and validation on the still-unregistered model.
+
+        Must run BEFORE registration/swap: anything that can raise has to
+        fire while the model is still outside the session, or a failed
+        batch would leave partial state behind.
+        """
+        extras: dict[str, Any] = {}
+        if arguments.get("sync_connectors", True):
+            extras["connector_sync"] = model.sync_connectors_from_equations()
+        if arguments.get("validate", True):
+            issues = validate_model(model)
+            extras["validation"] = {
+                "passed": not any(issue.severity == "error" for issue in issues),
+                "issues": [validation_issue_to_dict(issue) for issue in issues],
+            }
+        return extras
+
     def _batch_response(
         action: str,
         model_id: str,
         model: StellaModel,
         added: dict[str, int],
-        arguments: dict[str, Any],
+        extras: dict[str, Any],
     ) -> ToolResponse:
         payload: dict[str, Any] = {
             "model_id": model_id,
             "added": added,
             "model": model_to_summary(model_id, model),
+            **extras,
         }
-        if arguments.get("sync_connectors", True):
-            payload["connector_sync"] = model.sync_connectors_from_equations()
-        if arguments.get("validate", True):
-            issues = validate_model(model)
-            payload["validation"] = {
-                "passed": not any(issue.severity == "error" for issue in issues),
-                "issues": [validation_issue_to_dict(issue) for issue in issues],
-            }
         counts_text = ", ".join(f"{count} {kind}" for kind, count in added.items() if count)
         return success_result(
             f"{action} model_id={model_id}: added {counts_text or 'nothing'}",
@@ -228,20 +259,24 @@ def register_tool_handlers(
         model.sim_specs.method = sim.get("method", "Euler")
         model.sim_specs.time_units = sim.get("time_units", "Years")
 
-        # All items apply to the unregistered model: any failure raises
-        # before registration, so a failed batch leaves no session trace.
+        # Items, connector sync, and validation all run on the unregistered
+        # model: any failure raises before registration, so a failed batch
+        # leaves no session trace.
         added = _apply_batch_items(model, arguments, build_graphical_function)
+        extras = _finalize_batch(model, arguments)
         model_id = set_current_model(model, model_id=requested_id)
-        return _batch_response("Built", model_id, model, added, arguments)
+        return _batch_response("Built", model_id, model, added, extras)
 
     @register("add_variables")
     def _handle_add_variables(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
-        # Atomic: apply to a scratch copy, swap into the session on success.
+        # Atomic: apply items, sync, and validate on a scratch copy; swap
+        # into the session only after everything that can raise has run.
         scratch = copy.deepcopy(model)
         added = _apply_batch_items(scratch, arguments, build_graphical_function)
+        extras = _finalize_batch(scratch, arguments)
         get_session_models().models[model_id] = scratch
-        return _batch_response("Updated", model_id, scratch, added, arguments)
+        return _batch_response("Updated", model_id, scratch, added, extras)
 
     @register("set_sim_specs")
     def _handle_set_sim_specs(arguments: dict[str, Any]) -> ToolResponse:
