@@ -27,3 +27,16 @@ jobs:
         run: uv run python -m pytest tests/test_compatibility_corpus.py
       - name: Run full test suite
         run: uv run python -m pytest
+
+  test-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies with sim extra
+        run: uv sync --locked --extra dev --extra sim
+      - name: Run simulation tests
+        run: uv run python -m pytest tests/test_simulate.py

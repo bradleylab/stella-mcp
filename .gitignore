@@ -60,3 +60,4 @@ Thumbs.db
 !tests/fixtures/
 !tests/fixtures/compat_corpus/
 !tests/fixtures/compat_corpus/*.stmx
+stella_mcp/builtin_templates/*.py

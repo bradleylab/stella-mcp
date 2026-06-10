@@ -28,6 +28,9 @@ dev = [
     "pytest>=8",
     "ruff>=0.8",
 ]
+sim = [
+    "pysd>=3.14",
+]
 
 [project.scripts]
 stella-mcp = "stella_mcp.server:main"

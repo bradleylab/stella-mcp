@@ -458,11 +458,25 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             extras.append(ET.tostring(child, encoding="unicode"))
         return extras
 
-    def parse_point_list(text: str | None, context: str) -> list[float]:
+    def parse_point_list(
+        text: str | None, context: str, sep: str | None = None
+    ) -> list[float]:
         if not text:
             return []
+        # XMILE point lists are comma-separated by default, with an optional
+        # sep attribute; exports from older versions of this package used
+        # spaces, so whitespace splitting is kept as the fallback.
+        if sep:
+            tokens = text.split(sep)
+        elif "," in text:
+            tokens = text.split(",")
+        else:
+            tokens = text.split()
         values: list[float] = []
-        for raw in text.split():
+        for raw in tokens:
+            raw = raw.strip()
+            if not raw:
+                continue
             try:
                 values.append(float(raw))
             except ValueError:
@@ -488,7 +502,11 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
         yscale_elem = find_child(elem, "yscale")
         ypts_elem = find_child(elem, "ypts")
 
-        xpts = parse_point_list(xpts_elem.text, f"{context}.xpts") if xpts_elem is not None else None
+        xpts = (
+            parse_point_list(xpts_elem.text, f"{context}.xpts", sep=xpts_elem.get("sep"))
+            if xpts_elem is not None
+            else None
+        )
         xscale = None
         if xscale_elem is not None:
             min_val = parse_optional_float(xscale_elem.get("min"), f"{context}.xscale.min")
@@ -501,7 +519,11 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             max_val = parse_optional_float(yscale_elem.get("max"), f"{context}.yscale.max")
             if min_val is not None and max_val is not None:
                 yscale = (min_val, max_val)
-        ypts = parse_point_list(ypts_elem.text if ypts_elem is not None else None, f"{context}.ypts")
+        ypts = parse_point_list(
+            ypts_elem.text if ypts_elem is not None else None,
+            f"{context}.ypts",
+            sep=ypts_elem.get("sep") if ypts_elem is not None else None,
+        )
         if not ypts:
             compat_issue(f"Graphical function for {context} has empty/invalid ypts and was skipped")
             return None

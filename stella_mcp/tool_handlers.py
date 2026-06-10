@@ -20,6 +20,7 @@ from .model_snapshot import (
     template_info_to_dict,
     validation_issue_to_dict,
 )
+from .simulate import run_simulation
 from .templates import (
     get_template_info,
     load_template_model,
@@ -747,6 +748,26 @@ def register_tool_handlers(
             for mid, model in sorted(session_models.models.items())
         ]
         return success_result("\n".join(lines), {"models": models_payload})
+
+    @register("simulate")
+    def _handle_simulate(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        result = run_simulation(
+            model,
+            overrides=arguments.get("overrides"),
+            max_points=arguments.get("max_points", 101),
+            include=arguments.get("include"),
+            save_results_csv=arguments.get("save_results_csv"),
+        )
+        finals = ", ".join(
+            f"{s['name']}={s['summary']['final']}" for s in result["series"]
+        )
+        warn_text = f" ({len(result['warnings'])} warnings)" if result["warnings"] else ""
+        return success_result(
+            f"Simulated model_id={model_id} from {result['sim_specs']['start']} to "
+            f"{result['sim_specs']['stop']}{warn_text}. Final values: {finals}",
+            {"model_id": model_id, **result},
+        )
 
     @register("delete_model")
     def _handle_delete_model(arguments: dict[str, Any]) -> ToolResponse:

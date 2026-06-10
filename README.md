@@ -110,7 +110,8 @@ For a new model:
    default, so the response doubles as an inspection).
 2. Fix validation errors with `update_*`, `rename_variable`, or `delete_variable`.
 3. Extend incrementally with `add_variables` (batch) or the single-add tools.
-4. Save with `save_model`.
+4. `simulate` to sanity-check behavior (requires the `sim` extra).
+5. Save with `save_model`.
 
 For imported models:
 
@@ -190,6 +191,7 @@ Notes:
 | `list_variables` | List all stocks, flows, and auxiliaries |
 | `validate_model` | Check for errors (undefined variables, missing connections, etc.) |
 | `get_model_xml` | Preview the XMILE XML output |
+| `simulate` | Run the model via PySD and return time series + summaries (`sim` extra) |
 
 ### Batch Building
 
@@ -437,6 +439,35 @@ Claude: [Uses create_model, add_stock (x4), add_aux (x8), add_flow (x6), save_mo
         Creates a model with nutrient cycling between surface and deep ocean
         including upwelling, downwelling, biological uptake, and remineralization
 ```
+
+## Simulation
+
+The `simulate` tool runs the current model and returns downsampled time
+series plus per-variable summaries (initial/final/min/max), closing the
+build→verify loop without opening Stella. It requires the optional
+[PySD](https://pysd.readthedocs.io/) dependency:
+
+```bash
+pip install 'stella-mcp[sim]'
+```
+
+```json
+{"name":"simulate","arguments":{"model_id":"pop_v1","overrides":{"growth_rate":0.05},"include":["Population"],"max_points":50}}
+```
+
+Notes and caveats:
+
+- PySD integrates with **Euler only** — models whose `method` is RK4 simulate
+  with Euler and the response carries a warning. Results can differ from
+  Stella for stiff systems.
+- PySD supports a subset of XMILE; unsupported constructs fail with a
+  structured error rather than wrong numbers.
+- `overrides` accepts variable names in display (`"growth rate"`) or
+  underscore (`growth_rate`) form and replaces the variable with a constant.
+- `save_results_csv` writes the full-resolution results table with a `time`
+  column.
+- The session model is never modified by simulation (the run uses a
+  throwaway copy).
 
 ## Validation
 

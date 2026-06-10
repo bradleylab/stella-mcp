@@ -1978,7 +1978,9 @@ class StellaModel:
         lines.append('\t\t\t\t</style>')
 
     def _format_point_list(self, points: list[float]) -> str:
-        return " ".join(f"{p:g}" for p in points)
+        # XMILE defines point lists as comma-separated (the sep attribute can
+        # override, but readers like Stella and PySD assume the spec default).
+        return ",".join(f"{p:g}" for p in points)
 
     def _add_graphical_function_str(self, lines: list[str], gf: GraphicalFunction):
         attrs = f' type="{escape(gf.gf_type)}"' if gf.gf_type else ""

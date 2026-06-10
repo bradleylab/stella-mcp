@@ -634,3 +634,52 @@ def test_delete_model_unknown_id_is_structured_error(monkeypatch):
 
     assert result.isError
     assert result.structuredContent["error"]["code"] == "model_not_found"
+
+
+def test_graphical_function_exports_comma_separated_points(monkeypatch):
+    """XMILE point lists are comma-separated by spec (readers like Stella and PySD rely on it)."""
+    from stella_mcp.xmile import GraphicalFunction, StellaModel
+
+    model = StellaModel("GF")
+    model.add_aux(
+        "lookup",
+        "GRAPH(TIME)",
+        graphical_function=GraphicalFunction(ypts=[1.0, 1.2, 0.8], xscale=(0, 10)),
+    )
+    xml = model.to_xml()
+    assert "<ypts>1,1.2,0.8</ypts>" in xml
+
+
+def test_graphical_function_import_accepts_comma_space_and_sep(tmp_path):
+    """Importer accepts comma-separated (Stella), legacy space-separated, and explicit sep."""
+    from stella_mcp.xmile import parse_stmx
+
+    template = """<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0">
+  <header><name>GF</name></header>
+  <sim_specs><start>0</start><stop>10</stop><dt>0.25</dt></sim_specs>
+  <model>
+    <variables>
+      <aux name="lookup">
+        <eqn>GRAPH(TIME)</eqn>
+        <gf>
+          <xscale min="0" max="10"/>
+          <ypts{sep_attr}>{ypts}</ypts>
+        </gf>
+      </aux>
+    </variables>
+  </model>
+</xmile>
+"""
+    cases = [
+        ("", "1,1.2,0.8"),
+        ("", "1 1.2 0.8"),
+        (' sep=";"', "1;1.2;0.8"),
+    ]
+    for i, (sep_attr, ypts) in enumerate(cases):
+        path = tmp_path / f"gf_{i}.stmx"
+        path.write_text(template.format(sep_attr=sep_attr, ypts=ypts))
+        model = parse_stmx(str(path))
+        gf = model.auxs["lookup"].graphical_function
+        assert gf is not None, f"case {i}: graphical function was dropped"
+        assert gf.ypts == [1.0, 1.2, 0.8], f"case {i}: wrong ypts {gf.ypts}"

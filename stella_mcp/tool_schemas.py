@@ -724,6 +724,44 @@ def build_tool_definitions() -> list[Tool]:
             },
         ),
         Tool(
+            name="simulate",
+            description=(
+                "Run the model and return downsampled time series with per-"
+                "variable summaries (initial/final/min/max). Requires the "
+                "optional pysd dependency (pip install 'stella-mcp[sim]'). "
+                "Integration is Euler regardless of the model's method setting."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "overrides": {
+                        "type": "object",
+                        "description": (
+                            "Constant parameter overrides keyed by variable name "
+                            "(display or underscore form)"
+                        ),
+                        "additionalProperties": {"type": "number"},
+                    },
+                    "include": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Variables to report (default: all stocks)",
+                    },
+                    "max_points": {
+                        "type": "integer",
+                        "description": "Maximum points per returned series",
+                        "default": 101,
+                        "minimum": 2,
+                    },
+                    "save_results_csv": {
+                        "type": "string",
+                        "description": "Optional path to write the full results table as CSV",
+                    },
+                },
+            },
+        ),
+        Tool(
             name="list_models",
             description="List all model IDs available in the current session",
             inputSchema={

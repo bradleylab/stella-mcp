@@ -156,7 +156,11 @@ def _error_result(
 
 def _classify_error(exc: Exception) -> tuple[str, str]:
     """Map Python exceptions to stable tool error codes/categories."""
+    from .simulate import SimulationDependencyError
+
     message = str(exc)
+    if isinstance(exc, SimulationDependencyError):
+        return ("sim_dependency_missing", "environment")
     if isinstance(exc, FileNotFoundError):
         return ("not_found", "user_input")
     if isinstance(exc, ValueError):
