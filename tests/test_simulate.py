@@ -1,11 +1,17 @@
-"""Tests for the simulate tool (pysd-backed, optional extra)."""
+"""Tests for the simulate tool (pysd-backed, optional extra).
+
+The whole module is skipped when pysd is not installed; the
+dependency-missing error path is covered in test_server_state_and_gf.py,
+which runs without the sim extra.
+"""
 
 import asyncio
-import sys
 
 import pytest
 
-from stella_mcp import server as server_mod
+pysd = pytest.importorskip("pysd")
+
+from stella_mcp import server as server_mod  # noqa: E402
 
 
 def _call(name, arguments):
@@ -15,24 +21,6 @@ def _call(name, arguments):
 def _fresh_session(monkeypatch, key):
     server_mod._session_models.clear()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: key)
-
-
-def test_simulate_without_pysd_is_structured_error(monkeypatch):
-    """Missing optional dependency must produce the dedicated error code."""
-    _fresh_session(monkeypatch, 4000)
-    _call("create_model", {"name": "M", "model_id": "m"})
-    _call("add_stock", {"model_id": "m", "name": "S", "initial_value": "1"})
-    monkeypatch.setitem(sys.modules, "pysd", None)
-
-    result = _call("simulate", {"model_id": "m"})
-
-    assert result.isError
-    err = result.structuredContent["error"]
-    assert err["code"] == "sim_dependency_missing"
-    assert "stella-mcp[sim]" in err["message"]
-
-
-pysd = pytest.importorskip("pysd")
 
 
 def _build_growth_model(monkeypatch, key):

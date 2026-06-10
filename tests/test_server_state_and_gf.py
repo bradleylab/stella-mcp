@@ -683,3 +683,27 @@ def test_graphical_function_import_accepts_comma_space_and_sep(tmp_path):
         gf = model.auxs["lookup"].graphical_function
         assert gf is not None, f"case {i}: graphical function was dropped"
         assert gf.ypts == [1.0, 1.2, 0.8], f"case {i}: wrong ypts {gf.ypts}"
+
+
+def test_simulate_without_pysd_is_structured_error(monkeypatch):
+    """Missing optional sim dependency must produce the dedicated error code.
+
+    Lives here (not test_simulate.py) so it runs in environments without
+    the sim extra — test_simulate.py is module-skipped when pysd is absent.
+    """
+    import sys
+
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2109)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "M", "model_id": "m"}))
+    asyncio.run(
+        server_mod.call_tool("add_stock", {"model_id": "m", "name": "S", "initial_value": "1"})
+    )
+    monkeypatch.setitem(sys.modules, "pysd", None)
+
+    result = asyncio.run(server_mod.call_tool("simulate", {"model_id": "m"}))
+
+    assert result.isError
+    err = result.structuredContent["error"]
+    assert err["code"] == "sim_dependency_missing"
+    assert "stella-mcp[sim]" in err["message"]
