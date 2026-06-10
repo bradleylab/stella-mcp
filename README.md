@@ -128,6 +128,7 @@ For imported models:
 | `set_sim_specs` | Update simulation time settings on an existing model |
 | `read_model` | Load an existing .stmx file |
 | `save_model` | Save model to a .stmx file |
+| `delete_model` | Remove a model from the session (saved files untouched) |
 
 ### Templates
 
@@ -202,6 +203,10 @@ Create and switch between session models:
 
 ```json
 {"name":"list_models","arguments":{}}
+```
+
+```json
+{"name":"delete_model","arguments":{"model_id":"pop_v1"}}
 ```
 
 ```json

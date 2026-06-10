@@ -594,3 +594,43 @@ def test_sync_connectors_from_equations_tool(monkeypatch):
     assert result.structuredContent["added"] == 2
     listed = asyncio.run(server_mod.call_tool("list_connectors", {"model_id": "m1"}))
     assert len(listed.structuredContent["connectors"]) == 2
+
+
+def test_delete_model_removes_from_session(monkeypatch):
+    """delete_model should drop the model and report remaining session state."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2106)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "A", "model_id": "a"}))
+    asyncio.run(server_mod.call_tool("create_model", {"name": "B", "model_id": "b"}))
+
+    result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "a"}))
+
+    assert result.structuredContent["deleted"] == "a"
+    assert result.structuredContent["remaining"] == ["b"]
+    listed = asyncio.run(server_mod.call_tool("list_models", {}))
+    assert [m["model_id"] for m in listed.structuredContent["models"]] == ["b"]
+
+
+def test_delete_model_clears_current_pointer(monkeypatch):
+    """Deleting the current model should leave the session with no current model."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2107)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "A", "model_id": "a"}))
+
+    result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "a"}))
+
+    assert result.structuredContent["current_model_id"] is None
+    followup = asyncio.run(server_mod.call_tool("list_variables", {}))
+    assert followup.isError
+    assert followup.structuredContent["error"]["code"] == "model_not_found"
+
+
+def test_delete_model_unknown_id_is_structured_error(monkeypatch):
+    """Unknown model_id should map to the model_not_found error code."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2108)
+
+    result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "nope"}))
+
+    assert result.isError
+    assert result.structuredContent["error"]["code"] == "model_not_found"

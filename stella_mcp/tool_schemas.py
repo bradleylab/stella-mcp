@@ -565,6 +565,24 @@ def build_tool_definitions() -> list[Tool]:
             },
         ),
         Tool(
+            name="delete_model",
+            description=(
+                "Remove a model from the current session. Saved .stmx files are "
+                "not touched. model_id is required — there is deliberately no "
+                "implicit 'delete current model'."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": {
+                        "type": "string",
+                        "description": "Session model ID to remove",
+                    },
+                },
+                "required": ["model_id"],
+            },
+        ),
+        Tool(
             name="inspect_model",
             description="Return a structured summary of the current model for agent inspection",
             inputSchema={

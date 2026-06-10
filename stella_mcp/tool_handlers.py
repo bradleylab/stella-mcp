@@ -583,6 +583,26 @@ def register_tool_handlers(
         ]
         return success_result("\n".join(lines), {"models": models_payload})
 
+    @register("delete_model")
+    def _handle_delete_model(arguments: dict[str, Any]) -> ToolResponse:
+        session_models = get_session_models()
+        model_id = arguments["model_id"]
+        if model_id not in session_models.models:
+            raise ValueError(f"Unknown model_id '{model_id}' for this session")
+        del session_models.models[model_id]
+        if session_models.current_model_id == model_id:
+            session_models.current_model_id = None
+        remaining = sorted(session_models.models)
+        return success_result(
+            f"Deleted model_id={model_id} from session ({len(remaining)} remaining). "
+            "Saved .stmx files are not affected.",
+            {
+                "deleted": model_id,
+                "remaining": remaining,
+                "current_model_id": session_models.current_model_id,
+            },
+        )
+
     @register("inspect_model")
     def _handle_inspect_model(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
