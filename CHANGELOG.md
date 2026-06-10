@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-10
+
+### Added
+
+- `simulate` tool: run the model through [PySD](https://pysd.readthedocs.io/)
+  and return downsampled time series with per-variable summaries, parameter
+  overrides, variable selection, and optional CSV export. PySD is an
+  optional extra: `pip install 'stella-mcp[sim]'`. Integration is Euler
+  regardless of the model's method setting (a warning is included for
+  RK4 models).
+- Batch construction tools: `build_model` (create and populate a model in
+  one call) and `add_variables` (batch-extend an existing model). Both are
+  all-or-nothing; item failures report the failing stage, index, and item
+  name in the structured error.
+- `delete_model` tool to remove a model from the session.
+- Quoted identifiers in equations (`"net growth rate" * Population`) are
+  now recognized as variable references by validation and connector sync;
+  quoted spans matching no variable produce an
+  `unresolved_quoted_reference` warning instead of an undefined-variable
+  error.
+- `CHANGELOG.md` and a uvx-based client configuration example.
+
+### Fixed
+
+- Reserved-token list now covers the full XMILE v1.0 builtin set and the
+  isee Stella extensions, so functions like `SINWAVE`, `ARCTAN`, or
+  `CLOCKTIME` are no longer misread as undefined variables (which also
+  caused `sync_connectors_from_equations` to fabricate connectors).
+- Graphical-function point lists are exported comma-separated per the
+  XMILE spec (previously space-separated, which broke downstream XMILE
+  readers such as PySD). Import now accepts comma-separated values, the
+  `sep` attribute, and the legacy space-separated form — real Stella
+  files with comma-separated `ypts` previously lost their graphical
+  functions silently on import.
+
+### Changed
+
+- CI installs from the committed `uv.lock` (`uv sync --locked`) and fails
+  when the lockfile drifts.
+
 ## [0.6.0] - 2026-05-22
 
 ### Added
@@ -55,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tool_handlers.py`, `xmile_io.py`, `equation_parser.py`,
   `templates.py`).
 
-[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/bradleylab/stella-mcp/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/bradleylab/stella-mcp/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/bradleylab/stella-mcp/compare/v0.4.0...v0.5.0

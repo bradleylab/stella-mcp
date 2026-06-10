@@ -1,3 +1,3 @@
 """Stella MCP Server - Create and manipulate Stella system dynamics models."""
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
