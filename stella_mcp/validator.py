@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from .equation_parser import extract_variable_references
+from .equation_parser import extract_quoted_references, extract_variable_references
 from .xmile import StellaModel
 
 
@@ -56,27 +56,38 @@ class ModelValidator:
         """Check for references to undefined variables."""
         all_vars = self._get_all_variable_names()
 
-        # Check flow equations
-        for name, flow in self.model.flows.items():
-            refs = self._extract_variable_references(flow.equation)
+        variables = [
+            ("Flow", name, flow.name, flow.equation)
+            for name, flow in self.model.flows.items()
+        ] + [
+            ("Auxiliary", name, aux.name, aux.equation)
+            for name, aux in self.model.auxs.items()
+        ]
+
+        for kind, name, display_name, equation in variables:
+            refs = self._extract_variable_references(equation)
+            quoted = extract_quoted_references(equation)
             for ref in refs:
-                if ref not in all_vars:
+                if self.model._normalize_name(ref) in all_vars:
+                    continue
+                if ref in quoted:
+                    # A quoted span that matches no variable may be a genuine
+                    # string argument (e.g., a label), so this is not a hard error.
                     self.errors.append(ValidationError(
-                        severity="error",
-                        category="undefined_variable",
-                        message=f"Flow '{flow.name}' references undefined variable '{ref}'",
+                        severity="warning",
+                        category="unresolved_quoted_reference",
+                        message=(
+                            f"{kind} '{display_name}' contains quoted reference "
+                            f"'\"{ref}\"' that matches no variable (string label, "
+                            f"or a typo in a quoted variable name)"
+                        ),
                         variable=name
                     ))
-
-        # Check aux equations
-        for name, aux in self.model.auxs.items():
-            refs = self._extract_variable_references(aux.equation)
-            for ref in refs:
-                if ref not in all_vars:
+                else:
                     self.errors.append(ValidationError(
                         severity="error",
                         category="undefined_variable",
-                        message=f"Auxiliary '{aux.name}' references undefined variable '{ref}'",
+                        message=f"{kind} '{display_name}' references undefined variable '{ref}'",
                         variable=name
                     ))
 
@@ -122,8 +133,9 @@ class ModelValidator:
         for name, flow in self.model.flows.items():
             refs = self._extract_variable_references(flow.equation)
             for ref in refs:
-                if ref in all_vars and ref != name:
-                    if (ref, name) not in existing_connections:
+                normalized = self.model._normalize_name(ref)
+                if normalized in all_vars and normalized != name:
+                    if (normalized, name) not in existing_connections:
                         self.errors.append(ValidationError(
                             severity="warning",
                             category="missing_connection",
@@ -135,8 +147,9 @@ class ModelValidator:
         for name, aux in self.model.auxs.items():
             refs = self._extract_variable_references(aux.equation)
             for ref in refs:
-                if ref in all_vars and ref != name:
-                    if (ref, name) not in existing_connections:
+                normalized = self.model._normalize_name(ref)
+                if normalized in all_vars and normalized != name:
+                    if (normalized, name) not in existing_connections:
                         self.errors.append(ValidationError(
                             severity="warning",
                             category="missing_connection",
@@ -225,8 +238,10 @@ class ModelValidator:
 
         for name, aux in self.model.auxs.items():
             refs = self._extract_variable_references(aux.equation)
-            # Only track dependencies on other aux variables
-            deps[name] = refs & aux_names
+            # Only track dependencies on other aux variables; normalization
+            # maps quoted display-name refs onto internal keys, and unresolved
+            # quoted spans drop out of the intersection.
+            deps[name] = {self.model._normalize_name(ref) for ref in refs} & aux_names
 
         # Check for cycles using DFS
         def has_cycle(node: str, visited: set[str], rec_stack: set[str]) -> list[str]:
