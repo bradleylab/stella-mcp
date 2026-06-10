@@ -41,6 +41,22 @@ pip install -e .
 
 ## Configuration
 
+### Via uvx (no install required)
+
+If you have [uv](https://docs.astral.sh/uv/) installed, the lowest-friction
+configuration runs the published package directly:
+
+```json
+{
+  "mcpServers": {
+    "stella": {
+      "command": "uvx",
+      "args": ["stella-mcp"]
+    }
+  }
+}
+```
+
 ### Claude Desktop
 
 Add to your `claude_desktop_config.json`:
@@ -89,12 +105,13 @@ If running from source:
 
 For a new model:
 
-1. `create_model` with a stable `model_id`.
-2. Add stocks, flows, and auxiliaries.
-3. Run `sync_connectors_from_equations`.
-4. Run `inspect_model` with `include_validation=true`.
-5. Fix validation errors with `update_*`, `rename_variable`, or `delete_variable`.
-6. Save with `save_model`.
+1. `build_model` with a stable `model_id` and the full set of stocks,
+   auxiliaries, and flows in one call (connector sync and validation run by
+   default, so the response doubles as an inspection).
+2. Fix validation errors with `update_*`, `rename_variable`, or `delete_variable`.
+3. Extend incrementally with `add_variables` (batch) or the single-add tools.
+4. `simulate` to sanity-check behavior (requires the `sim` extra).
+5. Save with `save_model`.
 
 For imported models:
 
@@ -112,6 +129,7 @@ For imported models:
 | `set_sim_specs` | Update simulation time settings on an existing model |
 | `read_model` | Load an existing .stmx file |
 | `save_model` | Save model to a .stmx file |
+| `delete_model` | Remove a model from the session (saved files untouched) |
 
 ### Templates
 
@@ -126,6 +144,8 @@ For imported models:
 
 | Tool | Description |
 |------|-------------|
+| `build_model` | Create and populate a model in one call (atomic batch) |
+| `add_variables` | Add multiple variables/connectors/modules to an existing model (atomic batch) |
 | `add_stock` | Add a stock (reservoir) with initial value and units |
 | `add_flow` | Add a flow between stocks with an equation |
 | `add_aux` | Add an auxiliary variable (parameter or calculation) |
@@ -171,6 +191,48 @@ Notes:
 | `list_variables` | List all stocks, flows, and auxiliaries |
 | `validate_model` | Check for errors (undefined variables, missing connections, etc.) |
 | `get_model_xml` | Preview the XMILE XML output |
+| `simulate` | Run the model via PySD and return time series + summaries (`sim` extra) |
+
+### Batch Building
+
+`build_model` creates and populates a model in one call. Items apply in the
+order stocks → auxs → flows → connectors → modules; the whole batch is
+all-or-nothing, and on failure the error names the failing item
+(`error.stage` + `error.index`). The same item arrays work on an existing
+model via `add_variables`.
+
+```json
+{
+  "name": "build_model",
+  "arguments": {
+    "name": "SIR",
+    "model_id": "sir",
+    "sim_specs": {"start": 0, "stop": 100, "dt": 0.125, "time_units": "Days"},
+    "stocks": [
+      {"name": "Susceptible", "initial_value": "9999", "units": "people"},
+      {"name": "Infected", "initial_value": "1", "units": "people"},
+      {"name": "Recovered", "initial_value": "0", "units": "people"}
+    ],
+    "auxs": [
+      {"name": "contact_rate", "equation": "6"},
+      {"name": "infectivity", "equation": "0.25"},
+      {"name": "recovery_time", "equation": "2", "units": "days"},
+      {"name": "total_population", "equation": "Susceptible + Infected + Recovered"}
+    ],
+    "flows": [
+      {"name": "infection", "equation": "Susceptible * contact_rate * infectivity * Infected / total_population", "from_stock": "Susceptible", "to_stock": "Infected"},
+      {"name": "recovery", "equation": "Infected / recovery_time", "from_stock": "Infected", "to_stock": "Recovered"}
+    ],
+    "modules": [
+      {"name": "Disease Dynamics", "members": ["Susceptible", "Infected", "Recovered"]}
+    ]
+  }
+}
+```
+
+Connector sync and validation run by default (disable with
+`"sync_connectors": false` / `"validate": false`); the response includes the
+full structured model summary, so no follow-up `inspect_model` call is needed.
 
 ### Tool Payload Examples
 
@@ -186,6 +248,10 @@ Create and switch between session models:
 
 ```json
 {"name":"list_models","arguments":{}}
+```
+
+```json
+{"name":"delete_model","arguments":{"model_id":"pop_v1"}}
 ```
 
 ```json
@@ -374,6 +440,35 @@ Claude: [Uses create_model, add_stock (x4), add_aux (x8), add_flow (x6), save_mo
         including upwelling, downwelling, biological uptake, and remineralization
 ```
 
+## Simulation
+
+The `simulate` tool runs the current model and returns downsampled time
+series plus per-variable summaries (initial/final/min/max), closing the
+build→verify loop without opening Stella. It requires the optional
+[PySD](https://pysd.readthedocs.io/) dependency:
+
+```bash
+pip install 'stella-mcp[sim]'
+```
+
+```json
+{"name":"simulate","arguments":{"model_id":"pop_v1","overrides":{"growth_rate":0.05},"include":["Population"],"max_points":50}}
+```
+
+Notes and caveats:
+
+- PySD integrates with **Euler only** — models whose `method` is RK4 simulate
+  with Euler and the response carries a warning. Results can differ from
+  Stella for stiff systems.
+- PySD supports a subset of XMILE; unsupported constructs fail with a
+  structured error rather than wrong numbers.
+- `overrides` accepts variable names in display (`"growth rate"`) or
+  underscore (`growth_rate`) form and replaces the variable with a constant.
+- `save_results_csv` writes the full-resolution results table with a `time`
+  column.
+- The session model is never modified by simulation (the run uses a
+  throwaway copy).
+
 ## Validation
 
 The `validate_model` tool checks for:
@@ -424,7 +519,9 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 PyPI publishing is handled by `.github/workflows/publish.yml` using PyPI Trusted
 Publishing. To release a new version:
 
-1. Update the version in `pyproject.toml` and `stella_mcp/__init__.py`.
+1. Update the version in `pyproject.toml` and `stella_mcp/__init__.py`, and
+   move the `[Unreleased]` items in `CHANGELOG.md` under the new version
+   heading.
 2. Merge the release changes to `main`.
 3. Create and publish a GitHub release with a matching tag, for example `v0.5.0`.
 

@@ -133,24 +133,37 @@ def build_graphical_function(data: dict | None) -> GraphicalFunction | None:
     )
 
 
-def _error_result(code: str, message: str, category: str) -> CallToolResult:
+def _error_result(
+    code: str,
+    message: str,
+    category: str,
+    details: dict[str, Any] | None = None,
+) -> CallToolResult:
     """Build a structured MCP tool error result."""
+    error: dict[str, Any] = {
+        "code": code,
+        "message": message,
+        "category": category,
+    }
+    if details:
+        # Detail keys must never clobber the classified envelope fields.
+        for key, value in details.items():
+            if key not in error:
+                error[key] = value
     return CallToolResult(
         isError=True,
         content=[TextContent(type="text", text=f"[{code}] {message}")],
-        structuredContent={
-            "error": {
-                "code": code,
-                "message": message,
-                "category": category,
-            }
-        },
+        structuredContent={"error": error},
     )
 
 
 def _classify_error(exc: Exception) -> tuple[str, str]:
     """Map Python exceptions to stable tool error codes/categories."""
+    from .simulate import SimulationDependencyError
+
     message = str(exc)
+    if isinstance(exc, SimulationDependencyError):
+        return ("sim_dependency_missing", "environment")
     if isinstance(exc, FileNotFoundError):
         return ("not_found", "user_input")
     if isinstance(exc, ValueError):
@@ -213,7 +226,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> ToolResponse:
         return handler(arguments)
     except Exception as e:
         code, category = _classify_error(e)
-        return _error_result(code=code, message=str(e), category=category)
+        return _error_result(
+            code=code,
+            message=str(e),
+            category=category,
+            details=getattr(e, "details", None),
+        )
 
 
 async def run_server():

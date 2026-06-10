@@ -594,3 +594,161 @@ def test_sync_connectors_from_equations_tool(monkeypatch):
     assert result.structuredContent["added"] == 2
     listed = asyncio.run(server_mod.call_tool("list_connectors", {"model_id": "m1"}))
     assert len(listed.structuredContent["connectors"]) == 2
+
+
+def test_delete_model_removes_from_session(monkeypatch):
+    """delete_model should drop the model and report remaining session state."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2106)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "A", "model_id": "a"}))
+    asyncio.run(server_mod.call_tool("create_model", {"name": "B", "model_id": "b"}))
+
+    result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "a"}))
+
+    assert result.structuredContent["deleted"] == "a"
+    assert result.structuredContent["remaining"] == ["b"]
+    listed = asyncio.run(server_mod.call_tool("list_models", {}))
+    assert [m["model_id"] for m in listed.structuredContent["models"]] == ["b"]
+
+
+def test_delete_model_clears_current_pointer(monkeypatch):
+    """Deleting the current model should leave the session with no current model."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2107)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "A", "model_id": "a"}))
+
+    result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "a"}))
+
+    assert result.structuredContent["current_model_id"] is None
+    followup = asyncio.run(server_mod.call_tool("list_variables", {}))
+    assert followup.isError
+    assert followup.structuredContent["error"]["code"] == "model_not_found"
+
+
+def test_delete_model_unknown_id_is_structured_error(monkeypatch):
+    """Unknown model_id should map to the model_not_found error code."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2108)
+
+    result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "nope"}))
+
+    assert result.isError
+    assert result.structuredContent["error"]["code"] == "model_not_found"
+
+
+def test_graphical_function_exports_comma_separated_points(monkeypatch):
+    """XMILE point lists are comma-separated by spec (readers like Stella and PySD rely on it)."""
+    from stella_mcp.xmile import GraphicalFunction, StellaModel
+
+    model = StellaModel("GF")
+    model.add_aux(
+        "lookup",
+        "GRAPH(TIME)",
+        graphical_function=GraphicalFunction(ypts=[1.0, 1.2, 0.8], xscale=(0, 10)),
+    )
+    xml = model.to_xml()
+    assert "<ypts>1,1.2,0.8</ypts>" in xml
+
+
+def test_graphical_function_import_accepts_comma_space_and_sep(tmp_path):
+    """Importer accepts comma-separated (Stella), legacy space-separated, and explicit sep."""
+    from stella_mcp.xmile import parse_stmx
+
+    template = """<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0">
+  <header><name>GF</name></header>
+  <sim_specs><start>0</start><stop>10</stop><dt>0.25</dt></sim_specs>
+  <model>
+    <variables>
+      <aux name="lookup">
+        <eqn>GRAPH(TIME)</eqn>
+        <gf>
+          <xscale min="0" max="10"/>
+          <ypts{sep_attr}>{ypts}</ypts>
+        </gf>
+      </aux>
+    </variables>
+  </model>
+</xmile>
+"""
+    cases = [
+        ("", "1,1.2,0.8"),
+        ("", "1 1.2 0.8"),
+        (' sep=";"', "1;1.2;0.8"),
+    ]
+    for i, (sep_attr, ypts) in enumerate(cases):
+        path = tmp_path / f"gf_{i}.stmx"
+        path.write_text(template.format(sep_attr=sep_attr, ypts=ypts))
+        model = parse_stmx(str(path))
+        gf = model.auxs["lookup"].graphical_function
+        assert gf is not None, f"case {i}: graphical function was dropped"
+        assert gf.ypts == [1.0, 1.2, 0.8], f"case {i}: wrong ypts {gf.ypts}"
+
+
+def test_simulate_without_pysd_is_structured_error(monkeypatch):
+    """Missing optional sim dependency must produce the dedicated error code.
+
+    Lives here (not test_simulate.py) so it runs in environments without
+    the sim extra — test_simulate.py is module-skipped when pysd is absent.
+    """
+    import sys
+
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2109)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "M", "model_id": "m"}))
+    asyncio.run(
+        server_mod.call_tool("add_stock", {"model_id": "m", "name": "S", "initial_value": "1"})
+    )
+    monkeypatch.setitem(sys.modules, "pysd", None)
+
+    result = asyncio.run(server_mod.call_tool("simulate", {"model_id": "m"}))
+
+    assert result.isError
+    err = result.structuredContent["error"]
+    assert err["code"] == "sim_dependency_missing"
+    assert "stella-mcp[sim]" in err["message"]
+
+
+def test_gf_equation_exports_spec_form_without_graph_wrapper():
+    """GRAPH(input) is tool-input convention; spec XMILE wants only the input
+    expression in <eqn> when a <gf> is present (Stella and PySD both reject
+    the wrapper)."""
+    from stella_mcp.xmile import GraphicalFunction, StellaModel
+
+    model = StellaModel("GF")
+    model.add_aux(
+        "seasonal",
+        "GRAPH(TIME)",
+        graphical_function=GraphicalFunction(ypts=[1.0, 1.2], xscale=(0, 10)),
+    )
+    model.add_aux("plain", "GRAPH(TIME)")  # no gf: equation exported verbatim
+
+    xml = model.to_xml()
+
+    assert "<eqn>TIME</eqn>" in xml
+    assert xml.count("GRAPH(TIME)") == 1  # only the gf-less aux keeps the text
+    # In-memory equation (tool input) is untouched.
+    assert model.auxs["seasonal"].equation == "GRAPH(TIME)"
+
+
+def test_gf_equation_without_graph_wrapper_exports_verbatim():
+    from stella_mcp.xmile import GraphicalFunction, StellaModel
+
+    model = StellaModel("GF")
+    model.add_aux(
+        "effect",
+        "Population / 2",
+        graphical_function=GraphicalFunction(ypts=[0.0, 1.0], xscale=(0, 100)),
+    )
+    model.add_stock("Population", "100")
+
+    assert "<eqn>Population / 2</eqn>" in model.to_xml()
+
+
+def test_gf_equation_nested_parens_stripped_correctly():
+    from stella_mcp.xmile_io import gf_eqn_text
+
+    assert gf_eqn_text("GRAPH(TIME)") == "TIME"
+    assert gf_eqn_text("graph( x * (y + 1) )") == "x * (y + 1)"
+    assert gf_eqn_text("GRAPH(TIME) * 2") == "GRAPH(TIME) * 2"  # not a pure wrapper
+    assert gf_eqn_text("Population / 2") == "Population / 2"
