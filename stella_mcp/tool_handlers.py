@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import math
 from collections.abc import Callable
 from pathlib import Path
@@ -27,12 +28,113 @@ from .templates import (
 from .templates import (
     list_templates as list_available_templates,
 )
-from .tool_results import success_result
+from .tool_results import BatchItemError, success_result
 from .validator import validate_model
 from .xmile import GraphicalFunction, StellaModel, parse_stmx
 
 ToolResponse = list[TextContent] | CallToolResult
 ToolHandler = Callable[[dict[str, Any]], ToolResponse]
+
+
+def _apply_batch_items(
+    model: StellaModel,
+    arguments: dict[str, Any],
+    build_graphical_function: Callable[[dict[str, Any] | None], GraphicalFunction | None],
+) -> dict[str, int]:
+    """Apply batched variable/connector/module items to a model.
+
+    Application order matters: auxs before flows so flow equations can
+    reference parameters, flows after stocks because they attach to them.
+    Raises BatchItemError naming the failing item; callers guarantee
+    atomicity by applying to a scratch model and swapping on success.
+    """
+    added = {"stocks": 0, "flows": 0, "auxiliaries": 0, "connectors": 0, "modules": 0}
+
+    def fail(stage: str, index: int, item: dict[str, Any], exc: Exception) -> BatchItemError:
+        message = (
+            f"missing required field {exc}" if isinstance(exc, KeyError) else str(exc)
+        )
+        return BatchItemError(stage, index, item.get("name") or item.get("to_var"), message)
+
+    for index, item in enumerate(arguments.get("stocks") or []):
+        try:
+            model.add_stock(
+                name=item["name"],
+                initial_value=item["initial_value"],
+                units=item.get("units", ""),
+                non_negative=item.get("non_negative", True),
+                x=item.get("x"),
+                y=item.get("y"),
+            )
+            added["stocks"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("stocks", index, item, exc) from exc
+
+    for index, item in enumerate(arguments.get("auxs") or []):
+        try:
+            model.add_aux(
+                name=item["name"],
+                equation=item["equation"],
+                units=item.get("units", ""),
+                x=item.get("x"),
+                y=item.get("y"),
+                graphical_function=build_graphical_function(item.get("graphical_function")),
+            )
+            added["auxiliaries"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("auxs", index, item, exc) from exc
+
+    for index, item in enumerate(arguments.get("flows") or []):
+        try:
+            model.add_flow(
+                name=item["name"],
+                equation=item["equation"],
+                units=item.get("units", ""),
+                from_stock=item.get("from_stock"),
+                to_stock=item.get("to_stock"),
+                non_negative=item.get("non_negative", True),
+                x=item.get("x"),
+                y=item.get("y"),
+                graphical_function=build_graphical_function(item.get("graphical_function")),
+            )
+            added["flows"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("flows", index, item, exc) from exc
+
+    for index, item in enumerate(arguments.get("connectors") or []):
+        try:
+            model.add_connector(item["from_var"], item["to_var"])
+            added["connectors"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("connectors", index, item, exc) from exc
+
+    for index, item in enumerate(arguments.get("modules") or []):
+        try:
+            model.create_module(item["name"], members=item.get("members"))
+            view = item.get("view")
+            if view is not None:
+                model.set_module_view(
+                    item["name"],
+                    x=view["x"],
+                    y=view["y"],
+                    width=view["width"],
+                    height=view["height"],
+                )
+            style = item.get("style")
+            if style is not None:
+                model.set_module_style(
+                    item["name"],
+                    border_color=style.get("border_color"),
+                    background=style.get("background"),
+                    font_color=style.get("font_color"),
+                    font_size=style.get("font_size"),
+                    label_side=style.get("label_side"),
+                )
+            added["modules"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("modules", index, item, exc) from exc
+
+    return added
 
 
 class SessionModelsLike(Protocol):
@@ -76,6 +178,69 @@ def register_tool_handlers(
                 f"(model_id={model_id}) with time range {start}-{stop}, dt={dt}"
             ),
         )]
+
+    def _batch_response(
+        action: str,
+        model_id: str,
+        model: StellaModel,
+        added: dict[str, int],
+        arguments: dict[str, Any],
+    ) -> ToolResponse:
+        payload: dict[str, Any] = {
+            "model_id": model_id,
+            "added": added,
+            "model": model_to_summary(model_id, model),
+        }
+        if arguments.get("sync_connectors", True):
+            payload["connector_sync"] = model.sync_connectors_from_equations()
+        if arguments.get("validate", True):
+            issues = validate_model(model)
+            payload["validation"] = {
+                "passed": not any(issue.severity == "error" for issue in issues),
+                "issues": [validation_issue_to_dict(issue) for issue in issues],
+            }
+        counts_text = ", ".join(f"{count} {kind}" for kind, count in added.items() if count)
+        return success_result(
+            f"{action} model_id={model_id}: added {counts_text or 'nothing'}",
+            payload,
+        )
+
+    @register("build_model")
+    def _handle_build_model(arguments: dict[str, Any]) -> ToolResponse:
+        requested_id = arguments.get("model_id")
+        if requested_id and requested_id in get_session_models().models:
+            raise ValueError(f"model_id '{requested_id}' already exists in this session")
+
+        sim = arguments.get("sim_specs") or {}
+        start = float(sim.get("start", 0))
+        stop = float(sim.get("stop", 100))
+        dt = float(sim.get("dt", 0.25))
+        if dt <= 0:
+            raise ValueError("dt must be > 0")
+        if stop <= start:
+            raise ValueError("stop must be greater than start")
+
+        model = StellaModel(name=arguments["name"])
+        model.sim_specs.start = start
+        model.sim_specs.stop = stop
+        model.sim_specs.dt = dt
+        model.sim_specs.method = sim.get("method", "Euler")
+        model.sim_specs.time_units = sim.get("time_units", "Years")
+
+        # All items apply to the unregistered model: any failure raises
+        # before registration, so a failed batch leaves no session trace.
+        added = _apply_batch_items(model, arguments, build_graphical_function)
+        model_id = set_current_model(model, model_id=requested_id)
+        return _batch_response("Built", model_id, model, added, arguments)
+
+    @register("add_variables")
+    def _handle_add_variables(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        # Atomic: apply to a scratch copy, swap into the session on success.
+        scratch = copy.deepcopy(model)
+        added = _apply_batch_items(scratch, arguments, build_graphical_function)
+        get_session_models().models[model_id] = scratch
+        return _batch_response("Updated", model_id, scratch, added, arguments)
 
     @register("set_sim_specs")
     def _handle_set_sim_specs(arguments: dict[str, Any]) -> ToolResponse:

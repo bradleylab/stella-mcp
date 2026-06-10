@@ -57,6 +57,127 @@ def build_tool_definitions() -> list[Tool]:
             {"required": ["xpts"]},
         ],
     }
+    stock_item_schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Stock name"},
+            "initial_value": {"type": "string", "description": "Initial value (number or equation)"},
+            "units": {"type": "string", "description": "Units", "default": ""},
+            "non_negative": {"type": "boolean", "description": "Prevent negative values", "default": True},
+            "x": {"type": "number", "description": "X position (optional, auto-positioned if not specified)"},
+            "y": {"type": "number", "description": "Y position (optional, auto-positioned if not specified)"},
+        },
+        "required": ["name", "initial_value"],
+    }
+    flow_item_schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Flow name"},
+            "equation": {"type": "string", "description": "Flow rate equation"},
+            "units": {"type": "string", "description": "Units", "default": ""},
+            "from_stock": {"type": "string", "description": "Source stock (omit for external source)"},
+            "to_stock": {"type": "string", "description": "Destination stock (omit for external sink)"},
+            "non_negative": {"type": "boolean", "description": "Prevent negative values", "default": True},
+            "x": {"type": "number", "description": "X position (optional)"},
+            "y": {"type": "number", "description": "Y position (optional)"},
+            "graphical_function": graphical_function_schema,
+        },
+        "required": ["name", "equation"],
+    }
+    aux_item_schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Variable name"},
+            "equation": {"type": "string", "description": "Equation or constant value"},
+            "units": {"type": "string", "description": "Units", "default": ""},
+            "x": {"type": "number", "description": "X position (optional)"},
+            "y": {"type": "number", "description": "Y position (optional)"},
+            "graphical_function": graphical_function_schema,
+        },
+        "required": ["name", "equation"],
+    }
+    connector_item_schema = {
+        "type": "object",
+        "properties": {
+            "from_var": {"type": "string", "description": "Source variable name"},
+            "to_var": {"type": "string", "description": "Target variable name (the one using from_var)"},
+        },
+        "required": ["from_var", "to_var"],
+    }
+    module_item_schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Module name"},
+            "members": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Member variable names",
+            },
+            "view": {
+                "type": "object",
+                "description": "Optional explicit module box geometry",
+                "properties": {
+                    "x": {"type": "number", "description": "Center X"},
+                    "y": {"type": "number", "description": "Center Y"},
+                    "width": {"type": "number", "description": "Box width"},
+                    "height": {"type": "number", "description": "Box height"},
+                },
+                "required": ["x", "y", "width", "height"],
+            },
+            "style": {
+                "type": "object",
+                "description": "Optional module box style",
+                "properties": {
+                    "border_color": {"type": "string", "description": "Module border/line color"},
+                    "background": {"type": "string", "description": "Module fill/background color"},
+                    "font_color": {"type": "string", "description": "Module label font color"},
+                    "font_size": {"type": "string", "description": "Module label font size (e.g., 9pt)"},
+                    "label_side": {
+                        "type": "string",
+                        "description": "Module label position: top, bottom, left, or right",
+                    },
+                },
+            },
+        },
+        "required": ["name"],
+    }
+    batch_item_properties = {
+        "stocks": {
+            "type": "array",
+            "items": stock_item_schema,
+            "description": "Stocks to add (applied first)",
+        },
+        "auxs": {
+            "type": "array",
+            "items": aux_item_schema,
+            "description": "Auxiliary variables to add (applied after stocks)",
+        },
+        "flows": {
+            "type": "array",
+            "items": flow_item_schema,
+            "description": "Flows to add (applied after stocks and auxs)",
+        },
+        "connectors": {
+            "type": "array",
+            "items": connector_item_schema,
+            "description": "Explicit connectors to add (applied after variables)",
+        },
+        "modules": {
+            "type": "array",
+            "items": module_item_schema,
+            "description": "Modules to create (applied last)",
+        },
+        "sync_connectors": {
+            "type": "boolean",
+            "description": "Run sync_connectors_from_equations after applying items",
+            "default": True,
+        },
+        "validate": {
+            "type": "boolean",
+            "description": "Include validation results in the response",
+            "default": True,
+        },
+    }
     return [
         Tool(
             name="create_model",
@@ -73,6 +194,52 @@ def build_tool_definitions() -> list[Tool]:
                     "time_units": {"type": "string", "description": "Time units", "default": "Years"},
                 },
                 "required": ["name"],
+            },
+        ),
+        Tool(
+            name="build_model",
+            description=(
+                "Create and populate a model in one call: sim specs, stocks, "
+                "auxiliaries, flows, connectors, and modules. All-or-nothing — "
+                "on any item error nothing is registered and the error names the "
+                "failing item (stage + index). Connector sync and validation run "
+                "by default, so the response doubles as an inspection."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Model name"},
+                    "model_id": {"type": "string", "description": "Optional model ID to assign in this session"},
+                    "sim_specs": {
+                        "type": "object",
+                        "description": "Simulation time settings",
+                        "properties": {
+                            "start": {"type": "number", "description": "Simulation start time", "default": 0},
+                            "stop": {"type": "number", "description": "Simulation stop time", "default": 100},
+                            "dt": {"type": "number", "description": "Time step", "default": 0.25},
+                            "method": {"type": "string", "description": "Integration method (Euler or RK4)", "default": "Euler"},
+                            "time_units": {"type": "string", "description": "Time units", "default": "Years"},
+                        },
+                    },
+                    **batch_item_properties,
+                },
+                "required": ["name"],
+            },
+        ),
+        Tool(
+            name="add_variables",
+            description=(
+                "Add multiple stocks, auxiliaries, flows, connectors, and/or "
+                "modules to an existing model in one call. All-or-nothing — on "
+                "any item error the model is left unchanged and the error names "
+                "the failing item (stage + index)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    **batch_item_properties,
+                },
             },
         ),
         Tool(

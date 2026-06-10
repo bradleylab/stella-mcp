@@ -105,12 +105,12 @@ If running from source:
 
 For a new model:
 
-1. `create_model` with a stable `model_id`.
-2. Add stocks, flows, and auxiliaries.
-3. Run `sync_connectors_from_equations`.
-4. Run `inspect_model` with `include_validation=true`.
-5. Fix validation errors with `update_*`, `rename_variable`, or `delete_variable`.
-6. Save with `save_model`.
+1. `build_model` with a stable `model_id` and the full set of stocks,
+   auxiliaries, and flows in one call (connector sync and validation run by
+   default, so the response doubles as an inspection).
+2. Fix validation errors with `update_*`, `rename_variable`, or `delete_variable`.
+3. Extend incrementally with `add_variables` (batch) or the single-add tools.
+4. Save with `save_model`.
 
 For imported models:
 
@@ -143,6 +143,8 @@ For imported models:
 
 | Tool | Description |
 |------|-------------|
+| `build_model` | Create and populate a model in one call (atomic batch) |
+| `add_variables` | Add multiple variables/connectors/modules to an existing model (atomic batch) |
 | `add_stock` | Add a stock (reservoir) with initial value and units |
 | `add_flow` | Add a flow between stocks with an equation |
 | `add_aux` | Add an auxiliary variable (parameter or calculation) |
@@ -188,6 +190,47 @@ Notes:
 | `list_variables` | List all stocks, flows, and auxiliaries |
 | `validate_model` | Check for errors (undefined variables, missing connections, etc.) |
 | `get_model_xml` | Preview the XMILE XML output |
+
+### Batch Building
+
+`build_model` creates and populates a model in one call. Items apply in the
+order stocks → auxs → flows → connectors → modules; the whole batch is
+all-or-nothing, and on failure the error names the failing item
+(`error.stage` + `error.index`). The same item arrays work on an existing
+model via `add_variables`.
+
+```json
+{
+  "name": "build_model",
+  "arguments": {
+    "name": "SIR",
+    "model_id": "sir",
+    "sim_specs": {"start": 0, "stop": 100, "dt": 0.125, "time_units": "Days"},
+    "stocks": [
+      {"name": "Susceptible", "initial_value": "9999", "units": "people"},
+      {"name": "Infected", "initial_value": "1", "units": "people"},
+      {"name": "Recovered", "initial_value": "0", "units": "people"}
+    ],
+    "auxs": [
+      {"name": "contact_rate", "equation": "6"},
+      {"name": "infectivity", "equation": "0.25"},
+      {"name": "recovery_time", "equation": "2", "units": "days"},
+      {"name": "total_population", "equation": "Susceptible + Infected + Recovered"}
+    ],
+    "flows": [
+      {"name": "infection", "equation": "Susceptible * contact_rate * infectivity * Infected / total_population", "from_stock": "Susceptible", "to_stock": "Infected"},
+      {"name": "recovery", "equation": "Infected / recovery_time", "from_stock": "Infected", "to_stock": "Recovered"}
+    ],
+    "modules": [
+      {"name": "Disease Dynamics", "members": ["Susceptible", "Infected", "Recovered"]}
+    ]
+  }
+}
+```
+
+Connector sync and validation run by default (disable with
+`"sync_connectors": false` / `"validate": false`); the response includes the
+full structured model summary, so no follow-up `inspect_model` call is needed.
 
 ### Tool Payload Examples
 
