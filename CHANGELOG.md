@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-11
+
+### Added
+
+- `render_diagram` tool: render the model as an SVG stock-and-flow diagram
+  (stocks as rectangles, auxiliaries as circles, flows as valved pipes with
+  source/sink clouds, dependency connectors as arcs), returned inline and
+  optionally written to a file. Pure stdlib — no rasterization dependency.
+  Runs auto-layout first by default.
+- Units validation (warning-tier, conservative): `units_missing` flags a
+  stock or flow with no units while others define them; `units_inconsistent`
+  flags a flow whose units don't read as stock-units-per-time-unit when every
+  attached stock shares the same units. Both stay silent when uncertain.
+- `unused_variable` validation warning for an auxiliary referenced by no
+  equation or connector.
+- MCP tool annotations (`readOnlyHint`/`destructiveHint`/`idempotentHint`) on
+  every tool.
+- MCP resources: `stella://templates/{name}` and `stella://models/{model_id}`.
+- MCP prompt `build-stella-model` encoding the recommended modeling workflow.
+
+### Changed
+
+- `get_model_xml` is now read-only: it exports from a copy, so previewing XML
+  no longer rewrites the model's layout state.
+- Minimum `mcp` dependency raised to `>=1.7.0` (introduces `ToolAnnotations`);
+  a CI job exercises the suite pinned at that floor.
+
 ## [0.7.0] - 2026-06-10
 
 ### Added
@@ -100,7 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tool_handlers.py`, `xmile_io.py`, `equation_parser.py`,
   `templates.py`).
 
-[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/bradleylab/stella-mcp/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/bradleylab/stella-mcp/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/bradleylab/stella-mcp/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/bradleylab/stella-mcp/compare/v0.4.0...v0.5.0
