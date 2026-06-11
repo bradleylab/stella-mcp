@@ -499,6 +499,10 @@ The `validate_model` tool checks for:
 - **Orphan flows** - Flows not connected to any stock
 - **Circular dependencies** - Infinite loops in auxiliary calculations
 - **Module integrity** - Empty modules (warning) and modules referencing missing members (error)
+- **Units present** - A stock or flow missing units while others define them (warning)
+- **Units consistency** - A flow whose units don't read as `stock-units/time-unit`
+  when every attached stock shares the same units (warning; conservative —
+  stays silent on conversion flows and anything it can't confidently parse)
 
 ## XMILE Compatibility
 
