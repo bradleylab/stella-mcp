@@ -10,17 +10,22 @@ runner, so importing this module never requires the optional ``sim`` extra.
 
 from __future__ import annotations
 
+import csv
+import math
 from typing import Any
 
 from .simulate import (
     DEFAULT_MAX_POINTS,
     _compile_runner,
+    _resolve_key,
     method_warnings,
     resolve_overrides,
     resolve_report_keys,
     summarize_run,
 )
 from .xmile import StellaModel
+
+_METRICS = frozenset({"final", "max", "min", "mean", "time_to_threshold"})
 
 
 def _sub(a: float | None, b: float | None) -> float | None:
@@ -190,4 +195,299 @@ def compare_scenarios(
         },
         "scenarios": scenario_payload,
         "csv_path": save_comparison_csv,
+    }
+
+
+# =============================================================================
+# Sensitivity analysis (one-at-a-time)
+# =============================================================================
+
+def _output_series(results: Any, display: str) -> tuple[list[float] | None, list[float] | None]:
+    """Full (non-downsampled) (times, values) for one variable, or (None, None)
+    when the backend did not report it."""
+    if display not in results.columns:
+        return None, None
+    times = [float(t) for t in results.index]
+    values = [float(v) for v in results[display]]
+    return times, values
+
+
+def _time_to_threshold(
+    times: list[float], values: list[float], threshold: float
+) -> float | None:
+    """First time the series crosses ``threshold``.
+
+    Direction is inferred from the first finite value: a series starting below
+    the threshold crosses when it first reaches/exceeds it, one starting above
+    crosses when it first reaches/falls below. Non-finite points are skipped.
+    Returns None if it never crosses.
+    """
+    rising = None
+    for t, v in zip(times, values, strict=True):
+        if not math.isfinite(v):
+            continue
+        if rising is None:
+            if v == threshold:
+                return float(t)
+            rising = v < threshold
+        if (rising and v >= threshold) or (not rising and v <= threshold):
+            return float(t)
+    return None
+
+
+def _reduce_metric(
+    times: list[float] | None,
+    values: list[float] | None,
+    metric: str,
+    threshold: float | None,
+) -> float | None:
+    """Reduce a full output series to the requested scalar metric.
+
+    max/min/mean cover finite values only (consistent with the simulate
+    summaries); ``final`` is None when the last point is non-finite. Returns
+    None when the metric is undefined (e.g. an all-NaN series, or a threshold
+    never crossed)."""
+    if not values:
+        return None
+    if metric == "final":
+        last = values[-1]
+        return float(last) if math.isfinite(last) else None
+    if metric == "time_to_threshold":
+        if threshold is None:
+            return None
+        return _time_to_threshold(times or [], values, threshold)
+    finite = [v for v in values if math.isfinite(v)]
+    if not finite:
+        return None
+    if metric == "max":
+        return max(finite)
+    if metric == "min":
+        return min(finite)
+    if metric == "mean":
+        return sum(finite) / len(finite)
+    raise ValueError(f"unknown metric '{metric}'")
+
+
+def _range_sensitivity(points: list[dict[str, Any]]) -> float | None:
+    """Average slope of the metric across the swept range:
+    ``(metric_hi - metric_lo) / (value_hi - value_lo)`` between the lowest and
+    highest swept values whose metric is defined. None if fewer than two such
+    points or the endpoints share a value."""
+    valid = sorted((p["value"], p["metric"]) for p in points if p["metric"] is not None)
+    if len(valid) < 2:
+        return None
+    (v_lo, m_lo), (v_hi, m_hi) = valid[0], valid[-1]
+    if v_hi == v_lo:
+        return None
+    return (m_hi - m_lo) / (v_hi - v_lo)
+
+
+def _baseline_param_value(model: StellaModel, key: str | None) -> float | None:
+    """The parameter's baseline constant value (its defining equation parsed as
+    a float), or None when it is not a simple constant."""
+    if key is None:
+        return None
+    if key in model.auxs:
+        equation = model.auxs[key].equation
+    elif key in model.flows:
+        equation = model.flows[key].equation
+    elif key in model.stocks:
+        equation = model.stocks[key].initial_value
+    else:
+        return None
+    try:
+        return float(equation)
+    except (TypeError, ValueError):
+        return None
+
+
+def _elasticity(
+    model: StellaModel, name: str, range_sensitivity: float | None, baseline_metric: float | None
+) -> float | None:
+    """Sensitivity normalized at the baseline: ``slope * p0 / metric0``
+    (≈ Δoutput% / Δparam%). None when any term is undefined (non-constant
+    parameter, zero baseline metric or parameter)."""
+    if range_sensitivity is None or baseline_metric in (None, 0):
+        return None
+    p0 = _baseline_param_value(model, _resolve_key(model, name))
+    if p0 is None or p0 == 0:
+        return None
+    return range_sensitivity * p0 / baseline_metric
+
+
+def _expand_param_sweep(
+    model: StellaModel, spec: dict[str, Any]
+) -> tuple[str, list[float]]:
+    """Validate one parameter spec and expand it to the list of swept values.
+
+    Accepts either explicit ``values`` (≥2) or ``start``/``stop``/``steps``
+    (steps ≥ 2, start ≠ stop). Resolves the parameter name, raising the
+    shared override error (with valid names) on a typo.
+    """
+    name = spec.get("name")
+    if not name:
+        raise ValueError("each parameter needs a 'name'")
+    if _resolve_key(model, name) is None:
+        resolve_overrides(model, {name: 0.0})  # raises naming the valid variables
+    if spec.get("values") is not None:
+        values = [float(v) for v in spec["values"]]
+        if len(values) < 2:
+            raise ValueError(f"parameter '{name}': 'values' needs at least 2 entries")
+        return name, values
+    start, stop, steps = spec.get("start"), spec.get("stop"), spec.get("steps")
+    if start is None or stop is None or steps is None:
+        raise ValueError(
+            f"parameter '{name}': provide 'values' or all of start/stop/steps"
+        )
+    steps = int(steps)
+    if steps < 2:
+        raise ValueError(f"parameter '{name}': 'steps' must be >= 2")
+    if float(start) == float(stop):
+        raise ValueError(f"parameter '{name}': 'start' and 'stop' must differ")
+    step = (float(stop) - float(start)) / (steps - 1)
+    return name, [float(start) + i * step for i in range(steps)]
+
+
+def _validate_output(
+    model: StellaModel, output: dict[str, Any]
+) -> tuple[str, str, float | None]:
+    """Validate the output spec; return (variable_key, metric, threshold)."""
+    variable = output.get("variable")
+    if not variable:
+        raise ValueError("output.variable is required")
+    key = _resolve_key(model, variable)
+    if key is None:
+        raise ValueError(f"output.variable '{variable}' matches no model variable")
+    metric = output.get("metric", "final")
+    if metric not in _METRICS:
+        raise ValueError(
+            f"output.metric '{metric}' must be one of {sorted(_METRICS)}"
+        )
+    threshold = output.get("threshold")
+    if metric == "time_to_threshold" and threshold is None:
+        raise ValueError("output.metric 'time_to_threshold' requires output.threshold")
+    return key, metric, threshold
+
+
+def _write_sweep_csv(path: str, metric: str, rows: list[tuple[str, float, float | None]]) -> None:
+    """Write the long sweep table (parameter, value, metric) as CSV (stdlib —
+    no pandas needed for this shape)."""
+    with open(path, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["parameter", "value", metric])
+        for name, value, metric_value in rows:
+            writer.writerow([name, value, "" if metric_value is None else metric_value])
+
+
+def sensitivity_analysis(
+    model: StellaModel,
+    parameters: list[dict[str, Any]],
+    output: dict[str, Any],
+    mode: str = "oat",
+    max_runs: int = 200,
+    include_series: bool = False,
+    save_sweep_csv: str | None = None,
+    max_points: int = DEFAULT_MAX_POINTS,
+) -> dict[str, Any]:
+    """One-at-a-time parameter sensitivity of a single output metric.
+
+    Sweeps each parameter across its range holding the others at their model
+    baseline, reduces each run's output series to ``output.metric``, and
+    reports per-parameter metric curves plus a range slope and a
+    baseline-normalized elasticity for ranking.
+
+    Parameters
+    ----------
+    model : StellaModel
+        Session model; never mutated (the runner works on a deep copy).
+    parameters : list of dict
+        Each ``{"name": str, "start", "stop", "steps"}`` or
+        ``{"name": str, "values": [..]}``.
+    output : dict
+        ``{"variable": str, "metric": "final"|"max"|"min"|"mean"|
+        "time_to_threshold", "threshold": number}`` (threshold required only
+        for ``time_to_threshold``).
+    mode : str
+        Only ``"oat"`` (one-at-a-time) is supported; ``"grid"``/``"montecarlo"``
+        are reserved.
+    max_runs : int
+        Hard cap on the total swept runs (excludes the single baseline run);
+        the call raises rather than truncating a larger sweep.
+    include_series : bool
+        Also attach each run's downsampled output series to its point.
+    save_sweep_csv : str, optional
+        Write the long (parameter, value, metric) table to this CSV path.
+    """
+    if mode != "oat":
+        raise ValueError(
+            f"mode '{mode}' not supported; only 'oat' (one-at-a-time) is available"
+        )
+    if not parameters:
+        raise ValueError("sensitivity_analysis requires at least one parameter")
+
+    output_key, metric, threshold = _validate_output(model, output)
+    output_display = model._display_name(output_key)
+    sweeps = [_expand_param_sweep(model, spec) for spec in parameters]
+
+    total_runs = sum(len(values) for _, values in sweeps)
+    if total_runs > max_runs:
+        raise ValueError(
+            f"sweep needs {total_runs} runs (> max_runs={max_runs}); "
+            "reduce steps/values or raise max_runs"
+        )
+
+    report_keys = [output_key]
+    warnings = method_warnings(model)
+    csv_rows: list[tuple[str, float, float | None]] = []
+
+    with _compile_runner(model) as runner:
+        base_times, base_values = _output_series(runner.run(params=None), output_display)
+        baseline_metric = _reduce_metric(base_times, base_values, metric, threshold)
+
+        param_payload: list[dict[str, Any]] = []
+        for name, values in sweeps:
+            points: list[dict[str, Any]] = []
+            param_warnings: list[str] = []
+            for value in values:
+                results = runner.run(params=resolve_overrides(model, {name: value}))
+                times, series_values = _output_series(results, output_display)
+                if series_values is None:
+                    param_warnings.append(
+                        f"output variable '{output_display}' not reported at {name}={value}"
+                    )
+                    metric_value = None
+                else:
+                    metric_value = _reduce_metric(times, series_values, metric, threshold)
+                    if metric_value is None:
+                        param_warnings.append(
+                            f"{name}={value}: metric '{metric}' is undefined (non-finite "
+                            "series or threshold never crossed)"
+                        )
+                point: dict[str, Any] = {"value": value, "metric": metric_value}
+                if include_series and series_values is not None:
+                    point["series"] = summarize_run(results, report_keys, model, max_points)[0]
+                points.append(point)
+                csv_rows.append((name, value, metric_value))
+
+            range_sensitivity = _range_sensitivity(points)
+            param_payload.append({
+                "name": name,
+                "points": points,
+                "range_sensitivity": range_sensitivity,
+                "elasticity": _elasticity(model, name, range_sensitivity, baseline_metric),
+                "warnings": param_warnings,
+            })
+
+    if save_sweep_csv:
+        _write_sweep_csv(save_sweep_csv, metric, csv_rows)
+
+    output_payload: dict[str, Any] = {"variable": output_display, "metric": metric}
+    if metric == "time_to_threshold":
+        output_payload["threshold"] = threshold
+    return {
+        "output": output_payload,
+        "baseline": {"overrides": {}, "metric_value": baseline_metric},
+        "parameters": param_payload,
+        "total_runs": total_runs,
+        "warnings": warnings,
     }

@@ -14,7 +14,9 @@ _READ_ONLY_TOOLS = {
 }
 _DESTRUCTIVE_TOOLS = {"delete_model", "delete_module", "delete_variable"}
 # Optional file writes only; safe to repeat with the same arguments.
-_IDEMPOTENT_TOOLS = {"compare_scenarios", "render_diagram", "simulate"}
+_IDEMPOTENT_TOOLS = {
+    "compare_scenarios", "render_diagram", "sensitivity_analysis", "simulate",
+}
 _MUTATING_TOOLS = {
     "add_aux", "add_connector", "add_flow", "add_stock", "add_to_module",
     "add_variables", "auto_place_module_boxes", "build_model", "create_model",
@@ -882,6 +884,110 @@ def build_tool_definitions() -> list[Tool]:
                     },
                 },
                 "required": ["scenarios"],
+            },
+        ),
+        Tool(
+            name="sensitivity_analysis",
+            description=(
+                "One-at-a-time sensitivity: sweep each parameter across a range "
+                "(holding the others at their baseline) and report how one chosen "
+                "output metric responds, with a range slope and a "
+                "baseline-normalized elasticity for ranking. Requires the "
+                "optional pysd dependency (pip install 'stella-mcp[sim]')."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "parameters": {
+                        "type": "array",
+                        "minItems": 1,
+                        "description": "Parameters to sweep, each one at a time",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Parameter variable name",
+                                },
+                                "start": {
+                                    "type": "number",
+                                    "description": "Sweep start (use with stop + steps)",
+                                },
+                                "stop": {
+                                    "type": "number",
+                                    "description": "Sweep stop (use with start + steps)",
+                                },
+                                "steps": {
+                                    "type": "integer",
+                                    "minimum": 2,
+                                    "description": "Number of evenly spaced sweep points",
+                                },
+                                "values": {
+                                    "type": "array",
+                                    "items": {"type": "number"},
+                                    "minItems": 2,
+                                    "description": (
+                                        "Explicit sweep values "
+                                        "(alternative to start/stop/steps)"
+                                    ),
+                                },
+                            },
+                            "required": ["name"],
+                        },
+                    },
+                    "output": {
+                        "type": "object",
+                        "description": "The single output metric to track across the sweep",
+                        "properties": {
+                            "variable": {
+                                "type": "string",
+                                "description": "Output variable to reduce to a metric",
+                            },
+                            "metric": {
+                                "type": "string",
+                                "enum": ["final", "max", "min", "mean", "time_to_threshold"],
+                                "default": "final",
+                            },
+                            "threshold": {
+                                "type": "number",
+                                "description": "Required when metric is time_to_threshold",
+                            },
+                        },
+                        "required": ["variable"],
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["oat"],
+                        "default": "oat",
+                        "description": (
+                            "Sweep design; only one-at-a-time is available "
+                            "(grid/montecarlo reserved)"
+                        ),
+                    },
+                    "max_runs": {
+                        "type": "integer",
+                        "default": 200,
+                        "minimum": 1,
+                        "description": (
+                            "Hard cap on total swept runs; the call errors "
+                            "rather than truncating a larger sweep"
+                        ),
+                    },
+                    "include_series": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Also return each run's downsampled output series",
+                    },
+                    "save_sweep_csv": {
+                        "type": "string",
+                        "description": (
+                            "Optional path to write the long "
+                            "(parameter, value, metric) CSV"
+                        ),
+                    },
+                },
+                "required": ["parameters", "output"],
             },
         ),
         Tool(

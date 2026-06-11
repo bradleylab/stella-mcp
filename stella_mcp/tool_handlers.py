@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 from mcp.types import CallToolResult, TextContent
 
-from .analysis import compare_scenarios
+from .analysis import compare_scenarios, sensitivity_analysis
 from .model_snapshot import (
     aux_to_dict,
     connector_to_dict,
@@ -856,6 +856,36 @@ def register_tool_handlers(
         return success_result(
             f"Compared {len(result['scenarios'])} scenario(s) for model_id={model_id} "
             f"vs baseline. Final deltas: {summary}",
+            {"model_id": model_id, **result},
+        )
+
+    @register("sensitivity_analysis")
+    def _handle_sensitivity_analysis(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        result = sensitivity_analysis(
+            model,
+            parameters=arguments["parameters"],
+            output=arguments["output"],
+            mode=arguments.get("mode", "oat"),
+            max_runs=arguments.get("max_runs", 200),
+            include_series=arguments.get("include_series", False),
+            save_sweep_csv=arguments.get("save_sweep_csv"),
+        )
+        ranked = sorted(
+            result["parameters"],
+            key=lambda p: abs(p["elasticity"]) if p["elasticity"] is not None else -1.0,
+            reverse=True,
+        )
+        ranking = ", ".join(
+            f"{p['name']} (elasticity {p['elasticity']:+.3g})"
+            if p["elasticity"] is not None
+            else f"{p['name']} (n/a)"
+            for p in ranked
+        )
+        return success_result(
+            f"Swept {len(result['parameters'])} parameter(s) over {result['total_runs']} "
+            f"run(s) for {result['output']['variable']} ({result['output']['metric']}) on "
+            f"model_id={model_id}. Ranked by |elasticity|: {ranking}",
             {"model_id": model_id, **result},
         )
 
