@@ -503,6 +503,8 @@ The `validate_model` tool checks for:
 - **Units consistency** - A flow whose units don't read as `stock-units/time-unit`
   when every attached stock shares the same units (warning; conservative —
   stays silent on conversion flows and anything it can't confidently parse)
+- **Unused auxiliaries** - An auxiliary referenced by no equation or connector
+  (warning); stocks and flows are never flagged
 
 ## XMILE Compatibility
 

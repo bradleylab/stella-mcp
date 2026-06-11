@@ -60,6 +60,7 @@ class ModelValidator:
         self._check_circular_dependencies()
         self._check_modules()
         self._check_units()
+        self._check_unused_variables()
 
         return self.errors
 
@@ -408,6 +409,46 @@ class ModelValidator:
                 ),
                 variable=name,
             ))
+
+    def _check_unused_variables(self):
+        """Warn about auxiliaries referenced by no equation or connector.
+
+        Only auxiliaries are flagged: a stock's state is a result, not an
+        input, and a flow attached to a stock is doing work even if nothing
+        reads it. A connector counts as use (graphical-function inputs arrive
+        that way), as does a reference inside a quoted identifier and a
+        reference from a stock's initial-value equation.
+
+        Known accepted limitation: a stale connector whose target equation
+        doesn't actually use the source will mask this warning, because the
+        validator doesn't cross-check connector-vs-equation usage. That is a
+        separate concern; tightening it here would duplicate
+        _check_missing_connections in reverse.
+        """
+        used: set[str] = set()
+        equations = (
+            [flow.equation for flow in self.model.flows.values()]
+            + [aux.equation for aux in self.model.auxs.values()]
+            + [stock.initial_value for stock in self.model.stocks.values()]
+        )
+        for equation in equations:
+            for ref in self._extract_variable_references(equation):
+                used.add(self.model._normalize_name(ref))
+        # Connector sources count as use (already normalized internal keys).
+        for connector in self.model.connectors:
+            used.add(connector.from_var)
+
+        for name, aux in self.model.auxs.items():
+            if name not in used:
+                self.errors.append(ValidationError(
+                    severity="warning",
+                    category="unused_variable",
+                    message=(
+                        f"Auxiliary '{aux.name}' is defined but referenced by no "
+                        f"equation or connector"
+                    ),
+                    variable=name,
+                ))
 
 
 def validate_model(model: StellaModel) -> list[ValidationError]:
