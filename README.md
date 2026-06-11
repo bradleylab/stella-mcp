@@ -193,6 +193,7 @@ Notes:
 | `get_model_xml` | Preview the XMILE XML output |
 | `render_diagram` | Render the model as an SVG stock-and-flow diagram |
 | `simulate` | Run the model via PySD and return time series + summaries (`sim` extra) |
+| `compare_scenarios` | Run named what-if override sets against a baseline and report deltas (`sim` extra) |
 
 ### Batch Building
 
@@ -487,6 +488,34 @@ Notes and caveats:
   column.
 - The session model is never modified by simulation (the run uses a
   throwaway copy).
+
+## Scenario Comparison
+
+The `compare_scenarios` tool answers "what happens under these alternative
+assumptions?" — it runs several named override sets against a baseline (the
+unmodified model by default) and reports how each diverges. Also requires the
+`sim` extra.
+
+```json
+{"name":"compare_scenarios","arguments":{"model_id":"pop_v1","include":["Population"],"scenarios":[{"name":"low growth","overrides":{"growth_rate":0.02}},{"name":"high growth","overrides":{"growth_rate":0.08}}]}}
+```
+
+Each scenario reports its own downsampled series plus `delta_vs_baseline` per
+variable: `final_abs`, `final_pct` (percent change of the final value), and
+`max_abs`. Notes:
+
+- Every override name across all scenarios is validated **before** any run, so
+  a typo fails fast and atomically — no scenario runs half-applied.
+- A scenario whose run produces NaN/inf reports the warning in that scenario's
+  `warnings` without aborting the others; `final_pct` is `null` when the
+  baseline final is zero (no divide-by-zero).
+- `baseline` is optional — pass an override set to measure deltas against, or
+  omit it to compare against the unmodified model.
+- `save_comparison_csv` writes a wide table with one column per
+  `variable__scenario` (and `variable__baseline`).
+- The compiled model is reused across every scenario in one call, so a
+  comparison is roughly as cheap as a single simulation plus one run per
+  scenario.
 
 ## MCP Resources & Prompts
 

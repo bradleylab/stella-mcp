@@ -10,6 +10,7 @@ from typing import Any, Protocol
 
 from mcp.types import CallToolResult, TextContent
 
+from .analysis import compare_scenarios
 from .model_snapshot import (
     aux_to_dict,
     connector_to_dict,
@@ -830,6 +831,31 @@ def register_tool_handlers(
         return success_result(
             f"Simulated model_id={model_id} from {result['sim_specs']['start']} to "
             f"{result['sim_specs']['stop']}{warn_text}. Final values: {finals}",
+            {"model_id": model_id, **result},
+        )
+
+    @register("compare_scenarios")
+    def _handle_compare_scenarios(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        result = compare_scenarios(
+            model,
+            scenarios=arguments["scenarios"],
+            baseline=arguments.get("baseline"),
+            include=arguments.get("include"),
+            max_points=arguments.get("max_points", 101),
+            save_comparison_csv=arguments.get("save_comparison_csv"),
+        )
+        lines = []
+        for scenario in result["scenarios"]:
+            deltas = ", ".join(
+                f"{var} {d['final_abs']:+.4g}" if d["final_abs"] is not None else f"{var} n/a"
+                for var, d in scenario["delta_vs_baseline"].items()
+            )
+            lines.append(f"{scenario['name']}: {deltas}" if deltas else scenario["name"])
+        summary = "; ".join(lines) if lines else "none"
+        return success_result(
+            f"Compared {len(result['scenarios'])} scenario(s) for model_id={model_id} "
+            f"vs baseline. Final deltas: {summary}",
             {"model_id": model_id, **result},
         )
 

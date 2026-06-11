@@ -14,7 +14,7 @@ _READ_ONLY_TOOLS = {
 }
 _DESTRUCTIVE_TOOLS = {"delete_model", "delete_module", "delete_variable"}
 # Optional file writes only; safe to repeat with the same arguments.
-_IDEMPOTENT_TOOLS = {"render_diagram", "simulate"}
+_IDEMPOTENT_TOOLS = {"compare_scenarios", "render_diagram", "simulate"}
 _MUTATING_TOOLS = {
     "add_aux", "add_connector", "add_flow", "add_stock", "add_to_module",
     "add_variables", "auto_place_module_boxes", "build_model", "create_model",
@@ -822,6 +822,66 @@ def build_tool_definitions() -> list[Tool]:
                         "description": "Optional path to write the full results table as CSV",
                     },
                 },
+            },
+        ),
+        Tool(
+            name="compare_scenarios",
+            description=(
+                "Run several named what-if scenarios (each a set of constant "
+                "parameter overrides) against a baseline and report how each "
+                "diverges: per-variable final/max absolute deltas and final "
+                "percent change. Requires the optional pysd dependency "
+                "(pip install 'stella-mcp[sim]')."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "scenarios": {
+                        "type": "array",
+                        "minItems": 1,
+                        "description": "Named override sets to compare (names must be unique)",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Unique scenario label",
+                                },
+                                "overrides": {
+                                    "type": "object",
+                                    "additionalProperties": {"type": "number"},
+                                    "description": "Constant parameter overrides for this scenario",
+                                },
+                            },
+                            "required": ["name", "overrides"],
+                        },
+                    },
+                    "baseline": {
+                        "type": "object",
+                        "additionalProperties": {"type": "number"},
+                        "description": (
+                            "Override set to measure deltas against "
+                            "(default: the unmodified model)"
+                        ),
+                    },
+                    "include": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Variables to report and compare (default: all stocks)",
+                    },
+                    "max_points": {
+                        "type": "integer",
+                        "description": "Maximum points per returned series",
+                        "default": 101,
+                        "minimum": 2,
+                    },
+                    "save_comparison_csv": {
+                        "type": "string",
+                        "description": "Optional path to write a wide variable-by-scenario CSV",
+                    },
+                },
+                "required": ["scenarios"],
             },
         ),
         Tool(
