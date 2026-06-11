@@ -2,7 +2,46 @@
 
 from __future__ import annotations
 
-from mcp.types import Tool
+from mcp.types import Tool, ToolAnnotations
+
+# Annotation policy. Every tool must appear in exactly one set — the test in
+# tests/test_mcp_surface.py asserts these partition the full tool list, so a
+# new tool added without an annotation decision fails CI.
+_READ_ONLY_TOOLS = {
+    "get_model_xml", "get_template_info", "inspect_model", "list_connectors",
+    "list_models", "list_modules", "list_templates", "list_variables",
+    "validate_model",
+}
+_DESTRUCTIVE_TOOLS = {"delete_model", "delete_module", "delete_variable"}
+# Optional file writes only; safe to repeat with the same arguments.
+_IDEMPOTENT_TOOLS = {"render_diagram", "simulate"}
+_MUTATING_TOOLS = {
+    "add_aux", "add_connector", "add_flow", "add_stock", "add_to_module",
+    "add_variables", "auto_place_module_boxes", "build_model", "create_model",
+    "create_module", "load_template", "read_model", "remove_from_module",
+    "rename_module", "rename_variable", "save_as_template", "save_model",
+    "set_connector_routing", "set_module_style", "set_module_view",
+    "set_sim_specs", "sync_connectors_from_equations", "update_aux",
+    "update_flow", "update_stock",
+}
+
+
+def _annotation_for(name: str) -> ToolAnnotations | None:
+    if name in _READ_ONLY_TOOLS:
+        return ToolAnnotations(readOnlyHint=True)
+    if name in _DESTRUCTIVE_TOOLS:
+        return ToolAnnotations(readOnlyHint=False, destructiveHint=True)
+    if name in _IDEMPOTENT_TOOLS:
+        return ToolAnnotations(readOnlyHint=False, idempotentHint=True)
+    if name in _MUTATING_TOOLS:
+        return ToolAnnotations(readOnlyHint=False, destructiveHint=False)
+    return None
+
+
+def _apply_tool_annotations(tools: list[Tool]) -> list[Tool]:
+    for tool in tools:
+        tool.annotations = _annotation_for(tool.name)
+    return tools
 
 
 def build_tool_definitions() -> list[Tool]:
@@ -178,7 +217,7 @@ def build_tool_definitions() -> list[Tool]:
             "default": True,
         },
     }
-    return [
+    tools = [
         Tool(
             name="create_model",
             description="Create a new Stella model with specified time settings",
@@ -893,3 +932,4 @@ def build_tool_definitions() -> list[Tool]:
             },
         ),
     ]
+    return _apply_tool_annotations(tools)

@@ -488,6 +488,22 @@ Notes and caveats:
 - The session model is never modified by simulation (the run uses a
   throwaway copy).
 
+## MCP Resources & Prompts
+
+Beyond tools, the server exposes MCP-native affordances:
+
+- **Tool annotations.** Every tool carries hints (`readOnlyHint`,
+  `destructiveHint`, `idempotentHint`) so clients can manage permissions and
+  parallelize read-only calls. Inspection tools (`inspect_model`,
+  `validate_model`, `list_*`, `get_model_xml`) are read-only; `delete_*` are
+  marked destructive.
+- **Resources.** Templates and session models are readable as resources:
+  - `stella://templates/{name}` — a built-in or user template's `.stmx`
+  - `stella://models/{model_id}` — a session model's current XMILE export
+- **Prompt.** A `build-stella-model` prompt (argument: `description`) encodes
+  the recommended build → validate → simulate → render → save workflow, so it
+  is discoverable inside MCP clients.
+
 ## Validation
 
 The `validate_model` tool checks for:

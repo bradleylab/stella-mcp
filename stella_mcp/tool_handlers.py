@@ -1024,7 +1024,10 @@ def register_tool_handlers(
     @register("get_model_xml")
     def _handle_get_model_xml(arguments: dict[str, Any]) -> ToolResponse:
         _, model = get_model(arguments.get("model_id"))
-        xml = model.to_xml(
+        # Export mutates layout state (auto-layout, flow points, connector
+        # angles), so previewing XML works on a copy — the tool is read-only.
+        preview = copy.deepcopy(model)
+        xml = preview.to_xml(
             auto_layout=arguments.get("auto_layout", True),
             resolve_layout_violations=arguments.get("resolve_layout_violations", False),
             compat_mode=arguments.get("compat_mode", "permissive"),
@@ -1033,13 +1036,13 @@ def register_tool_handlers(
         if len(xml) > 10000:
             xml = xml[:10000] + "\n... (truncated)"
         output = [TextContent(type="text", text=xml)]
-        if model.last_export_warnings:
+        if preview.last_export_warnings:
             output.append(
                 TextContent(
                     type="text",
                     text=(
-                        f"Compatibility warnings ({len(model.last_export_warnings)}):\n"
-                        + "\n".join(f"- {msg}" for msg in model.last_export_warnings[:5])
+                        f"Compatibility warnings ({len(preview.last_export_warnings)}):\n"
+                        + "\n".join(f"- {msg}" for msg in preview.last_export_warnings[:5])
                     ),
                 )
             )

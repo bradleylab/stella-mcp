@@ -40,3 +40,17 @@ jobs:
         run: uv sync --locked --extra dev --extra sim
       - name: Run simulation tests
         run: uv run python -m pytest tests/test_simulate.py
+
+  test-mcp-floor:
+    # Exercise the declared mcp minimum (the lockfile pins the latest, so the
+    # floor would otherwise never be tested) — a floor-breaking API use fails
+    # here instead of on a user's machine.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.10"
+      - name: Run suite against the mcp version floor
+        run: uv run --with "mcp==1.7.0" --extra dev python -m pytest
