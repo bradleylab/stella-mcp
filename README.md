@@ -191,6 +191,7 @@ Notes:
 | `list_variables` | List all stocks, flows, and auxiliaries |
 | `validate_model` | Check for errors (undefined variables, missing connections, etc.) |
 | `get_model_xml` | Preview the XMILE XML output |
+| `render_diagram` | Render the model as an SVG stock-and-flow diagram |
 | `simulate` | Run the model via PySD and return time series + summaries (`sim` extra) |
 
 ### Batch Building
@@ -439,6 +440,24 @@ Claude: [Uses create_model, add_stock (x4), add_aux (x8), add_flow (x6), save_mo
         Creates a model with nutrient cycling between surface and deep ocean
         including upwelling, downwelling, biological uptake, and remineralization
 ```
+
+## Diagram Preview
+
+The `render_diagram` tool renders the model as an SVG stock-and-flow diagram
+— stocks as rectangles, auxiliaries as circles, flows as valved pipes
+(clouds mark sources/sinks), and dependency connectors as arcs. The SVG is
+returned inline so an agent can inspect the layout, and optionally written
+to a file you can open in any browser. It runs auto-layout first by default,
+so a freshly built model renders without manual positioning.
+
+```json
+{"name":"render_diagram","arguments":{"model_id":"sir_baseline","filepath":"./sir.svg"}}
+```
+
+The diagram below is the built-in `sir` template rendered by `render_diagram`
+(no manual positioning):
+
+![SIR model rendered by render_diagram](docs/images/sir.svg)
 
 ## Simulation
 

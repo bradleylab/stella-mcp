@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="179 75 1241 849" width="1241" height="849">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>
+<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:11px;fill:#000}</style>
+<path class="connector" d="M237,866 Q479.23,732.37 580.7,475" marker-end="url(#arrow)"/>
+<path class="connector" d="M405,433 Q485.29,485.63 580.7,475" marker-end="url(#arrow)"/>
+<path class="connector" d="M755,518 Q675.59,465.13 580.7,475" marker-end="url(#arrow)"/>
+<path class="connector" d="M656,133 Q556.79,290.45 580.7,475" marker-end="url(#arrow)"/>
+<path class="connector" d="M1362,694 Q1198.06,478.53 934.4,417" marker-end="url(#arrow)"/>
+<path class="connector" d="M755,518 Q862.88,499.79 934.4,417" marker-end="url(#arrow)"/>
+<path class="connector" d="M405,433 Q584.5,328.18 656,133" marker-end="url(#arrow)"/>
+<path class="connector" d="M755,518 Q774.8,307.68 656,133" marker-end="url(#arrow)"/>
+<path class="connector" d="M1113,315 Q917.26,141.74 656,133" marker-end="url(#arrow)"/>
+<polyline class="flow-pipe" points="428.15,433.2 733.26,518.21"/>
+<path class="flow-valve" d="M573.7,468 L587.7,482 L587.7,468 L573.7,482 z"/>
+<text class="label" x="580.7" y="495" text-anchor="middle">infection</text>
+<polyline class="flow-pipe" points="778.26,518.21 1090.54,315.99"/>
+<path class="flow-valve" d="M927.4,410 L941.4,424 L941.4,410 L927.4,424 z"/>
+<text class="label" x="934.4" y="437" text-anchor="middle">recovery</text>
+<rect class="stock" x="732.5" y="500.5" width="45" height="35"/>
+<text class="label" x="755" y="548.5" text-anchor="middle">Infected</text>
+<rect class="stock" x="1090.5" y="297.5" width="45" height="35"/>
+<text class="label" x="1113" y="345.5" text-anchor="middle">Recovered</text>
+<rect class="stock" x="382.5" y="415.5" width="45" height="35"/>
+<text class="label" x="405" y="463.5" text-anchor="middle">Susceptible</text>
+<circle class="aux" cx="237" cy="866" r="18"/>
+<text class="label" x="237" y="897" text-anchor="middle">beta</text>
+<circle class="aux" cx="1362" cy="694" r="18"/>
+<text class="label" x="1362" y="725" text-anchor="middle">gamma</text>
+<circle class="aux" cx="656" cy="133" r="18"/>
+<text class="label" x="656" y="164" text-anchor="middle">population total</text>
+</svg>

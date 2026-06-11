@@ -20,6 +20,7 @@ from .model_snapshot import (
     template_info_to_dict,
     validation_issue_to_dict,
 )
+from .render_svg import render_model_svg
 from .simulate import run_simulation
 from .templates import (
     get_template_info,
@@ -666,6 +667,33 @@ def register_tool_handlers(
             type="text",
             text=f"Saved model_id={model_id} to {filepath}{warning_suffix}"
         )]
+
+    @register("render_diagram")
+    def _handle_render_diagram(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        if arguments.get("auto_layout", True):
+            # Mirror save_model's layout prep so a freshly built model
+            # renders sensibly.
+            model._auto_layout()
+            if model.modules:
+                model.auto_place_module_boxes(only_missing=True)
+        else:
+            model._recalculate_flow_points()
+            model._calculate_connector_angles()
+        svg = render_model_svg(model)
+        result: dict[str, Any] = {"model_id": model_id, "svg": svg, "filepath": None}
+        filepath = arguments.get("filepath")
+        if filepath:
+            path = Path(filepath)
+            if not path.suffix:
+                path = path.with_suffix(".svg")
+            path.write_text(svg, encoding="utf-8")
+            result["filepath"] = str(path)
+        suffix = f" -> {result['filepath']}" if result["filepath"] else ""
+        return success_result(
+            f"Rendered model_id={model_id} to SVG ({len(svg)} bytes){suffix}",
+            result,
+        )
 
     @register("read_model")
     def _handle_read_model(arguments: dict[str, Any]) -> ToolResponse:

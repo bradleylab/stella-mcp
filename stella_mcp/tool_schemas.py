@@ -633,6 +633,30 @@ def build_tool_definitions() -> list[Tool]:
             },
         ),
         Tool(
+            name="render_diagram",
+            description=(
+                "Render the current model as an SVG stock-and-flow diagram. "
+                "The SVG is returned inline (for clients without file access) "
+                "and optionally written to a file. Defaults to running "
+                "auto-layout first so freshly built models render sensibly."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "filepath": {
+                        "type": "string",
+                        "description": "Optional output path (.svg); parent directory must exist",
+                    },
+                    "auto_layout": {
+                        "type": "boolean",
+                        "description": "Run auto-layout before rendering (same semantics as save_model)",
+                        "default": True,
+                    },
+                },
+            },
+        ),
+        Tool(
             name="read_model",
             description="Read an existing .stmx file and load it as the current model",
             inputSchema={
