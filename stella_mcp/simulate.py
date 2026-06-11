@@ -12,6 +12,7 @@ import copy
 import math
 import tempfile
 import warnings
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -74,6 +75,137 @@ def _downsample_indices(n: int, max_points: int) -> list[int]:
     return sorted(indices)
 
 
+def _resolve_key(model: StellaModel, name: str) -> str | None:
+    """Map a user-supplied name (display or underscore form) to a normalized
+    model variable key, or None if it matches no stock/flow/aux."""
+    key = model._normalize_name(name)
+    for registry in (model.stocks, model.flows, model.auxs):
+        if key in registry:
+            return key
+    return None
+
+
+def resolve_overrides(
+    model: StellaModel, overrides: dict[str, float] | None
+) -> dict[str, float]:
+    """Validate override names and return them keyed by display name (the form
+    PySD's ``params=`` expects), with float values.
+
+    Raises ValueError naming the offending entry and the valid variable names.
+    """
+    all_keys = [*model.stocks, *model.flows, *model.auxs]
+    resolved: dict[str, float] = {}
+    for name, value in (overrides or {}).items():
+        key = _resolve_key(model, name)
+        if key is None:
+            candidates = ", ".join(sorted(model._display_name(k) for k in all_keys))
+            raise ValueError(
+                f"Override '{name}' matches no model variable. "
+                f"Valid names: {candidates}"
+            )
+        resolved[model._display_name(key)] = float(value)
+    return resolved
+
+
+def resolve_report_keys(
+    model: StellaModel, include: list[str] | None
+) -> list[str]:
+    """Resolve the list of variables to report to normalized keys. Defaults to
+    all stocks when ``include`` is None. Raises ValueError on an unknown name."""
+    if include is None:
+        return list(model.stocks)
+    report_keys = []
+    for name in include:
+        key = _resolve_key(model, name)
+        if key is None:
+            raise ValueError(f"include entry '{name}' matches no model variable")
+        report_keys.append(key)
+    return report_keys
+
+
+def method_warnings(model: StellaModel) -> list[str]:
+    """Warn when the model's integration method is not Euler (PySD is Euler-only)."""
+    method = (model.sim_specs.method or "").strip()
+    if method.upper() not in ("", "EULER"):
+        return [
+            f"Model integration method is '{method}' but PySD integrates with "
+            "Euler only; results will differ from Stella for stiff systems."
+        ]
+    return []
+
+
+@contextmanager
+def _compile_runner(model: StellaModel):
+    """Compile ``model`` into a PySD runner once, yielding the runner.
+
+    The model is deep-copied and written to a temp ``.stmx`` (export mutates
+    layout state; the XMILE writer also handles the GRAPH(input) -> spec-form
+    rewrite for gf-bearing equations). The temp file is kept for the lifetime
+    of the context so repeated ``runner.run(params=...)`` calls are safe, then
+    removed. PySD is stateless across ``run()`` calls (verified 2026-06-11:
+    a run after a different-params run reproduces a fresh-compile result
+    byte-for-byte), so callers may loop ``runner.run(params=...)`` with
+    different params and reuse a single compiled model across a sweep.
+    """
+    pysd = _import_pysd()
+    sim_model = copy.deepcopy(model)
+    handle = tempfile.NamedTemporaryFile(
+        suffix=".stmx", mode="w", delete=False, encoding="utf-8"
+    )
+    tmp_path = Path(handle.name)
+    try:
+        with handle:
+            handle.write(sim_model.to_xml())
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            runner = pysd.read_xmile(str(tmp_path))
+            yield runner
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+def summarize_run(
+    results: Any,
+    report_keys: list[str],
+    model: StellaModel,
+    max_points: int,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Reduce a PySD results DataFrame to downsampled, NaN-aware series.
+
+    Returns ``(series, warnings)``. A report key absent from the results
+    columns yields a warning rather than a series entry. Shared by
+    ``run_simulation`` and the scenario/sensitivity analyses so every tool
+    produces an identical series structure.
+    """
+    times = [float(t) for t in results.index]
+    indices = _downsample_indices(len(times), max_points)
+
+    series: list[dict[str, Any]] = []
+    warnings_out: list[str] = []
+    for key in report_keys:
+        display = model._display_name(key)
+        if display not in results.columns:
+            warnings_out.append(
+                f"Variable '{display}' was not reported by the simulation backend"
+            )
+            continue
+        values = [float(v) for v in results[display]]
+        summary, had_non_finite = _series_summary(values)
+        if had_non_finite:
+            warnings_out.append(
+                f"Series '{display}' contains non-finite values (NaN/inf); "
+                "summary covers finite points only"
+            )
+        series.append({
+            "name": display,
+            "points": [
+                {"t": times[i], "value": _json_safe(values[i])} for i in indices
+            ],
+            "summary": summary,
+        })
+    return series, warnings_out
+
+
 def run_simulation(
     model: StellaModel,
     overrides: dict[str, float] | None = None,
@@ -97,97 +229,21 @@ def run_simulation(
     save_results_csv : str, optional
         Write the full (non-downsampled) results table to this CSV path.
     """
-    pysd = _import_pysd()
-
     if max_points < 2:
         raise ValueError("max_points must be >= 2")
 
-    def resolve(name: str) -> str | None:
-        """Map a user-supplied name to a normalized model variable key."""
-        key = model._normalize_name(name)
-        for registry in (model.stocks, model.flows, model.auxs):
-            if key in registry:
-                return key
-        return None
+    resolved_overrides = resolve_overrides(model, overrides)
+    report_keys = resolve_report_keys(model, include)
+    sim_warnings = method_warnings(model)
 
-    all_keys = [*model.stocks, *model.flows, *model.auxs]
-
-    resolved_overrides: dict[str, float] = {}
-    for name, value in (overrides or {}).items():
-        key = resolve(name)
-        if key is None:
-            candidates = ", ".join(sorted(model._display_name(k) for k in all_keys))
-            raise ValueError(
-                f"Override '{name}' matches no model variable. "
-                f"Valid names: {candidates}"
-            )
-        resolved_overrides[model._display_name(key)] = float(value)
-
-    if include is not None:
-        report_keys = []
-        for name in include:
-            key = resolve(name)
-            if key is None:
-                raise ValueError(f"include entry '{name}' matches no model variable")
-            report_keys.append(key)
-    else:
-        report_keys = list(model.stocks)
-
-    sim_warnings: list[str] = []
-    method = (model.sim_specs.method or "").strip()
-    if method.upper() not in ("", "EULER"):
-        sim_warnings.append(
-            f"Model integration method is '{method}' but PySD integrates with "
-            "Euler only; results will differ from Stella for stiff systems."
-        )
-
-    # The XMILE writer handles the GRAPH(input) -> spec-form rewrite for
-    # gf-bearing equations; the copy exists because export mutates layout.
-    sim_model = copy.deepcopy(model)
-
-    handle = tempfile.NamedTemporaryFile(
-        suffix=".stmx", mode="w", delete=False, encoding="utf-8"
-    )
-    tmp_path = Path(handle.name)
-    try:
-        with handle:
-            handle.write(sim_model.to_xml())
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            runner = pysd.read_xmile(str(tmp_path))
-            results = runner.run(params=resolved_overrides or None)
-    finally:
-        tmp_path.unlink(missing_ok=True)
+    with _compile_runner(model) as runner:
+        results = runner.run(params=resolved_overrides or None)
 
     if save_results_csv:
         results.to_csv(save_results_csv, index_label="time")
 
-    times = [float(t) for t in results.index]
-    indices = _downsample_indices(len(times), max_points)
-
-    series: list[dict[str, Any]] = []
-    for key in report_keys:
-        display = model._display_name(key)
-        if display not in results.columns:
-            sim_warnings.append(
-                f"Variable '{display}' was not reported by the simulation backend"
-            )
-            continue
-        column = results[display]
-        values = [float(v) for v in column]
-        summary, had_non_finite = _series_summary(values)
-        if had_non_finite:
-            sim_warnings.append(
-                f"Series '{display}' contains non-finite values (NaN/inf); "
-                "summary covers finite points only"
-            )
-        series.append({
-            "name": display,
-            "points": [
-                {"t": times[i], "value": _json_safe(values[i])} for i in indices
-            ],
-            "summary": summary,
-        })
+    series, series_warnings = summarize_run(results, report_keys, model, max_points)
+    sim_warnings.extend(series_warnings)
 
     return {
         "sim_specs": {
