@@ -1895,7 +1895,7 @@ wheels = [
 
 [[package]]
 name = "stella-mcp"
-version = "0.7.0"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
@@ -1912,7 +1912,7 @@ sim = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mcp", specifier = ">=1.0.0" },
+    { name = "mcp", specifier = ">=1.7.0" },
     { name = "pysd", marker = "extra == 'sim'", specifier = ">=3.14" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },

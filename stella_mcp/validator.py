@@ -5,6 +5,31 @@ from dataclasses import dataclass
 from .equation_parser import extract_quoted_references, extract_variable_references
 from .xmile import StellaModel
 
+# Canonical singular form for the XMILE-conventional time units (XMILE v1.0
+# sim_specs time_units is a free string, but these are the calendar units used
+# in practice). Used to collapse "years" vs "year" when checking that a flow's
+# units read as stock-units-per-time-unit. Fixed table, not a stemmer.
+_TIME_UNIT_SINGULAR = {
+    "years": "year", "year": "year", "yr": "year", "yrs": "year",
+    "months": "month", "month": "month", "mo": "month", "mos": "month",
+    "weeks": "week", "week": "week", "wk": "week", "wks": "week",
+    "days": "day", "day": "day",
+    "hours": "hour", "hour": "hour", "hr": "hour", "hrs": "hour",
+    "minutes": "minute", "minute": "minute", "min": "minute", "mins": "minute",
+    "seconds": "second", "second": "second", "sec": "second", "secs": "second",
+}
+
+
+def _norm_units(units: str) -> str:
+    """Conservative unit normalization: lowercase, drop whitespace."""
+    return units.strip().lower().replace(" ", "")
+
+
+def _norm_time_unit(units: str) -> str:
+    """Normalize a time unit, collapsing the known plural/singular pairs."""
+    normalized = _norm_units(units)
+    return _TIME_UNIT_SINGULAR.get(normalized, normalized)
+
 
 @dataclass
 class ValidationError:
@@ -34,6 +59,8 @@ class ModelValidator:
         self._check_stock_inflow_outflow_consistency()
         self._check_circular_dependencies()
         self._check_modules()
+        self._check_units()
+        self._check_unused_variables()
 
         return self.errors
 
@@ -295,6 +322,142 @@ class ModelValidator:
                         message=f"Module '{module.name}' references missing member '{member}'",
                         variable=module_key,
                     ))
+
+    def _check_units(self):
+        """Conservative, warning-tier unit consistency checks.
+
+        These are heuristics, not dimensional analysis: they only fire when
+        near-certain, because a false units warning trains users to ignore
+        the validator. When in doubt, stay silent.
+        """
+        self._check_units_missing()
+        self._check_units_inconsistent()
+
+    def _check_units_missing(self):
+        """Warn when some stocks/flows carry units but others are blank.
+
+        A fully unitless model (common in teaching) stays silent; mixed
+        models are where unit mistakes hide. Auxiliaries are exempt —
+        dimensionless parameters are routine.
+        """
+        stocks_and_flows = [
+            ("Stock", name, stock) for name, stock in self.model.stocks.items()
+        ] + [
+            ("Flow", name, flow) for name, flow in self.model.flows.items()
+        ]
+        if not any(item.units.strip() for _, _, item in stocks_and_flows):
+            return  # fully unitless model
+        for kind, name, item in stocks_and_flows:
+            if not item.units.strip():
+                self.errors.append(ValidationError(
+                    severity="warning",
+                    category="units_missing",
+                    message=(
+                        f"{kind} '{item.name}' has no units while other variables "
+                        f"in the model do"
+                    ),
+                    variable=name,
+                ))
+
+    def _check_units_inconsistent(self):
+        """Warn when a flow's units don't read as stock-units-per-time-unit.
+
+        Only fires when every stock attached to the flow shares the same
+        non-empty units (a conversion flow between differently-united stocks
+        is legitimate, so those are skipped). Anything the normalizer cannot
+        confidently parse stays silent.
+        """
+        time_unit = self.model.sim_specs.time_units
+        for name, flow in self.model.flows.items():
+            attached = [
+                (s, self.model.stocks[s].name, self.model.stocks[s].units.strip())
+                for s in (flow.from_stock, flow.to_stock)
+                if s and s in self.model.stocks
+            ]
+            attached_units = [units for _, _, units in attached]
+            # Need at least one attached stock, all with the same non-empty units.
+            if not attached_units or not all(attached_units):
+                continue
+            if len({_norm_units(u) for u in attached_units}) != 1:
+                continue  # conversion flow between differing units
+            if not flow.units.strip():
+                continue  # blank flow units are units_missing, not inconsistent
+
+            stock_display = attached[0][1]
+            stock_units = attached_units[0]
+            expected = f"{stock_units}/{time_unit}"
+            flow_units = flow.units.strip()
+            slash_count = flow_units.count("/")
+            if slash_count == 1:
+                numerator, denominator = flow_units.split("/")
+                consistent = (
+                    _norm_units(numerator) == _norm_units(stock_units)
+                    and _norm_time_unit(denominator) == _norm_time_unit(time_unit)
+                )
+                if consistent:
+                    continue
+            elif slash_count == 0:
+                # No division operator. We cannot confidently parse rate forms
+                # like "GtC yr-1", "people per year", or "molecules s^-1", so
+                # the only thing flagged is flow units identical to the stock's
+                # (the per-time operator was dropped entirely). Everything else
+                # stays silent — a false units warning trains users to ignore
+                # the validator.
+                if _norm_units(flow_units) != _norm_units(stock_units):
+                    continue
+            else:
+                continue  # multiple slashes: too complex to judge confidently
+
+            self.errors.append(ValidationError(
+                severity="warning",
+                category="units_inconsistent",
+                message=(
+                    f"Flow '{flow.name}' has units '{flow_units}' but stock "
+                    f"'{stock_display}' ({stock_units}) over time unit "
+                    f"'{time_unit}' implies '{expected}'"
+                ),
+                variable=name,
+            ))
+
+    def _check_unused_variables(self):
+        """Warn about auxiliaries referenced by no equation or connector.
+
+        Only auxiliaries are flagged: a stock's state is a result, not an
+        input, and a flow attached to a stock is doing work even if nothing
+        reads it. A connector counts as use (graphical-function inputs arrive
+        that way), as does a reference inside a quoted identifier and a
+        reference from a stock's initial-value equation.
+
+        Known accepted limitation: a stale connector whose target equation
+        doesn't actually use the source will mask this warning, because the
+        validator doesn't cross-check connector-vs-equation usage. That is a
+        separate concern; tightening it here would duplicate
+        _check_missing_connections in reverse.
+        """
+        used: set[str] = set()
+        equations = (
+            [flow.equation for flow in self.model.flows.values()]
+            + [aux.equation for aux in self.model.auxs.values()]
+            + [stock.initial_value for stock in self.model.stocks.values()]
+        )
+        for equation in equations:
+            for ref in self._extract_variable_references(equation):
+                used.add(self.model._normalize_name(ref))
+        # Connector sources count as use (already normalized internal keys).
+        for connector in self.model.connectors:
+            used.add(connector.from_var)
+
+        for name, aux in self.model.auxs.items():
+            if name not in used:
+                self.errors.append(ValidationError(
+                    severity="warning",
+                    category="unused_variable",
+                    message=(
+                        f"Auxiliary '{aux.name}' is defined but referenced by no "
+                        f"equation or connector"
+                    ),
+                    variable=name,
+                ))
 
 
 def validate_model(model: StellaModel) -> list[ValidationError]:

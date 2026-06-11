@@ -7,9 +7,17 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mcp.server import Server
+from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.stdio import stdio_server
-from mcp.types import CallToolResult, TextContent, Tool
+from mcp.types import CallToolResult, GetPromptResult, Prompt, Resource, TextContent, Tool
+from pydantic import AnyUrl
 
+from .mcp_resources import (
+    build_model_prompt,
+    list_all_resources,
+    list_prompt_definitions,
+    read_resource_content,
+)
 from .tool_handlers import register_tool_handlers
 from .tool_schemas import build_tool_definitions
 from .xmile import GraphicalFunction, StellaModel
@@ -187,6 +195,33 @@ def _compat_warning_suffix(warnings: list[str]) -> str:
 async def list_tools() -> list[Tool]:
     """List available tools."""
     return build_tool_definitions()
+
+
+@server.list_resources()
+async def list_resources() -> list[Resource]:
+    """Expose templates and session models as MCP resources."""
+    return list_all_resources(_get_session_models())
+
+
+@server.read_resource()
+async def read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
+    """Return the content of a stella:// resource."""
+    content, mime_type = read_resource_content(str(uri), _get_session_models())
+    return [ReadResourceContents(content=content, mime_type=mime_type)]
+
+
+@server.list_prompts()
+async def list_prompts() -> list[Prompt]:
+    """Expose the model-building workflow as an MCP prompt."""
+    return list_prompt_definitions()
+
+
+@server.get_prompt()
+async def get_prompt(name: str, arguments: dict[str, str] | None) -> GetPromptResult:
+    """Render the build-stella-model prompt."""
+    if name != "build-stella-model":
+        raise ValueError(f"Unknown prompt '{name}'")
+    return build_model_prompt((arguments or {}).get("description"))
 
 
 ToolResponse = list[TextContent] | CallToolResult

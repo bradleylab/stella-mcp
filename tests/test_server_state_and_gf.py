@@ -752,3 +752,44 @@ def test_gf_equation_nested_parens_stripped_correctly():
     assert gf_eqn_text("graph( x * (y + 1) )") == "x * (y + 1)"
     assert gf_eqn_text("GRAPH(TIME) * 2") == "GRAPH(TIME) * 2"  # not a pure wrapper
     assert gf_eqn_text("Population / 2") == "Population / 2"
+
+
+def test_render_diagram_tool_returns_svg(monkeypatch, tmp_path):
+    """render_diagram returns inline SVG and optionally writes a file."""
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2110)
+    asyncio.run(server_mod.call_tool("build_model", {
+        "name": "Diag", "model_id": "d",
+        "stocks": [{"name": "Population", "initial_value": "100"}],
+        "auxs": [{"name": "growth rate", "equation": "0.1"}],
+        "flows": [{"name": "growth", "equation": 'Population * "growth rate"',
+                   "to_stock": "Population"}],
+    }))
+
+    svg_path = tmp_path / "diagram.svg"
+    result = asyncio.run(server_mod.call_tool(
+        "render_diagram", {"model_id": "d", "filepath": str(svg_path)}
+    ))
+
+    assert not result.isError
+    sc = result.structuredContent
+    assert sc["svg"].startswith("<svg")
+    assert sc["filepath"] == str(svg_path)
+    assert svg_path.read_text().startswith("<svg")
+    import xml.etree.ElementTree as ET
+    ET.fromstring(sc["svg"])  # well-formed
+
+
+def test_render_diagram_inline_only_without_filepath(monkeypatch):
+    server_mod._session_models.clear()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2111)
+    asyncio.run(server_mod.call_tool("create_model", {"name": "D", "model_id": "d"}))
+    asyncio.run(server_mod.call_tool(
+        "add_stock", {"model_id": "d", "name": "S", "initial_value": "1"}
+    ))
+
+    result = asyncio.run(server_mod.call_tool("render_diagram", {"model_id": "d"}))
+
+    assert not result.isError
+    assert result.structuredContent["filepath"] is None
+    assert "<rect" in result.structuredContent["svg"]

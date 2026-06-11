@@ -20,6 +20,7 @@ from .model_snapshot import (
     template_info_to_dict,
     validation_issue_to_dict,
 )
+from .render_svg import render_model_svg
 from .simulate import run_simulation
 from .templates import (
     get_template_info,
@@ -667,6 +668,34 @@ def register_tool_handlers(
             text=f"Saved model_id={model_id} to {filepath}{warning_suffix}"
         )]
 
+    @register("render_diagram")
+    def _handle_render_diagram(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        if arguments.get("auto_layout", True):
+            # Mirror save_model's layout prep so a freshly built model
+            # renders sensibly.
+            model._auto_layout()
+            if model.modules:
+                model.auto_place_module_boxes(only_missing=True)
+        else:
+            model._recalculate_flow_points()
+            model._calculate_connector_angles()
+            model._position_orphan_flows()
+        svg = render_model_svg(model)
+        result: dict[str, Any] = {"model_id": model_id, "svg": svg, "filepath": None}
+        filepath = arguments.get("filepath")
+        if filepath:
+            path = Path(filepath)
+            if not path.suffix:
+                path = path.with_suffix(".svg")
+            path.write_text(svg, encoding="utf-8")
+            result["filepath"] = str(path)
+        suffix = f" -> {result['filepath']}" if result["filepath"] else ""
+        return success_result(
+            f"Rendered model_id={model_id} to SVG ({len(svg)} bytes){suffix}",
+            result,
+        )
+
     @register("read_model")
     def _handle_read_model(arguments: dict[str, Any]) -> ToolResponse:
         filepath = Path(arguments["filepath"])
@@ -996,7 +1025,10 @@ def register_tool_handlers(
     @register("get_model_xml")
     def _handle_get_model_xml(arguments: dict[str, Any]) -> ToolResponse:
         _, model = get_model(arguments.get("model_id"))
-        xml = model.to_xml(
+        # Export mutates layout state (auto-layout, flow points, connector
+        # angles), so previewing XML works on a copy — the tool is read-only.
+        preview = copy.deepcopy(model)
+        xml = preview.to_xml(
             auto_layout=arguments.get("auto_layout", True),
             resolve_layout_violations=arguments.get("resolve_layout_violations", False),
             compat_mode=arguments.get("compat_mode", "permissive"),
@@ -1005,13 +1037,13 @@ def register_tool_handlers(
         if len(xml) > 10000:
             xml = xml[:10000] + "\n... (truncated)"
         output = [TextContent(type="text", text=xml)]
-        if model.last_export_warnings:
+        if preview.last_export_warnings:
             output.append(
                 TextContent(
                     type="text",
                     text=(
-                        f"Compatibility warnings ({len(model.last_export_warnings)}):\n"
-                        + "\n".join(f"- {msg}" for msg in model.last_export_warnings[:5])
+                        f"Compatibility warnings ({len(preview.last_export_warnings)}):\n"
+                        + "\n".join(f"- {msg}" for msg in preview.last_export_warnings[:5])
                     ),
                 )
             )

@@ -436,8 +436,17 @@ class StellaModel:
                 elif src in nodes and tgt in nodes:
                     edges.append((src, tgt, CONNECTOR_WEIGHT))
 
+        # Element sizes let the layout keep larger stocks from overlapping.
+        node_sizes: dict[str, tuple[float, float]] = {}
+        for name in nodes:
+            if name in self.stocks:
+                stock = self.stocks[name]
+                node_sizes[name] = (float(stock.width), float(stock.height))
+            elif name in self.auxs:
+                node_sizes[name] = (AUX_RADIUS * 2.0, AUX_RADIUS * 2.0)
+
         # Run force-directed layout
-        positions = force_directed_layout(nodes, edges, fixed_positions)
+        positions = force_directed_layout(nodes, edges, fixed_positions, node_sizes=node_sizes)
 
         # Apply positions to stocks and auxs
         for name, (x, y) in positions.items():
@@ -1312,8 +1321,40 @@ class StellaModel:
         # Always recalculate flow points to connect stocks at their actual positions
         self._recalculate_flow_points()
 
+        # Give unconnected ("orphan") flows a fallback position so they still
+        # render and export instead of being left unpositioned.
+        self._position_orphan_flows()
+
         # Calculate connector angles based on final positions
         self._calculate_connector_angles(force=True)
+
+    def _position_orphan_flows(self):
+        """Place flows with no source or destination stock at a fallback spot.
+
+        A flow with neither ``from_stock`` nor ``to_stock`` is never anchored
+        by ``_position_subsystem``, so it would otherwise keep ``x/y == None``
+        and block rendering and XMILE export. Lay such flows out in a row
+        beneath the positioned elements with a short two-point segment; the
+        renderer then draws source/sink clouds at both ends.
+        """
+        orphans = [
+            flow for flow in self.flows.values()
+            if flow.x is None or flow.y is None
+        ]
+        if not orphans:
+            return
+
+        positioned = (*self.stocks.values(), *self.auxs.values(), *self.flows.values())
+        xs = [el.x for el in positioned if el.x is not None]
+        ys = [el.y for el in positioned if el.y is not None]
+        base_x = min(xs) if xs else 100.0
+        base_y = (max(ys) + 90.0) if ys else 100.0
+
+        for i, flow in enumerate(sorted(orphans, key=lambda f: f.name)):
+            cx = base_x + i * 120.0
+            flow.x = cx
+            flow.y = base_y
+            flow.points = [(cx - 30.0, base_y), (cx + 30.0, base_y)]
 
     def _calculate_flow_offset(self, index: int, total: int) -> float:
         """Calculate vertical offset for flow attachment point.
