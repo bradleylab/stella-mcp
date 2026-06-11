@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Auto-layout produces much tighter diagrams. The force-directed engine's
+  ideal edge length is now a fixed, readable distance instead of scaling with
+  the canvas area (which made small models sprawl across the whole canvas).
+  Overlap prevention is now size-aware (larger stocks are kept proportionally
+  farther apart) and runs after the canvas-fit rescale, so a downscale can no
+  longer compress elements back into overlap.
 - `get_model_xml` is now read-only: it exports from a copy, so previewing XML
   no longer rewrites the model's layout state.
 - Minimum `mcp` dependency raised to `>=1.7.0` (introduces `ToolAnnotations`);

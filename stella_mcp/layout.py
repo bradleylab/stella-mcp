@@ -76,6 +76,81 @@ def segment_intersects_box(
 # Fruchterman-Reingold Force-Directed Layout
 # =============================================================================
 
+# Default ideal edge length (pixels) between connected nodes. Chosen for
+# readable Stella diagrams: a stock is 45-120px wide and an aux ~36px, so
+# ~150px keeps connected elements close without overlapping. Decoupled from
+# canvas size on purpose — spacing should not balloon with the canvas (the
+# old k = sqrt(canvas_area / n) gave ~480px edges for a 7-node model, which
+# is what made small diagrams sprawl).
+DEFAULT_IDEAL_EDGE_LENGTH = 150.0
+# Extra gap (pixels) added on top of two elements' radii when enforcing
+# non-overlap, so neighbors have visible breathing room.
+_SEPARATION_GAP = 22.0
+# Box assumed for a node with no size provided.
+_DEFAULT_NODE_SIZE = (40.0, 40.0)
+
+
+def _required_separation(
+    u: str,
+    v: str,
+    node_sizes: Mapping[str, tuple[float, float]] | None,
+    floor: float,
+) -> float:
+    """Minimum center-to-center distance so u and v cannot overlap.
+
+    Treats each node as a circle of radius max(width, height)/2 — a
+    conservative proxy that guarantees the bounding boxes stay apart.
+    """
+    if node_sizes is None:
+        return floor
+    wu, hu = node_sizes.get(u, _DEFAULT_NODE_SIZE)
+    wv, hv = node_sizes.get(v, _DEFAULT_NODE_SIZE)
+    radius_u = max(wu, hu) / 2
+    radius_v = max(wv, hv) / 2
+    return max(floor, radius_u + radius_v + _SEPARATION_GAP)
+
+
+def _enforce_min_separation(
+    pos: dict[str, tuple[float, float]],
+    sorted_nodes: list[str],
+    fixed_positions: Mapping[str, tuple[float, float]],
+    node_sizes: Mapping[str, tuple[float, float]] | None,
+    min_separation: float,
+) -> None:
+    """Push overlapping free nodes apart until every pair clears its
+    required separation. Mutates ``pos`` in place.
+
+    Dense pileups (e.g. a long linear chain compressed by a downscale) need
+    many relaxation sweeps to fully resolve, so the iteration budget is
+    generous; the loop exits early once a sweep moves nothing."""
+    for _ in range(150):
+        moved = False
+        for i, u in enumerate(sorted_nodes):
+            if u in fixed_positions:
+                continue
+            for v in sorted_nodes[i + 1:]:
+                # Re-read u each time: a push from an earlier v this sweep
+                # has already moved it, and using the stale center slows
+                # convergence in tight clusters.
+                ux, uy = pos[u]
+                vx, vy = pos[v]
+                dx, dy = ux - vx, uy - vy
+                dist = math.sqrt(dx * dx + dy * dy)
+                required = _required_separation(u, v, node_sizes, min_separation)
+                if dist < required:
+                    if dist < 0.01:
+                        dx, dy, dist = 1.0, 0.0, 1.0
+                    push = (required - dist) / 2 + 1
+                    nx, ny = (dx / dist) * push, (dy / dist) * push
+                    if u not in fixed_positions:
+                        pos[u] = (ux + nx, uy + ny)
+                    if v not in fixed_positions:
+                        pos[v] = (vx - nx, vy - ny)
+                    moved = True
+        if not moved:
+            break
+
+
 def force_directed_layout(
     nodes: list[str],
     edges: list[tuple[str, str, float]],
@@ -84,6 +159,8 @@ def force_directed_layout(
     canvas_height: float = 1000.0,
     iterations: int = 300,
     min_separation: float = 50.0,
+    ideal_edge_length: float = DEFAULT_IDEAL_EDGE_LENGTH,
+    node_sizes: Mapping[str, tuple[float, float]] | None = None,
 ) -> dict[str, tuple[float, float]]:
     """Compute node positions using Fruchterman-Reingold force-directed layout.
 
@@ -96,7 +173,12 @@ def force_directed_layout(
         canvas_width: Canvas width in pixels.
         canvas_height: Canvas height in pixels.
         iterations: Number of simulation steps.
-        min_separation: Minimum distance between node centers after layout.
+        min_separation: Floor on the distance between node centers after layout.
+        ideal_edge_length: Target distance between connected nodes (the FR
+            spring constant). Smaller values produce tighter diagrams.
+        node_sizes: Optional per-node (width, height); when given, the
+            minimum separation grows with element size so larger stocks
+            cannot overlap.
 
     Returns:
         Dict mapping node name to (x, y) position.
@@ -112,9 +194,9 @@ def force_directed_layout(
             return {name: fixed_positions[name]}
         return {name: (canvas_width / 2, canvas_height / 2)}
 
-    # Ideal edge length
-    area = canvas_width * canvas_height
-    k = math.sqrt(area / n)
+    # Ideal edge length is fixed (not derived from canvas area) so diagram
+    # spacing stays readable regardless of element count.
+    k = ideal_edge_length
 
     # Initial placement: fixed nodes at their positions, free nodes on a circle
     pos: dict[str, tuple[float, float]] = {}
@@ -196,76 +278,39 @@ def force_directed_layout(
 
         t -= dt
 
-    # Post-processing: enforce minimum separation
     sorted_nodes = sorted(nodes)
-    for _ in range(50):
-        moved = False
-        for i, u in enumerate(sorted_nodes):
-            if u in fixed_positions:
-                continue
-            ux, uy = pos[u]
-            for v in sorted_nodes[i + 1:]:
-                vx, vy = pos[v]
-                dx = ux - vx
-                dy = uy - vy
-                dist = math.sqrt(dx * dx + dy * dy)
-                if dist < min_separation:
-                    if dist < 0.01:
-                        dx, dy, dist = 1.0, 0.0, 1.0
-                    push = (min_separation - dist) / 2 + 1
-                    nx = (dx / dist) * push
-                    ny = (dy / dist) * push
-                    if u not in fixed_positions:
-                        pos[u] = (ux + nx, uy + ny)
-                    if v not in fixed_positions:
-                        pos[v] = (vx - nx, vy - ny)
-                    moved = True
-        if not moved:
-            break
-
-    # Rescale free nodes to fit within canvas, expanding only if needed
-    padding = 50.0
     free = [nd for nd in nodes if nd not in fixed_positions]
     if not free:
         return pos
 
+    # Rescale free nodes to fit within canvas, downscaling only when the
+    # layout overflows, then re-center.
+    padding = 50.0
     free_x = [pos[nd][0] for nd in free]
     free_y = [pos[nd][1] for nd in free]
     min_x, max_x = min(free_x), max(free_x)
     min_y, max_y = min(free_y), max(free_y)
-    span_x = max_x - min_x
-    span_y = max_y - min_y
-
-    # Available space (use canvas, expand if layout truly needs more)
-    avail_w = canvas_width - 2 * padding
-    avail_h = canvas_height - 2 * padding
-
-    # Scale down if layout exceeds canvas, but don't upscale small layouts
-    if span_x > avail_w:
-        scale_x = avail_w / span_x
-    else:
-        scale_x = 1.0
-    if span_y > avail_h:
-        scale_y = avail_h / span_y
-    else:
-        scale_y = 1.0
+    span_x, span_y = max_x - min_x, max_y - min_y
+    avail_w, avail_h = canvas_width - 2 * padding, canvas_height - 2 * padding
+    scale_x = avail_w / span_x if span_x > avail_w else 1.0
+    scale_y = avail_h / span_y if span_y > avail_h else 1.0
     scale = min(scale_x, scale_y)
-
-    # Center of current free-node positions
-    center_x = (min_x + max_x) / 2
-    center_y = (min_y + max_y) / 2
-
-    # Target center
-    target_cx = canvas_width / 2
-    target_cy = canvas_height / 2
-
+    center_x, center_y = (min_x + max_x) / 2, (min_y + max_y) / 2
     for name in free:
         x, y = pos[name]
-        x = (x - center_x) * scale + target_cx
-        y = (y - center_y) * scale + target_cy
-        # Hard clamp to padding
-        x = max(padding, x)
-        y = max(padding, y)
-        pos[name] = (x, y)
+        pos[name] = (
+            (x - center_x) * scale + canvas_width / 2,
+            (y - center_y) * scale + canvas_height / 2,
+        )
+
+    # Enforce minimum separation AFTER the rescale, so a downscale can never
+    # compress elements back into overlap — non-overlap is the hard rule,
+    # canvas-fit is best-effort.
+    _enforce_min_separation(pos, sorted_nodes, fixed_positions, node_sizes, min_separation)
+
+    # Keep coordinates non-negative.
+    for name in free:
+        x, y = pos[name]
+        pos[name] = (max(padding, x), max(padding, y))
 
     return pos

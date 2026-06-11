@@ -107,6 +107,46 @@ class TestForceDirectedPureFunction:
         assert result["A"] == (100, 200)
         assert result["B"] == (300, 400)
 
+    def test_ideal_edge_length_controls_spacing(self):
+        """Connected nodes settle near the ideal edge length, not canvas scale."""
+        result = force_directed_layout(["A", "B"], [("A", "B", 2.0)], {})
+        dist = math.dist(result["A"], result["B"])
+        assert 60 <= dist <= 260, f"edge length {dist:.0f}px outside expected band"
+
+    def test_layout_is_compact_not_canvas_scaled(self):
+        """A small connected model must not sprawl to canvas scale (regression:
+        the old k = sqrt(canvas_area / n) gave ~480px edges)."""
+        nodes = [f"n{i}" for i in range(6)]
+        edges = [("n0", "n1", 2.0), ("n1", "n2", 2.0),
+                 ("n3", "n0", 1.5), ("n4", "n1", 1.5), ("n5", "n2", 1.5)]
+        result = force_directed_layout(nodes, edges, {})
+        xs = [p[0] for p in result.values()]
+        ys = [p[1] for p in result.values()]
+        span = max(max(xs) - min(xs), max(ys) - min(ys))
+        assert span < 700, f"layout sprawled to {span:.0f}px"
+
+    def test_size_aware_separation_prevents_large_stock_overlap(self):
+        """Large stocks must be kept far enough apart that boxes don't overlap."""
+        sizes = {"A": (120.0, 90.0), "B": (120.0, 90.0)}
+        result = force_directed_layout(["A", "B"], [("A", "B", 2.0)], {}, node_sizes=sizes)
+        dist = math.dist(result["A"], result["B"])
+        assert dist >= 120, f"large stocks too close: {dist:.0f}px"
+
+    def test_downscale_does_not_reintroduce_overlap(self):
+        """A chain overflowing a small canvas is downscaled, but min-separation
+        must still hold afterward (separation runs after the rescale)."""
+        nodes = [f"n{i}" for i in range(20)]
+        edges = [(f"n{i}", f"n{i+1}", 2.0) for i in range(19)]
+        sizes = {n: (45.0, 35.0) for n in nodes}
+        result = force_directed_layout(
+            nodes, edges, {}, node_sizes=sizes, canvas_width=800, canvas_height=600
+        )
+        names = list(result)
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                dist = math.dist(result[a], result[b])
+                assert dist >= 49.5, f"{a}/{b} overlap after downscale: {dist:.0f}px"
+
 
 class TestForceDirectedIntegration:
     """Integration tests: FR layout through StellaModel._auto_layout()."""

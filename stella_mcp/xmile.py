@@ -436,8 +436,17 @@ class StellaModel:
                 elif src in nodes and tgt in nodes:
                     edges.append((src, tgt, CONNECTOR_WEIGHT))
 
+        # Element sizes let the layout keep larger stocks from overlapping.
+        node_sizes: dict[str, tuple[float, float]] = {}
+        for name in nodes:
+            if name in self.stocks:
+                stock = self.stocks[name]
+                node_sizes[name] = (float(stock.width), float(stock.height))
+            elif name in self.auxs:
+                node_sizes[name] = (AUX_RADIUS * 2.0, AUX_RADIUS * 2.0)
+
         # Run force-directed layout
-        positions = force_directed_layout(nodes, edges, fixed_positions)
+        positions = force_directed_layout(nodes, edges, fixed_positions, node_sizes=node_sizes)
 
         # Apply positions to stocks and auxs
         for name, (x, y) in positions.items():
