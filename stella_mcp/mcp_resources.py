@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 from typing import Protocol
+from urllib.parse import quote, unquote
 
 from mcp.types import GetPromptResult, Prompt, PromptArgument, PromptMessage, Resource, TextContent
 
@@ -35,7 +36,9 @@ def list_template_resources() -> list[Resource]:
     resources: list[Resource] = []
     for info in list_available_templates():
         resources.append(Resource(
-            uri=f"{_TEMPLATE_SCHEME}{info.name}",  # type: ignore[arg-type]
+            # Percent-encode the name so it round-trips through AnyUrl (which
+            # otherwise encodes spaces/unicode and breaks the read lookup).
+            uri=f"{_TEMPLATE_SCHEME}{quote(info.name, safe='')}",  # type: ignore[arg-type]
             name=info.name,
             title=info.title or info.name,
             description=info.description or f"{info.source} template",
@@ -50,7 +53,7 @@ def list_model_resources(session_models: SessionModelsLike) -> list[Resource]:
     for model_id in sorted(session_models.models):
         model = session_models.models[model_id]
         resources.append(Resource(
-            uri=f"{_MODEL_SCHEME}{model_id}",  # type: ignore[arg-type]
+            uri=f"{_MODEL_SCHEME}{quote(model_id, safe='')}",  # type: ignore[arg-type]
             name=model_id,
             title=model.name,
             description=f"Session model '{model_id}' as XMILE",
@@ -69,13 +72,15 @@ def read_resource_content(uri: str, session_models: SessionModelsLike) -> tuple[
     Raises ValueError for unknown schemes or missing resources.
     """
     if uri.startswith(_TEMPLATE_SCHEME):
-        name = uri[len(_TEMPLATE_SCHEME):].rstrip("/")
+        # rstrip before unquote: any literal '/' in the name is %2F-encoded,
+        # so this only drops an AnyUrl-appended trailing slash.
+        name = unquote(uri[len(_TEMPLATE_SCHEME):].rstrip("/"))
         for info in list_available_templates():
             if info.name == name:
                 return info.path.read_text(encoding="utf-8"), "application/xml"
         raise ValueError(f"Unknown template resource '{name}'")
     if uri.startswith(_MODEL_SCHEME):
-        model_id = uri[len(_MODEL_SCHEME):].rstrip("/")
+        model_id = unquote(uri[len(_MODEL_SCHEME):].rstrip("/"))
         model = session_models.models.get(model_id)
         if model is None:
             raise ValueError(f"Unknown model resource '{model_id}'")

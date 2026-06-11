@@ -109,6 +109,25 @@ def test_read_model_resource_does_not_mutate_session(monkeypatch):
     assert model.stocks["S"].x is None  # export ran on a copy
 
 
+def test_model_resource_uri_round_trips_with_special_chars(monkeypatch):
+    """A model_id with a space must round-trip: the advertised URI must be
+    readable (regression — AnyUrl percent-encodes the space)."""
+    _fresh_session(monkeypatch, 5005)
+    from pydantic import AnyUrl
+
+    asyncio.run(server_mod.call_tool("create_model", {"name": "M", "model_id": "my model"}))
+    asyncio.run(server_mod.call_tool(
+        "add_stock", {"model_id": "my model", "name": "S", "initial_value": "1"}
+    ))
+
+    resources = asyncio.run(server_mod.list_resources())
+    model_uri = next(str(r.uri) for r in resources if r.name == "my model")
+
+    # Read back using the exact URI that list_resources advertised.
+    contents = asyncio.run(server_mod.read_resource(AnyUrl(model_uri)))
+    ET.fromstring(contents[0].content)
+
+
 def test_read_unknown_resource_raises(monkeypatch):
     _fresh_session(monkeypatch, 5004)
     from pydantic import AnyUrl
