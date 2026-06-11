@@ -93,3 +93,32 @@ def test_complex_flow_units_with_multiple_slashes_silent():
     # Two slashes: too complex to judge confidently -> stay silent.
     model.add_flow("respiration", "1", units="GtC/Years/m2", from_stock="Atmosphere")
     assert "units_inconsistent" not in _categories(model)
+
+
+def test_abbreviated_time_unit_in_slash_form_silent():
+    """'GtC/yr' against time unit 'Years' must be silent: 'yr' is a known
+    abbreviation for year (regression: 'yr' was absent from the singular
+    table, so the canonical carbon-flux unit fired a false warning)."""
+    model = StellaModel("Carbon")
+    model.sim_specs.time_units = "Years"
+    model.add_stock("Atmosphere", "100", units="GtC")
+    model.add_flow("respiration", "1", units="GtC/yr", from_stock="Atmosphere")
+    assert "units_inconsistent" not in _categories(model)
+
+
+def test_no_slash_rate_forms_stay_silent():
+    """Rate units written without a slash ('GtC yr-1', 'people per year',
+    'molecules s^-1') cannot be confidently parsed, so the check stays silent
+    rather than firing a false positive (regression)."""
+    for stock_units, flow_units in [
+        ("GtC", "GtC yr-1"),
+        ("people", "people per year"),
+        ("molecules", "molecules s^-1"),
+    ]:
+        model = StellaModel("Rate")
+        model.sim_specs.time_units = "Years"
+        model.add_stock("S", "1", units=stock_units)
+        model.add_flow("f", "1", units=flow_units, from_stock="S")
+        assert "units_inconsistent" not in _categories(model), (
+            f"false positive on flow units {flow_units!r}"
+        )

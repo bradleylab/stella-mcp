@@ -117,18 +117,22 @@ def _enforce_min_separation(
     node_sizes: Mapping[str, tuple[float, float]] | None,
     min_separation: float,
 ) -> None:
-    """Push overlapping free nodes apart until every pair clears its
-    required separation. Mutates ``pos`` in place.
+    """Push overlapping nodes apart until every pair clears its required
+    separation. Mutates ``pos`` in place.
 
-    Dense pileups (e.g. a long linear chain compressed by a downscale) need
-    many relaxation sweeps to fully resolve, so the iteration budget is
-    generous; the loop exits early once a sweep moves nothing."""
+    A pinned (fixed) node never moves, so when a fixed/free pair overlaps the
+    free node absorbs the whole push; only fixed/fixed pairs (neither can
+    move) are skipped. Dense pileups (e.g. a long linear chain compressed by a
+    downscale) need many relaxation sweeps to resolve, so the iteration budget
+    is generous; the loop exits early once a sweep moves nothing."""
     for _ in range(150):
         moved = False
         for i, u in enumerate(sorted_nodes):
-            if u in fixed_positions:
-                continue
+            u_fixed = u in fixed_positions
             for v in sorted_nodes[i + 1:]:
+                v_fixed = v in fixed_positions
+                if u_fixed and v_fixed:
+                    continue  # neither endpoint can move
                 # Re-read u each time: a push from an earlier v this sweep
                 # has already moved it, and using the stale center slows
                 # convergence in tight clusters.
@@ -137,16 +141,22 @@ def _enforce_min_separation(
                 dx, dy = ux - vx, uy - vy
                 dist = math.sqrt(dx * dx + dy * dy)
                 required = _required_separation(u, v, node_sizes, min_separation)
-                if dist < required:
-                    if dist < 0.01:
-                        dx, dy, dist = 1.0, 0.0, 1.0
-                    push = (required - dist) / 2 + 1
-                    nx, ny = (dx / dist) * push, (dy / dist) * push
-                    if u not in fixed_positions:
-                        pos[u] = (ux + nx, uy + ny)
-                    if v not in fixed_positions:
-                        pos[v] = (vx - nx, vy - ny)
-                    moved = True
+                if dist >= required:
+                    continue
+                if dist < 0.01:
+                    dx, dy, dist = 1.0, 0.0, 1.0
+                # +1 so floating-point math always makes forward progress.
+                deficit = required - dist + 1.0
+                nx, ny = dx / dist, dy / dist
+                if u_fixed:
+                    pos[v] = (vx - nx * deficit, vy - ny * deficit)
+                elif v_fixed:
+                    pos[u] = (ux + nx * deficit, uy + ny * deficit)
+                else:
+                    half = deficit / 2
+                    pos[u] = (ux + nx * half, uy + ny * half)
+                    pos[v] = (vx - nx * half, vy - ny * half)
+                moved = True
         if not moved:
             break
 
@@ -308,9 +318,17 @@ def force_directed_layout(
     # canvas-fit is best-effort.
     _enforce_min_separation(pos, sorted_nodes, fixed_positions, node_sizes, min_separation)
 
-    # Keep coordinates non-negative.
-    for name in free:
-        x, y = pos[name]
-        pos[name] = (max(padding, x), max(padding, y))
+    # Keep coordinates non-negative by translating the free nodes as a rigid
+    # body. A per-axis clamp (max(padding, x)) would pile every node pushed
+    # past an edge onto the same coordinate, undoing the separation just
+    # enforced; a uniform shift preserves all pairwise distances.
+    free_x = [pos[nd][0] for nd in free]
+    free_y = [pos[nd][1] for nd in free]
+    shift_x = padding - min(free_x) if min(free_x) < padding else 0.0
+    shift_y = padding - min(free_y) if min(free_y) < padding else 0.0
+    if shift_x or shift_y:
+        for name in free:
+            x, y = pos[name]
+            pos[name] = (x + shift_x, y + shift_y)
 
     return pos

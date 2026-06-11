@@ -10,13 +10,13 @@ from .xmile import StellaModel
 # in practice). Used to collapse "years" vs "year" when checking that a flow's
 # units read as stock-units-per-time-unit. Fixed table, not a stemmer.
 _TIME_UNIT_SINGULAR = {
-    "years": "year", "year": "year",
-    "months": "month", "month": "month",
-    "weeks": "week", "week": "week",
+    "years": "year", "year": "year", "yr": "year", "yrs": "year",
+    "months": "month", "month": "month", "mo": "month", "mos": "month",
+    "weeks": "week", "week": "week", "wk": "week", "wks": "week",
     "days": "day", "day": "day",
-    "hours": "hour", "hour": "hour",
-    "minutes": "minute", "minute": "minute",
-    "seconds": "second", "second": "second",
+    "hours": "hour", "hour": "hour", "hr": "hour", "hrs": "hour",
+    "minutes": "minute", "minute": "minute", "min": "minute", "mins": "minute",
+    "seconds": "second", "second": "second", "sec": "second", "secs": "second",
 }
 
 
@@ -396,8 +396,17 @@ class ModelValidator:
                 )
                 if consistent:
                     continue
-            elif slash_count != 0:
-                continue  # too complex to judge confidently
+            elif slash_count == 0:
+                # No division operator. We cannot confidently parse rate forms
+                # like "GtC yr-1", "people per year", or "molecules s^-1", so
+                # the only thing flagged is flow units identical to the stock's
+                # (the per-time operator was dropped entirely). Everything else
+                # stays silent — a false units warning trains users to ignore
+                # the validator.
+                if _norm_units(flow_units) != _norm_units(stock_units):
+                    continue
+            else:
+                continue  # multiple slashes: too complex to judge confidently
 
             self.errors.append(ValidationError(
                 severity="warning",

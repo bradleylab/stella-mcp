@@ -5,7 +5,11 @@ import time
 
 import pytest
 
-from stella_mcp.layout import force_directed_layout
+from stella_mcp.layout import (
+    _enforce_min_separation,
+    _required_separation,
+    force_directed_layout,
+)
 from stella_mcp.xmile import StellaModel
 
 
@@ -146,6 +150,42 @@ class TestForceDirectedPureFunction:
             for b in names[i + 1:]:
                 dist = math.dist(result[a], result[b])
                 assert dist >= 49.5, f"{a}/{b} overlap after downscale: {dist:.0f}px"
+
+    def test_dense_layout_edge_clamp_does_not_pile_nodes(self):
+        """Nodes pushed past a canvas edge must not be flattened onto the same
+        coordinate by the non-negative adjustment (regression: a per-axis
+        max(padding, x) clamp collapsed separation, leaving a 7px gap where
+        82px was required; the fix shifts free nodes as a rigid body)."""
+        n = 40
+        nodes = [f"n{i}" for i in range(n)]
+        edges = [(f"n{i}", f"n{i+1}", 2.0) for i in range(n - 1)]
+        edges += [("n0", f"n{i}", 1.5) for i in range(2, n, 3)]
+        sizes = {nd: (60.0, 45.0) for nd in nodes}
+        result = force_directed_layout(
+            nodes, edges, {}, node_sizes=sizes,
+            canvas_width=600, canvas_height=400,
+        )
+        names = list(result)
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                dist = math.dist(result[a], result[b])
+                required = _required_separation(a, b, sizes, 50.0)
+                assert dist >= required - 0.5, (
+                    f"{a}/{b} overlap: {dist:.0f}px < required {required:.0f}px"
+                )
+        assert all(x >= 0 and y >= 0 for x, y in result.values())
+
+    def test_min_separation_pushes_free_clear_of_fixed(self):
+        """A pinned node that sorts before a free node must still be cleared:
+        the free node absorbs the whole push (regression: fixed/free pairs were
+        skipped when the fixed node sorted first, so they stayed overlapping)."""
+        sizes = {"A": (60.0, 45.0), "z": (60.0, 45.0)}
+        pos = {"A": (100.0, 100.0), "z": (110.0, 100.0)}  # overlapping pair
+        _enforce_min_separation(pos, ["A", "z"], {"A": (100.0, 100.0)}, sizes, 50.0)
+        assert pos["A"] == (100.0, 100.0)  # fixed node never moves
+        dist = math.dist(pos["A"], pos["z"])
+        required = _required_separation("A", "z", sizes, 50.0)
+        assert dist >= required - 0.5, f"fixed/free still overlapping: {dist:.0f}px"
 
 
 class TestForceDirectedIntegration:

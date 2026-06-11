@@ -121,6 +121,24 @@ def test_render_overlapping_stocks_does_not_crash():
     assert _count_by_class(svg)["stock"] == 2
 
 
+def test_render_orphan_flow_after_auto_layout_succeeds():
+    """A flow with no source or destination stock is positioned by layout and
+    renders with source/sink clouds, rather than blocking the render
+    (regression: orphan flows kept x/y == None and render_model_svg raised)."""
+    model = StellaModel("Orphan")
+    model.add_stock("S", "10")
+    model.add_flow("leak", "1")  # no from_stock / to_stock
+    model._auto_layout()
+    leak = model.flows[model._normalize_name("leak")]
+    assert leak.x is not None and leak.y is not None
+    svg = render_model_svg(model)
+    ET.fromstring(svg)  # would raise if render failed
+    counts = _count_by_class(svg)
+    assert counts["flow-pipe"] == 1
+    # Both ends unattached -> a source cloud and a sink cloud.
+    assert counts.get("cloud", 0) == 2
+
+
 def test_render_locked_connector_uses_stored_waypoints():
     model = StellaModel("Locked")
     model.add_aux("k", "1", x=50, y=50)

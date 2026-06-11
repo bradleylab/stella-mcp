@@ -680,6 +680,7 @@ def register_tool_handlers(
         else:
             model._recalculate_flow_points()
             model._calculate_connector_angles()
+            model._position_orphan_flows()
         svg = render_model_svg(model)
         result: dict[str, Any] = {"model_id": model_id, "svg": svg, "filepath": None}
         filepath = arguments.get("filepath")
