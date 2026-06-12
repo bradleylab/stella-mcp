@@ -322,3 +322,59 @@ def test_sensitivity_tool(monkeypatch):
     sc = result.structuredContent
     assert sc["total_runs"] == 5
     assert sc["parameters"][0]["range_sensitivity"] > 0
+
+
+# === review hardening: input validation ======================================
+
+def test_non_finite_override_rejected():
+    for bad in (float("inf"), float("nan")):
+        with pytest.raises(ValueError, match="finite"):
+            compare_scenarios(
+                _growth_model(),
+                scenarios=[{"name": "x", "overrides": {"rate": bad}}],
+                include=["Population"],
+            )
+
+
+def test_non_finite_sweep_inputs_rejected():
+    model = _accumulator_model()
+    output = {"variable": "Accumulator", "metric": "final"}
+    with pytest.raises(ValueError, match="finite"):
+        sensitivity_analysis(model, parameters=[{"name": "rate", "values": [1, float("inf")]}], output=output)
+    with pytest.raises(ValueError, match="finite"):
+        sensitivity_analysis(model, parameters=[{"name": "rate", "start": 1, "stop": float("nan"), "steps": 3}], output=output)
+    with pytest.raises(ValueError, match="finite"):
+        sensitivity_analysis(
+            model,
+            parameters=[{"name": "rate", "values": [1, 2]}],
+            output={"variable": "Accumulator", "metric": "time_to_threshold", "threshold": float("inf")},
+        )
+
+
+def test_malformed_scenarios_raise_value_error():
+    with pytest.raises(ValueError, match="at least one scenario"):
+        compare_scenarios(_growth_model(), scenarios=None)
+    with pytest.raises(ValueError, match="must be an object"):
+        compare_scenarios(_growth_model(), scenarios=[None])
+
+
+def test_malformed_sensitivity_args_raise_value_error():
+    model = _accumulator_model()
+    with pytest.raises(ValueError, match="at least one parameter"):
+        sensitivity_analysis(model, parameters=None, output={"variable": "Accumulator"})
+    with pytest.raises(ValueError, match="must be an object"):
+        sensitivity_analysis(model, parameters=[None], output={"variable": "Accumulator"})
+    with pytest.raises(ValueError, match="output must be an object"):
+        sensitivity_analysis(model, parameters=[{"name": "rate", "values": [1, 2]}], output=None)
+
+
+def test_baseline_undefined_metric_warns():
+    """A baseline whose metric is undefined (threshold never crossed) must
+    surface a warning so a null elasticity is not silently ambiguous."""
+    result = sensitivity_analysis(
+        _accumulator_model(),
+        parameters=[{"name": "rate", "values": [1, 2]}],
+        output={"variable": "Accumulator", "metric": "time_to_threshold", "threshold": 1000},
+    )
+    assert result["baseline"]["metric_value"] is None
+    assert any("undefined" in w for w in result["warnings"])

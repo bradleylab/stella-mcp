@@ -839,7 +839,7 @@ def register_tool_handlers(
         model_id, model = get_model(arguments.get("model_id"))
         result = compare_scenarios(
             model,
-            scenarios=arguments["scenarios"],
+            scenarios=arguments.get("scenarios"),
             baseline=arguments.get("baseline"),
             include=arguments.get("include"),
             max_points=arguments.get("max_points", 101),
@@ -864,8 +864,8 @@ def register_tool_handlers(
         model_id, model = get_model(arguments.get("model_id"))
         result = sensitivity_analysis(
             model,
-            parameters=arguments["parameters"],
-            output=arguments["output"],
+            parameters=arguments.get("parameters"),
+            output=arguments.get("output"),
             mode=arguments.get("mode", "oat"),
             max_runs=arguments.get("max_runs", 200),
             include_series=arguments.get("include_series", False),

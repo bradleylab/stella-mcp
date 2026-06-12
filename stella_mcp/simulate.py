@@ -103,7 +103,10 @@ def resolve_overrides(
                 f"Override '{name}' matches no model variable. "
                 f"Valid names: {candidates}"
             )
-        resolved[model._display_name(key)] = float(value)
+        numeric = float(value)
+        if not math.isfinite(numeric):
+            raise ValueError(f"override '{name}' must be a finite number")
+        resolved[model._display_name(key)] = numeric
     return resolved
 
 

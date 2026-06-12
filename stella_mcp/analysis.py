@@ -28,6 +28,15 @@ from .xmile import StellaModel
 _METRICS = frozenset({"final", "max", "min", "mean", "time_to_threshold"})
 
 
+def _require_finite(value: Any, label: str) -> float:
+    """Coerce to float and reject non-finite user input (NaN/inf), so garbage
+    never silently propagates into a simulation or a sensitivity curve."""
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        raise ValueError(f"{label} must be a finite number")
+    return numeric
+
+
 def _sub(a: float | None, b: float | None) -> float | None:
     """Difference that propagates None (a non-finite summary stays None)."""
     return None if (a is None or b is None) else a - b
@@ -80,6 +89,8 @@ def _resolve_scenarios(
     resolved: list[tuple[str, dict[str, float]]] = []
     seen: set[str] = set()
     for scenario in scenarios:
+        if not isinstance(scenario, dict):
+            raise ValueError("each scenario must be an object")
         name = scenario.get("name")
         if not name:
             raise ValueError("each scenario needs a non-empty 'name'")
@@ -324,13 +335,15 @@ def _expand_param_sweep(
     (steps ≥ 2, start ≠ stop). Resolves the parameter name, raising the
     shared override error (with valid names) on a typo.
     """
+    if not isinstance(spec, dict):
+        raise ValueError("each parameter must be an object")
     name = spec.get("name")
     if not name:
         raise ValueError("each parameter needs a 'name'")
     if _resolve_key(model, name) is None:
         resolve_overrides(model, {name: 0.0})  # raises naming the valid variables
     if spec.get("values") is not None:
-        values = [float(v) for v in spec["values"]]
+        values = [_require_finite(v, f"parameter '{name}' value") for v in spec["values"]]
         if len(values) < 2:
             raise ValueError(f"parameter '{name}': 'values' needs at least 2 entries")
         return name, values
@@ -339,19 +352,23 @@ def _expand_param_sweep(
         raise ValueError(
             f"parameter '{name}': provide 'values' or all of start/stop/steps"
         )
+    start = _require_finite(start, f"parameter '{name}' start")
+    stop = _require_finite(stop, f"parameter '{name}' stop")
     steps = int(steps)
     if steps < 2:
         raise ValueError(f"parameter '{name}': 'steps' must be >= 2")
-    if float(start) == float(stop):
+    if start == stop:
         raise ValueError(f"parameter '{name}': 'start' and 'stop' must differ")
-    step = (float(stop) - float(start)) / (steps - 1)
-    return name, [float(start) + i * step for i in range(steps)]
+    step = (stop - start) / (steps - 1)
+    return name, [start + i * step for i in range(steps)]
 
 
 def _validate_output(
     model: StellaModel, output: dict[str, Any]
 ) -> tuple[str, str, float | None]:
     """Validate the output spec; return (variable_key, metric, threshold)."""
+    if not isinstance(output, dict):
+        raise ValueError("output must be an object")
     variable = output.get("variable")
     if not variable:
         raise ValueError("output.variable is required")
@@ -364,8 +381,10 @@ def _validate_output(
             f"output.metric '{metric}' must be one of {sorted(_METRICS)}"
         )
     threshold = output.get("threshold")
-    if metric == "time_to_threshold" and threshold is None:
-        raise ValueError("output.metric 'time_to_threshold' requires output.threshold")
+    if metric == "time_to_threshold":
+        if threshold is None:
+            raise ValueError("output.metric 'time_to_threshold' requires output.threshold")
+        threshold = _require_finite(threshold, "output.threshold")
     return key, metric, threshold
 
 
@@ -443,6 +462,13 @@ def sensitivity_analysis(
     with _compile_runner(model) as runner:
         base_times, base_values = _output_series(runner.run(params=None), output_display)
         baseline_metric = _reduce_metric(base_times, base_values, metric, threshold)
+        if baseline_metric is None:
+            warnings.append(
+                f"baseline did not report output '{output_display}'"
+                if base_values is None
+                else f"baseline metric '{metric}' is undefined (non-finite series or "
+                "threshold never crossed); elasticity will be null"
+            )
 
         param_payload: list[dict[str, Any]] = []
         for name, values in sweeps:
