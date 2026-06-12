@@ -10,6 +10,7 @@ from typing import Any, Protocol
 
 from mcp.types import CallToolResult, TextContent
 
+from .analysis import compare_scenarios, sensitivity_analysis
 from .model_snapshot import (
     aux_to_dict,
     connector_to_dict,
@@ -830,6 +831,61 @@ def register_tool_handlers(
         return success_result(
             f"Simulated model_id={model_id} from {result['sim_specs']['start']} to "
             f"{result['sim_specs']['stop']}{warn_text}. Final values: {finals}",
+            {"model_id": model_id, **result},
+        )
+
+    @register("compare_scenarios")
+    def _handle_compare_scenarios(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        result = compare_scenarios(
+            model,
+            scenarios=arguments.get("scenarios"),
+            baseline=arguments.get("baseline"),
+            include=arguments.get("include"),
+            max_points=arguments.get("max_points", 101),
+            save_comparison_csv=arguments.get("save_comparison_csv"),
+        )
+        lines = []
+        for scenario in result["scenarios"]:
+            deltas = ", ".join(
+                f"{var} {d['final_abs']:+.4g}" if d["final_abs"] is not None else f"{var} n/a"
+                for var, d in scenario["delta_vs_baseline"].items()
+            )
+            lines.append(f"{scenario['name']}: {deltas}" if deltas else scenario["name"])
+        summary = "; ".join(lines) if lines else "none"
+        return success_result(
+            f"Compared {len(result['scenarios'])} scenario(s) for model_id={model_id} "
+            f"vs baseline. Final deltas: {summary}",
+            {"model_id": model_id, **result},
+        )
+
+    @register("sensitivity_analysis")
+    def _handle_sensitivity_analysis(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        result = sensitivity_analysis(
+            model,
+            parameters=arguments.get("parameters"),
+            output=arguments.get("output"),
+            mode=arguments.get("mode", "oat"),
+            max_runs=arguments.get("max_runs", 200),
+            include_series=arguments.get("include_series", False),
+            save_sweep_csv=arguments.get("save_sweep_csv"),
+        )
+        ranked = sorted(
+            result["parameters"],
+            key=lambda p: abs(p["elasticity"]) if p["elasticity"] is not None else -1.0,
+            reverse=True,
+        )
+        ranking = ", ".join(
+            f"{p['name']} (elasticity {p['elasticity']:+.3g})"
+            if p["elasticity"] is not None
+            else f"{p['name']} (n/a)"
+            for p in ranked
+        )
+        return success_result(
+            f"Swept {len(result['parameters'])} parameter(s) over {result['total_runs']} "
+            f"run(s) for {result['output']['variable']} ({result['output']['metric']}) on "
+            f"model_id={model_id}. Ranked by |elasticity|: {ranking}",
             {"model_id": model_id, **result},
         )
 

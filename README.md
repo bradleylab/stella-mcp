@@ -193,6 +193,8 @@ Notes:
 | `get_model_xml` | Preview the XMILE XML output |
 | `render_diagram` | Render the model as an SVG stock-and-flow diagram |
 | `simulate` | Run the model via PySD and return time series + summaries (`sim` extra) |
+| `compare_scenarios` | Run named what-if override sets against a baseline and report deltas (`sim` extra) |
+| `sensitivity_analysis` | Sweep parameters one-at-a-time and rank their effect on an output metric (`sim` extra) |
 
 ### Batch Building
 
@@ -487,6 +489,67 @@ Notes and caveats:
   column.
 - The session model is never modified by simulation (the run uses a
   throwaway copy).
+
+## Scenario Comparison
+
+The `compare_scenarios` tool answers "what happens under these alternative
+assumptions?" — it runs several named override sets against a baseline (the
+unmodified model by default) and reports how each diverges. Also requires the
+`sim` extra.
+
+```json
+{"name":"compare_scenarios","arguments":{"model_id":"pop_v1","include":["Population"],"scenarios":[{"name":"low growth","overrides":{"growth_rate":0.02}},{"name":"high growth","overrides":{"growth_rate":0.08}}]}}
+```
+
+Each scenario reports its own downsampled series plus `delta_vs_baseline` per
+variable: `final_abs`, `final_pct` (percent change of the final value), and
+`max_abs`. Notes:
+
+- Every override name across all scenarios is validated **before** any run, so
+  a typo fails fast and atomically — no scenario runs half-applied.
+- A scenario whose run produces NaN/inf reports the warning in that scenario's
+  `warnings` without aborting the others; `final_pct` is `null` when the
+  baseline final is zero (no divide-by-zero).
+- `baseline` is optional — pass an override set to measure deltas against, or
+  omit it to compare against the unmodified model.
+- `save_comparison_csv` writes a wide table with one column per
+  `variable__scenario` (and `variable__baseline`).
+- The compiled model is reused across every scenario in one call, so a
+  comparison is roughly as cheap as a single simulation plus one run per
+  scenario.
+
+## Sensitivity Analysis
+
+The `sensitivity_analysis` tool answers "which parameters actually move the
+outcome?" — it sweeps each parameter one at a time across a range (holding the
+others at their baseline) and reports how a single chosen output metric
+responds. Also requires the `sim` extra.
+
+```json
+{"name":"sensitivity_analysis","arguments":{"model_id":"pop_v1","parameters":[{"name":"growth_rate","start":0.02,"stop":0.08,"steps":7}],"output":{"variable":"Population","metric":"final"}}}
+```
+
+For each parameter it returns the metric at every swept value, a
+`range_sensitivity` (the metric's average slope across the swept range), and a
+baseline-normalized `elasticity` (≈ Δoutput% / Δparam%) so parameters can be
+ranked by influence. Notes:
+
+- **One-at-a-time only.** `mode` accepts `"oat"`; full-factorial (`grid`) and
+  Monte-Carlo sampling are reserved for a future release.
+- `metric` is one of `final`, `max`, `min`, `mean`, or `time_to_threshold`
+  (which needs an `output.threshold` and reports the first time the series
+  crosses it). max/min/mean cover finite values only; a non-finite or
+  never-crossing run reports `null` for that point with a warning.
+- A parameter spec is either `start`/`stop`/`steps` (evenly spaced, `steps`
+  ≥ 2) or an explicit `values` list (≥ 2 entries).
+- `max_runs` (default 200) caps the total swept runs; an oversized sweep
+  **errors** rather than silently truncating. OAT runs are a sum across
+  parameters, not a product, so the cap only trips on genuinely large sweeps.
+- `elasticity` is `null` when it cannot be defined (a non-constant parameter,
+  or a zero baseline metric/parameter); `range_sensitivity` is still reported.
+- `save_sweep_csv` writes a long `parameter, value, metric` table.
+- Like scenario comparison, the model is compiled once and reused across the
+  whole sweep.
 
 ## MCP Resources & Prompts
 
