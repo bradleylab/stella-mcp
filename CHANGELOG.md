@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-11
+
+### Added
+
+- `compare_scenarios` tool: run several named what-if scenarios (each a set
+  of constant parameter overrides) against a baseline and report how each
+  diverges — per-variable final/max absolute deltas and final percent change.
+  Override names are validated up front so a typo fails fast and atomically;
+  a per-scenario blow-up is reported as a warning without aborting the others.
+  Requires the optional `sim` extra.
+- `sensitivity_analysis` tool: sweep parameters one at a time across a range
+  (holding the others at their baseline) and report how a chosen output
+  metric (`final`, `max`, `min`, `mean`, or `time_to_threshold`) responds,
+  with a range slope and a baseline-normalized elasticity for ranking
+  parameters by influence. A `max_runs` cap errors rather than truncating an
+  oversized sweep, non-finite inputs are rejected, and undefined metrics are
+  reported as warnings. Requires the optional `sim` extra.
+
+### Changed
+
+- The PySD model is now compiled once per call and reused across a scenario
+  comparison or sensitivity sweep, so a multi-run analysis no longer
+  recompiles the XMILE for every run.
+
 ## [0.8.0] - 2026-06-11
 
 ### Added
@@ -133,7 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tool_handlers.py`, `xmile_io.py`, `equation_parser.py`,
   `templates.py`).
 
-[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/bradleylab/stella-mcp/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/bradleylab/stella-mcp/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/bradleylab/stella-mcp/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/bradleylab/stella-mcp/compare/v0.5.0...v0.6.0
