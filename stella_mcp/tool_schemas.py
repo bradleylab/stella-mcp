@@ -14,8 +14,12 @@ _READ_ONLY_TOOLS = {
 }
 _DESTRUCTIVE_TOOLS = {"delete_model", "delete_module", "delete_variable"}
 # Optional file writes only; safe to repeat with the same arguments.
+# calibrate qualifies because differential_evolution is always seeded
+# (seed=None is rejected), so a call is deterministic given its inputs; exposing
+# an unseeded/random mode later would require moving it out of this set.
 _IDEMPOTENT_TOOLS = {
-    "compare_scenarios", "render_diagram", "sensitivity_analysis", "simulate",
+    "calibrate", "compare_scenarios", "render_diagram", "sensitivity_analysis",
+    "simulate",
 }
 _MUTATING_TOOLS = {
     "add_aux", "add_connector", "add_flow", "add_stock", "add_to_module",
@@ -988,6 +992,156 @@ def build_tool_definitions() -> list[Tool]:
                     },
                 },
                 "required": ["parameters", "output"],
+            },
+        ),
+        Tool(
+            name="calibrate",
+            description=(
+                "Fit constant model parameters to an observed time-series — the "
+                "inverse of simulate. Only constant auxiliaries/flows can be "
+                "calibrated (stocks are rejected: overriding a stock pins it to a "
+                "constant rather than setting its initial value). least_squares "
+                "(default) reports a linearized std_error; differential_evolution "
+                "is a global, seeded alternative requiring bounds. Observation "
+                "times must lie within the model window (no extrapolation). "
+                "Requires the optional pysd dependency "
+                "(pip install 'stella-mcp[sim]')."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": model_id_property,
+                    "observations": {
+                        "type": "object",
+                        "description": (
+                            "Observed data on one shared time grid: inline "
+                            "{time, targets} or {csv_path} (first CSV column is time)"
+                        ),
+                        "properties": {
+                            "time": {
+                                "type": "array",
+                                "items": {"type": "number"},
+                                "minItems": 2,
+                                "description": "Strictly increasing observation times",
+                            },
+                            "targets": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "array",
+                                    "items": {"type": "number"},
+                                },
+                                "description": (
+                                    "Observed series per model variable "
+                                    "(each same length as time)"
+                                ),
+                            },
+                            "csv_path": {
+                                "type": "string",
+                                "description": (
+                                    "Alternative to time/targets: CSV with a time "
+                                    "column followed by one column per target"
+                                ),
+                            },
+                        },
+                    },
+                    "parameters": {
+                        "type": "array",
+                        "minItems": 1,
+                        "description": (
+                            "Constant parameters to fit (constant auxiliaries/flows "
+                            "only; stocks are rejected)"
+                        ),
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Parameter variable name",
+                                },
+                                "initial": {
+                                    "type": "number",
+                                    "description": (
+                                        "Initial guess (default: the model's current "
+                                        "constant value)"
+                                    ),
+                                },
+                                "min": {
+                                    "type": "number",
+                                    "description": (
+                                        "Lower bound (optional for least_squares, "
+                                        "required for differential_evolution)"
+                                    ),
+                                },
+                                "max": {
+                                    "type": "number",
+                                    "description": "Upper bound (see min)",
+                                },
+                            },
+                            "required": ["name"],
+                        },
+                    },
+                    "method": {
+                        "type": "string",
+                        "enum": ["least_squares", "differential_evolution"],
+                        "default": "least_squares",
+                        "description": (
+                            "Optimizer: least_squares (local, gives std_error) or "
+                            "differential_evolution (global, seeded, needs bounds)"
+                        ),
+                    },
+                    "objective": {
+                        "type": "string",
+                        "enum": ["sse"],
+                        "default": "sse",
+                        "description": "Objective (sum of squared residuals; scale via weights)",
+                    },
+                    "weights": {
+                        "type": "object",
+                        "additionalProperties": {"type": "number"},
+                        "description": (
+                            "Optional positive per-target weights; a statistical "
+                            "std_error interpretation holds only for inverse-sigma weights"
+                        ),
+                    },
+                    "max_nfev": {
+                        "type": "integer",
+                        "default": 1000,
+                        "minimum": 1,
+                        "description": "least_squares function-evaluation cap",
+                    },
+                    "maxiter": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": (
+                            "differential_evolution generation cap "
+                            "(default derived from max_nfev)"
+                        ),
+                    },
+                    "popsize": {
+                        "type": "integer",
+                        "default": 15,
+                        "minimum": 1,
+                        "description": "differential_evolution population multiplier",
+                    },
+                    "seed": {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "differential_evolution seed (kept non-null for reproducibility)",
+                    },
+                    "return_fit_series": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Also return the best-fit downsampled series per target",
+                    },
+                    "save_fit_csv": {
+                        "type": "string",
+                        "description": (
+                            "Optional path to write a long "
+                            "(time, target, observed, fitted) CSV"
+                        ),
+                    },
+                },
+                "required": ["observations", "parameters"],
             },
         ),
         Tool(

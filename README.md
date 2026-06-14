@@ -195,6 +195,7 @@ Notes:
 | `simulate` | Run the model via PySD and return time series + summaries (`sim` extra) |
 | `compare_scenarios` | Run named what-if override sets against a baseline and report deltas (`sim` extra) |
 | `sensitivity_analysis` | Sweep parameters one-at-a-time and rank their effect on an output metric (`sim` extra) |
+| `calibrate` | Fit constant parameters to an observed time-series (inverse of simulate) (`sim` extra) |
 
 ### Batch Building
 
@@ -550,6 +551,45 @@ ranked by influence. Notes:
 - `save_sweep_csv` writes a long `parameter, value, metric` table.
 - Like scenario comparison, the model is compiled once and reused across the
   whole sweep.
+
+## Calibration
+
+The `calibrate` tool is the inverse of `simulate`: given an observed
+time-series, it fits constant parameters so the model reproduces the data. Also
+requires the `sim` extra.
+
+```json
+{"name":"calibrate","arguments":{"model_id":"pop_v1","observations":{"time":[0,2,4,6,8,10],"targets":{"Population":[100,122,149,182,222,271]}},"parameters":[{"name":"growth_rate","initial":0.05,"min":0,"max":0.3}]}}
+```
+
+It returns the fitted parameters (each with its bounds, an `at_bound` flag, and
+a linearized `std_error`), the objective trajectory (`initial`/`final` SSE and
+`rmse`), the convergence state, and warnings. Notes:
+
+- **Only constant auxiliaries and flows are calibratable.** Stocks are
+  rejected: PySD's parameter override pins a stock to a constant for the whole
+  run rather than setting its initial value, which would silently flatten a
+  dynamic model. Fitting stock initial conditions is not supported.
+- **Two optimizers.** `least_squares` (default) is local and fast and reports a
+  `std_error`; `differential_evolution` is global, stochastic, **seeded** for
+  reproducibility, and **requires** `min`/`max` bounds on every parameter.
+- Each parameter's `initial` defaults to the model's current constant value.
+  Bounds are optional for `least_squares`, required for `differential_evolution`.
+- **`std_error` is a linearized approximation**, not a posterior: it is the
+  covariance `σ²·(JᵀJ)⁻¹` and is reported only when there are more observations
+  than parameters, the Jacobian is well-conditioned, and no parameter sits on a
+  bound; otherwise it is `null` with a warning. `differential_evolution`
+  returns `null` (no Jacobian). Under non-default `weights`, the standard-error
+  interpretation holds only for inverse-σ weights.
+- **Alignment.** The model runs over its native `[start, stop]` window and the
+  simulation is linearly interpolated onto the observation times. Observation
+  times **outside** the window are rejected (no extrapolation). All targets
+  share one strictly-increasing time grid; observations are loaded inline or
+  from a `csv_path` (first column time, the rest targets).
+- Optional per-target `weights` scale the residuals (use for targets that
+  differ by orders of magnitude). `save_fit_csv` writes a long
+  `time, target, observed, fitted` table; `return_fit_series` attaches the
+  best-fit series. The model is compiled once and reused across the whole fit.
 
 ## MCP Resources & Prompts
 

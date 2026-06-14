@@ -11,6 +11,7 @@ from typing import Any, Protocol
 from mcp.types import CallToolResult, TextContent
 
 from .analysis import compare_scenarios, sensitivity_analysis
+from .calibrate import calibrate
 from .model_snapshot import (
     aux_to_dict,
     connector_to_dict,
@@ -886,6 +887,40 @@ def register_tool_handlers(
             f"Swept {len(result['parameters'])} parameter(s) over {result['total_runs']} "
             f"run(s) for {result['output']['variable']} ({result['output']['metric']}) on "
             f"model_id={model_id}. Ranked by |elasticity|: {ranking}",
+            {"model_id": model_id, **result},
+        )
+
+    @register("calibrate")
+    def _handle_calibrate(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        # Required args via .get() so a missing/malformed value becomes an
+        # invalid_input ValueError inside calibrate, not a KeyError/internal_error.
+        result = calibrate(
+            model,
+            observations=arguments.get("observations"),
+            parameters=arguments.get("parameters"),
+            method=arguments.get("method", "least_squares"),
+            objective=arguments.get("objective", "sse"),
+            weights=arguments.get("weights"),
+            max_nfev=arguments.get("max_nfev", 1000),
+            maxiter=arguments.get("maxiter"),
+            popsize=arguments.get("popsize", 15),
+            seed=arguments.get("seed", 0),
+            return_fit_series=arguments.get("return_fit_series", False),
+            save_fit_csv=arguments.get("save_fit_csv"),
+        )
+        fitted = ", ".join(
+            f"{p['name']}={p['fitted']:.4g}"
+            + (f"±{p['std_error']:.2g}" if p["std_error"] is not None else "")
+            for p in result["parameters"]
+        )
+        rmse = result["objective"]["rmse"]
+        rmse_text = f"{rmse:.4g}" if rmse is not None else "n/a"
+        status = "converged" if result["converged"] else "did NOT converge"
+        warn_text = f" ({len(result['warnings'])} warnings)" if result["warnings"] else ""
+        return success_result(
+            f"Calibrated {len(result['parameters'])} parameter(s) on model_id={model_id} "
+            f"via {result['method']} ({status}, RMSE={rmse_text}){warn_text}. Fitted: {fitted}",
             {"model_id": model_id, **result},
         )
 

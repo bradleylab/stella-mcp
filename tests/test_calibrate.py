@@ -5,6 +5,7 @@ test_simulate.py / test_analysis.py; the sim stack (numpy/scipy/pandas) arrives
 with pysd.
 """
 
+import asyncio
 import math
 
 import pytest
@@ -13,6 +14,7 @@ pysd = pytest.importorskip("pysd")
 
 import numpy as np  # noqa: E402
 
+from stella_mcp import server as server_mod  # noqa: E402
 from stella_mcp.calibrate import (  # noqa: E402
     _check_obs_window,
     _interp_onto,
@@ -305,3 +307,41 @@ def test_bound_and_method_guards():
         calibrate(model, obs, [])
     with pytest.raises(ValueError, match="duplicate parameter"):
         calibrate(model, obs, [{"name": "rate"}, {"name": "rate"}])
+
+
+# --- tool wiring -------------------------------------------------------------
+
+def _build_accumulator_tool(model_id: str) -> None:
+    server_mod._session_models.clear()
+    asyncio.run(server_mod.call_tool("build_model", {
+        "name": "Accumulator", "model_id": model_id,
+        "sim_specs": {"start": 0, "stop": 10, "dt": 1.0},
+        "stocks": [{"name": "Accumulator", "initial_value": "0"}],
+        "auxs": [{"name": "rate", "equation": "1"}],
+        "flows": [{"name": "inflow", "equation": "rate", "to_stock": "Accumulator"}],
+    }))
+
+
+def test_calibrate_tool(monkeypatch):
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 7003)
+    _build_accumulator_tool("cal")
+    times = [0, 2, 4, 6, 8, 10]
+    result = asyncio.run(server_mod.call_tool("calibrate", {
+        "model_id": "cal",
+        "observations": {"time": times, "targets": {"Accumulator": [3.0 * t for t in times]}},
+        "parameters": [{"name": "rate", "initial": 1.0}],
+    }))
+    assert not result.isError
+    sc = result.structuredContent
+    assert sc["model_id"] == "cal"
+    assert sc["converged"]
+    assert math.isclose(sc["parameters"][0]["fitted"], 3.0, rel_tol=1e-3)
+
+
+def test_calibrate_tool_malformed_args_is_clean_error(monkeypatch):
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 7004)
+    _build_accumulator_tool("cal2")
+    # No parameters -> a clean ValueError (invalid_input), not an internal_error.
+    result = asyncio.run(server_mod.call_tool("calibrate", {"model_id": "cal2"}))
+    assert result.isError
+    assert "parameter" in result.content[0].text.lower()
