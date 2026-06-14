@@ -30,6 +30,9 @@ dev = [
 ]
 sim = [
     "pysd>=3.14",
+    # scipy is already a pysd dependency; declared explicitly because
+    # calibrate.py imports scipy.optimize directly (no new install).
+    "scipy>=1.10",
 ]
 
 [project.scripts]

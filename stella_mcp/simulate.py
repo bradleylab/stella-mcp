@@ -110,6 +110,32 @@ def resolve_overrides(
     return resolved
 
 
+def constant_parameter_value(model: StellaModel, key: str | None) -> float | None:
+    """The defining numeric constant of a *constant aux or flow*, or None for a
+    stock or any non-constant equation.
+
+    Deliberately returns None for stocks: PySD's ``run(params={name: x})`` pins
+    a stock to the constant ``x`` for the entire run rather than setting its
+    initial condition (verified 2026-06-14), so stocks are not overridable as
+    fit parameters. Callers (e.g. calibrate) use a None return to reject a
+    variable as non-calibratable. This is intentionally stricter than a stock's
+    initial value, which is why it is separate from analysis's
+    ``_baseline_param_value``.
+    """
+    if key is None:
+        return None
+    if key in model.auxs:
+        equation = model.auxs[key].equation
+    elif key in model.flows:
+        equation = model.flows[key].equation
+    else:  # stock or unknown -> not a calibratable constant
+        return None
+    try:
+        return float(equation)
+    except (TypeError, ValueError):
+        return None
+
+
 def resolve_report_keys(
     model: StellaModel, include: list[str] | None
 ) -> list[str]:

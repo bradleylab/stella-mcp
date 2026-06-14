@@ -1908,6 +1908,8 @@ dev = [
 ]
 sim = [
     { name = "pysd" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 
 [package.metadata]
@@ -1916,6 +1918,7 @@ requires-dist = [
     { name = "pysd", marker = "extra == 'sim'", specifier = ">=3.14" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
+    { name = "scipy", marker = "extra == 'sim'", specifier = ">=1.10" },
 ]
 provides-extras = ["dev", "sim"]
 
