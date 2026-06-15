@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-06-14
+
+### Added
+
+- `calibrate` tool: fit constant model parameters to an observed time-series
+  (the inverse of `simulate`). Supports a local `least_squares` optimizer
+  (default, with a linearized `std_error` from the Jacobian) and a global,
+  seeded `differential_evolution` optimizer; per-target sum-of-squares
+  residuals with optional weights; observations supplied inline or from a CSV.
+  Only constant auxiliaries and flows are calibratable — stocks are rejected
+  because a parameter override pins a stock to a constant for the whole run
+  rather than setting its initial value. Observation times outside the model's
+  window are rejected (no extrapolation). Requires the optional `sim` extra.
+
+### Changed
+
+- `scipy` is now declared explicitly in the `sim` extra. It was already a
+  `pysd` dependency, so this adds no new install; the calibration tool imports
+  `scipy.optimize` directly, so it is declared rather than relied upon
+  transitively.
+
 ## [0.9.0] - 2026-06-11
 
 ### Added
@@ -157,7 +178,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tool_handlers.py`, `xmile_io.py`, `equation_parser.py`,
   `templates.py`).
 
-[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/bradleylab/stella-mcp/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/bradleylab/stella-mcp/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/bradleylab/stella-mcp/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/bradleylab/stella-mcp/compare/v0.6.0...v0.7.0
