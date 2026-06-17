@@ -38,6 +38,10 @@ SEED = 0
 _METHODS = frozenset({"least_squares", "differential_evolution"})
 _DEFAULT_MAX_NFEV = 1000
 _DEFAULT_POPSIZE = 15
+# differential_evolution generation cap when `maxiter` is not given. Kept
+# independent of `max_nfev` (a least_squares knob) so the two optimizers'
+# budgets don't masquerade as one.
+_DEFAULT_DE_MAXITER = 100
 _AT_BOUND_RTOL = 1e-6
 # Base magnitude for a non-finite trial's penalty residual. Grown with distance
 # from the last feasible point so the optimizer's Jacobian points back toward
@@ -50,8 +54,16 @@ _SCALE_WARN_RATIO = 10.0
 
 
 def _require_finite(value: Any, label: str) -> float:
-    """Coerce to float and reject non-finite user input (NaN/inf)."""
-    numeric = float(value)
+    """Coerce to float and reject non-finite or non-numeric user input.
+
+    A non-numeric value (list, dict, ...) raises ``ValueError`` — not the
+    ``TypeError`` ``float()`` would — so malformed tool input is classified as
+    invalid_input rather than internal_error.
+    """
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a finite number") from exc
     if not math.isfinite(numeric):
         raise ValueError(f"{label} must be a finite number")
     return numeric
@@ -110,6 +122,8 @@ def _load_observations(spec: Any, model: StellaModel) -> dict[str, Any]:
         if not isinstance(raw_targets, dict) or not raw_targets:
             raise ValueError("observations.targets must be a non-empty object")
 
+    if not isinstance(raw_times, list):
+        raise ValueError("observations.time must be an array of numbers")
     times = [_require_finite(t, "observations.time") for t in raw_times]
     if len(times) < 2:
         raise ValueError("observations need at least 2 time points")
@@ -119,6 +133,8 @@ def _load_observations(spec: Any, model: StellaModel) -> dict[str, Any]:
 
     targets: list[tuple[str, str, Any]] = []
     for name, values in raw_targets.items():
+        if not isinstance(values, list):
+            raise ValueError(f"observations target '{name}' must be an array of numbers")
         key = _resolve_key_or_raise(model, name)
         display = model._display_name(key)
         finite = [_require_finite(v, f"observations target '{name}'") for v in values]
@@ -258,11 +274,13 @@ def _setup_parameters(
         name = spec.get("name")
         if not name:
             raise ValueError("each parameter needs a 'name'")
-        if name in seen:
-            raise ValueError(f"duplicate parameter '{name}'")
-        seen.add(name)
-
         key = _resolve_key_or_raise(model, name)
+        # Dedup on the resolved key, not the raw name: 'growth rate' and
+        # 'growth_rate' alias the same PySD param, and trial params are keyed by
+        # display name — two aliases would silently collapse to one dimension.
+        if key in seen:
+            raise ValueError(f"duplicate parameter '{name}' (aliases an already-listed variable)")
+        seen.add(key)
         constant = constant_parameter_value(model, key)
         if constant is None:
             kind = "a stock" if key in model.stocks else "a non-constant variable"
@@ -498,8 +516,8 @@ def calibrate(
         raise ValueError(f"objective '{objective}' not supported; only 'sse' is available")
     if seed is None:
         raise ValueError("seed must not be null (it keeps differential_evolution reproducible)")
-    if not parameters:
-        raise ValueError("calibrate requires at least one parameter")
+    if not isinstance(parameters, list) or not parameters:
+        raise ValueError("calibrate requires at least one parameter (a non-empty array)")
 
     obs = _load_observations(observations, model)
     specs = model.sim_specs
@@ -543,19 +561,9 @@ def calibrate(
                 result, n_residuals, n_params, at_bounds
             )
             warnings_out += cov_warnings
-            if converged and nfev <= n_params + 1 and np.allclose(x_fit, x0, rtol=1e-12, atol=1e-12):
-                converged = False
-                warnings_out.append(
-                    "optimizer terminated at the initial guess after minimal "
-                    "evaluations; treating as not converged — revise the initial "
-                    "guess or bounds"
-                )
         else:  # differential_evolution
             bounds = list(zip(lower, upper, strict=True))
-            maxiter_eff = (
-                maxiter if maxiter is not None
-                else max(1, max_nfev // (popsize * max(1, n_params)))
-            )
+            maxiter_eff = maxiter if maxiter is not None else _DEFAULT_DE_MAXITER
             result = optimize.differential_evolution(
                 lambda x: _sse(residual_fn(x)),
                 bounds,
@@ -582,6 +590,17 @@ def calibrate(
 
     if save_fit_csv:
         _write_fit_csv(save_fit_csv, obs, fit_results)
+
+    if state["penalty_count"]:
+        warnings_out.append(
+            f"{state['penalty_count']} trial simulation(s) produced non-finite "
+            "residuals during the fit and were penalized"
+        )
+    if weights is not None and std_error is not None:
+        warnings_out.append(
+            "std_error is conditioned on the given weights; it is a true standard "
+            "error only when the weights are inverse-sigma (measurement-error) scale"
+        )
 
     parameters_payload: list[dict[str, Any]] = []
     for i, name in enumerate(names):

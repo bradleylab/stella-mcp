@@ -309,6 +309,55 @@ def test_bound_and_method_guards():
         calibrate(model, obs, [{"name": "rate"}, {"name": "rate"}])
 
 
+def test_duplicate_parameter_alias_rejected():
+    """Display and underscore forms of one variable alias the same PySD param;
+    listing both would silently collapse to one optimizer dimension."""
+    model = StellaModel("Alias")
+    model.sim_specs.start, model.sim_specs.stop, model.sim_specs.dt = 0.0, 10.0, 1.0
+    model.add_stock("Accumulator", "0")
+    model.add_aux("growth rate", "1")
+    model.add_flow("inflow", "growth rate", to_stock="Accumulator")
+    obs = {"time": [0, 2, 4], "targets": {"Accumulator": [0, 2, 4]}}
+    with pytest.raises(ValueError, match="duplicate parameter"):
+        calibrate(model, obs, [{"name": "growth rate"}, {"name": "growth_rate"}])
+
+
+def test_std_error_positive_on_imperfect_fit():
+    # observed ~ 3*t with small offsets -> nonzero residual -> positive finite SE
+    times = [0, 2, 4, 6, 8, 10]
+    noisy = [0.0, 6.2, 11.8, 18.3, 23.7, 30.2]
+    result = calibrate(
+        _accumulator_model(), {"time": times, "targets": {"Accumulator": noisy}},
+        [{"name": "rate", "initial": 1.0}],
+    )
+    se = result["parameters"][0]["std_error"]
+    assert se is not None and math.isfinite(se) and se > 0
+    assert result["objective"]["final"] > 0  # imperfect fit, nonzero SSE
+
+
+def test_optimal_initial_guess_still_reports_converged():
+    # initial == truth: the optimizer terminates fast but this is a GOOD fit,
+    # not a false convergence (regression for the removed heuristic).
+    result = calibrate(
+        _accumulator_model(), _obs_for_rate(3.0), [{"name": "rate", "initial": 3.0}]
+    )
+    assert result["converged"]
+    assert math.isclose(result["parameters"][0]["fitted"], 3.0, rel_tol=1e-4)
+
+
+def test_malformed_observation_values_raise_value_error():
+    model = _accumulator_model()
+    with pytest.raises(ValueError, match="array of numbers"):
+        calibrate(model, {"time": 5, "targets": {"Accumulator": [0, 1]}},
+                  [{"name": "rate"}])
+    with pytest.raises(ValueError, match="array of numbers"):
+        calibrate(model, {"time": [0, 1], "targets": {"Accumulator": 7}},
+                  [{"name": "rate"}])
+    with pytest.raises(ValueError, match="finite"):
+        calibrate(model, {"time": [0, 1], "targets": {"Accumulator": [0, [1]]}},
+                  [{"name": "rate"}])
+
+
 # --- tool wiring -------------------------------------------------------------
 
 def _build_accumulator_tool(model_id: str) -> None:
