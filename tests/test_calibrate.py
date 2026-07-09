@@ -21,6 +21,7 @@ from stella_mcp.calibrate import (  # noqa: E402
     _load_observations,
     _make_residual_fn,
     _residual_vector,
+    _target_fit_metrics,
     calibrate,
 )
 from stella_mcp.simulate import _resolve_key, constant_parameter_value  # noqa: E402
@@ -32,7 +33,7 @@ def _accumulator_model() -> StellaModel:
     exactly linear in `rate` (slope == stop). Ideal for truth recovery."""
     model = StellaModel("Accumulator")
     model.sim_specs.start, model.sim_specs.stop, model.sim_specs.dt = 0.0, 10.0, 1.0
-    model.add_stock("Accumulator", "0")
+    model.add_stock("Accumulator", "0", units="widgets")
     model.add_aux("rate", "1")
     model.add_flow("inflow", "rate", to_stock="Accumulator")
     return model
@@ -178,10 +179,23 @@ def test_recovers_truth_least_squares():
     result = calibrate(
         _accumulator_model(), _obs_for_rate(3.0), [{"name": "rate", "initial": 1.0}]
     )
-    assert result["converged"]
+    assert result["optimizer"]["converged"]
+    assert result["optimizer"]["method"] == "least_squares"
+    assert result["optimizer"]["status"] > 0
+    assert result["optimizer"]["message"]
+    assert result["optimizer"]["n_function_evals"] > 0
+    assert result["optimizer"]["config"] == {
+        "max_nfev": 1000,
+        "maxiter": None,
+        "popsize": None,
+        "seed": None,
+    }
     fitted = result["parameters"][0]["fitted"]
     assert math.isclose(fitted, 3.0, rel_tol=1e-4)
+    assert result["objective"]["metric"] == "weighted_sse"
     assert result["objective"]["final"] < 1e-6  # near-perfect fit
+    assert "rmse" not in result["objective"]
+    assert result["target_metrics"][0]["units"] == "widgets"
     assert result["parameters"][0]["std_error"] is not None  # well-posed
 
 
@@ -195,6 +209,86 @@ def test_recovers_truth_differential_evolution():
     )
     assert math.isclose(result["parameters"][0]["fitted"], 3.0, rel_tol=1e-3)
     assert result["parameters"][0]["std_error"] is None  # DE has no Jacobian
+    assert result["optimizer"]["config"] == {
+        "max_nfev": None,
+        "maxiter": 100,
+        "popsize": 15,
+        "seed": 0,
+    }
+
+
+def test_weighted_objective_and_native_target_rmse_are_distinct():
+    observations = {
+        "time": [0, 2, 4, 6, 8, 10],
+        "targets": {"Accumulator": [0.0, 6.2, 11.8, 18.3, 23.7, 30.2]},
+    }
+    unweighted = calibrate(
+        _accumulator_model(),
+        observations,
+        [{"name": "rate", "initial": 1.0}],
+        max_nfev=1,
+    )
+    weighted = calibrate(
+        _accumulator_model(),
+        observations,
+        [{"name": "rate", "initial": 1.0}],
+        weights={"Accumulator": 3.0},
+        max_nfev=1,
+    )
+
+    assert math.isclose(
+        unweighted["target_metrics"][0]["rmse"],
+        unweighted["objective"]["weighted_rmse"],
+    )
+    assert math.isclose(
+        weighted["target_metrics"][0]["rmse"],
+        unweighted["target_metrics"][0]["rmse"],
+    )
+    assert math.isclose(
+        weighted["objective"]["weighted_rmse"],
+        3.0 * weighted["target_metrics"][0]["rmse"],
+    )
+    assert math.isclose(
+        weighted["objective"]["initial"],
+        9.0 * unweighted["objective"]["initial"],
+    )
+
+
+def test_target_metrics_keep_each_targets_exact_units():
+    model = _two_param_model()
+    times = [0, 2, 4, 6, 8, 10]
+    observations = {
+        "time": times,
+        "targets": {
+            "Acc1": [2.0 * t for t in times],
+            "Acc2": [5.0 * t for t in times],
+        },
+    }
+
+    result = calibrate(
+        model,
+        observations,
+        [{"name": "rate1", "initial": 1.0}, {"name": "rate2", "initial": 1.0}],
+    )
+
+    metrics = {metric["name"]: metric for metric in result["target_metrics"]}
+    assert metrics["Acc1"]["units"] == "kg"
+    assert metrics["Acc2"]["units"] == "meters"
+    assert all(metric["n"] == len(times) for metric in metrics.values())
+    assert "rmse" not in result["objective"]
+
+
+def test_target_metrics_reject_non_finite_final_output():
+    import pandas as pd
+
+    model = _accumulator_model()
+    obs = _load_observations(_obs_for_rate(1.0, times=(0, 1, 2)), model)
+    fit_results = pd.DataFrame(
+        {"Accumulator": [0.0, float("nan"), 2.0]}, index=[0.0, 1.0, 2.0]
+    )
+
+    with pytest.raises(ValueError, match="non-finite"):
+        _target_fit_metrics(fit_results, obs, model)
 
 
 def test_stock_parameter_rejected():
@@ -220,8 +314,8 @@ def test_infeasible_initial_guess_raises_not_false_converge():
 def _two_param_model() -> StellaModel:
     model = StellaModel("Two")
     model.sim_specs.start, model.sim_specs.stop, model.sim_specs.dt = 0.0, 10.0, 1.0
-    model.add_stock("Acc1", "0")
-    model.add_stock("Acc2", "0")
+    model.add_stock("Acc1", "0", units="kg")
+    model.add_stock("Acc2", "0", units="meters")
     model.add_aux("rate1", "1")
     model.add_aux("rate2", "1")
     model.add_flow("in1", "rate1", to_stock="Acc1")
@@ -276,7 +370,7 @@ def test_max_nfev_exhaustion_reports_not_converged():
         _accumulator_model(), _obs_for_rate(3.0),
         [{"name": "rate", "initial": 1.0}], max_nfev=1,
     )
-    assert result["converged"] is False  # did not raise
+    assert result["optimizer"]["converged"] is False  # did not raise
 
 
 def test_de_honors_maxiter_budget():
@@ -285,7 +379,49 @@ def test_de_honors_maxiter_budget():
         [{"name": "rate", "min": 0.0, "max": 10.0}],
         method="differential_evolution", maxiter=2, popsize=5, seed=0,
     )
-    assert result["n_function_evals"] > 0
+    assert result["optimizer"]["n_function_evals"] > 0
+    assert result["optimizer"]["config"] == {
+        "max_nfev": None,
+        "maxiter": 2,
+        "popsize": 5,
+        "seed": 0,
+    }
+    assert isinstance(result["optimizer"]["status"], bool)
+    assert result["optimizer"]["message"]
+
+
+@pytest.mark.parametrize(
+    ("control", "value"),
+    [
+        ("max_nfev", 0),
+        ("max_nfev", -1),
+        ("max_nfev", True),
+        ("max_nfev", "1"),
+        ("max_nfev", []),
+        ("max_nfev", None),
+        ("maxiter", 0),
+        ("maxiter", False),
+        ("maxiter", "1"),
+        ("popsize", 0),
+        ("popsize", True),
+        ("popsize", 2.5),
+        ("seed", None),
+        ("seed", True),
+        ("seed", 1.5),
+        ("seed", "0"),
+        ("seed", []),
+    ],
+)
+def test_optimizer_controls_are_validated_before_execution(control, value):
+    kwargs = {control: value}
+
+    with pytest.raises(ValueError, match=control):
+        calibrate(
+            _accumulator_model(),
+            _obs_for_rate(3.0),
+            [{"name": "rate", "initial": 1.0}],
+            **kwargs,
+        )
 
 
 def test_bound_and_method_guards():
@@ -341,7 +477,7 @@ def test_optimal_initial_guess_still_reports_converged():
     result = calibrate(
         _accumulator_model(), _obs_for_rate(3.0), [{"name": "rate", "initial": 3.0}]
     )
-    assert result["converged"]
+    assert result["optimizer"]["converged"]
     assert math.isclose(result["parameters"][0]["fitted"], 3.0, rel_tol=1e-4)
 
 
@@ -383,7 +519,9 @@ def test_calibrate_tool(monkeypatch):
     assert not result.isError
     sc = result.structuredContent
     assert sc["model_id"] == "cal"
-    assert sc["converged"]
+    assert sc["optimizer"]["converged"]
+    assert sc["objective"]["metric"] == "weighted_sse"
+    assert "weighted RMSE" in result.content[0].text
     assert math.isclose(sc["parameters"][0]["fitted"], 3.0, rel_tol=1e-3)
 
 

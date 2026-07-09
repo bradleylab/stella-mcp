@@ -1099,8 +1099,9 @@ def build_tool_definitions() -> list[Tool]:
                         "type": "object",
                         "additionalProperties": {"type": "number"},
                         "description": (
-                            "Optional positive per-target weights; a statistical "
-                            "std_error interpretation holds only for inverse-sigma weights"
+                            "Optional positive per-target residual multipliers; "
+                            "inverse-sigma values give normalized residuals and the "
+                            "usual statistical std_error interpretation"
                         ),
                     },
                     "max_nfev": {
@@ -1110,11 +1111,11 @@ def build_tool_definitions() -> list[Tool]:
                         "description": "least_squares function-evaluation cap",
                     },
                     "maxiter": {
-                        "type": "integer",
+                        "type": ["integer", "null"],
+                        "default": 100,
                         "minimum": 1,
                         "description": (
-                            "differential_evolution generation cap "
-                            "(default derived from max_nfev)"
+                            "differential_evolution generation cap (default 100)"
                         ),
                     },
                     "popsize": {

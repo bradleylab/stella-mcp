@@ -914,13 +914,15 @@ def register_tool_handlers(
             + (f"±{p['std_error']:.2g}" if p["std_error"] is not None else "")
             for p in result["parameters"]
         )
-        rmse = result["objective"]["rmse"]
-        rmse_text = f"{rmse:.4g}" if rmse is not None else "n/a"
-        status = "converged" if result["converged"] else "did NOT converge"
+        weighted_rmse = result["objective"]["weighted_rmse"]
+        status = (
+            "converged" if result["optimizer"]["converged"] else "did NOT converge"
+        )
         warn_text = f" ({len(result['warnings'])} warnings)" if result["warnings"] else ""
         return success_result(
             f"Calibrated {len(result['parameters'])} parameter(s) on model_id={model_id} "
-            f"via {result['method']} ({status}, RMSE={rmse_text}){warn_text}. Fitted: {fitted}",
+            f"via {result['optimizer']['method']} ({status}, weighted RMSE="
+            f"{weighted_rmse:.4g}){warn_text}. Fitted: {fitted}",
             {"model_id": model_id, **result},
         )
 

@@ -69,6 +69,20 @@ def _require_finite(value: Any, label: str) -> float:
     return numeric
 
 
+def _positive_int(value: Any, label: str) -> int:
+    """Require a non-boolean integer greater than or equal to one."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{label} must be an integer greater than or equal to 1")
+    return value
+
+
+def _seed_int(value: Any) -> int:
+    """Require an explicit non-boolean integer seed."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("seed must be an integer and must not be null or boolean")
+    return value
+
+
 def _resolve_key_or_raise(model: StellaModel, name: str) -> str:
     """Resolve a user name to a model variable key, or raise the shared override
     error (naming the valid variables)."""
@@ -246,6 +260,48 @@ def _sse(residuals: Any) -> float:
     import numpy as np
 
     return float(np.sum(np.asarray(residuals, dtype=float) ** 2))
+
+
+def _variable_units(model: StellaModel, key: str) -> str:
+    """Return the exact units string stored for a resolved model variable."""
+    for variables in (model.stocks, model.flows, model.auxs):
+        if key in variables:
+            return variables[key].units
+    raise ValueError(f"calibration target '{key}' matches no model variable")
+
+
+def _target_fit_metrics(
+    fit_results: Any, obs: dict[str, Any], model: StellaModel
+) -> list[dict[str, Any]]:
+    """Calculate unweighted best-fit errors in each target's native units."""
+    import numpy as np
+
+    sim_times = np.asarray([float(t) for t in fit_results.index], dtype=float)
+    metrics: list[dict[str, Any]] = []
+    for key, display, observed in obs["targets"]:
+        if display not in fit_results.columns:
+            raise ValueError(f"best-fit simulation is missing calibration target '{display}'")
+        try:
+            simulated = np.asarray([float(v) for v in fit_results[display]], dtype=float)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"best-fit simulation produced non-numeric values for target '{display}'"
+            ) from exc
+        fitted = _interp_onto(sim_times, simulated, obs["times"])
+        if not np.all(np.isfinite(fitted)):
+            raise ValueError(
+                f"best-fit simulation produced non-finite values for target '{display}'"
+            )
+        residuals = fitted - observed
+        sse = _sse(residuals)
+        metrics.append({
+            "name": display,
+            "units": _variable_units(model, key),
+            "n": int(residuals.size),
+            "sse": sse,
+            "rmse": math.sqrt(sse / int(residuals.size)),
+        })
+    return metrics
 
 
 # === parameter setup + weights ===============================================
@@ -489,13 +545,14 @@ def calibrate(
     objective : str
         Only ``"sse"`` is supported; use ``weights`` for per-target scaling.
     weights : dict, optional
-        Per-target positive weights ``w·(sim − obs)``. A statistical
-        ``std_error`` interpretation holds only for inverse-σ weights.
+        Per-target positive residual multipliers ``w·(sim − obs)``. Values
+        equal to inverse measurement standard deviation give normalized
+        residuals and the usual statistical ``std_error`` interpretation.
     max_nfev : int
         least_squares function-evaluation cap.
     maxiter, popsize : int
-        differential_evolution budget (``maxiter`` defaults to a value derived
-        from ``max_nfev``; ``popsize`` is DE's population multiplier).
+        differential_evolution budget (``maxiter`` defaults to 100;
+        ``popsize`` is DE's population multiplier).
     seed : int
         differential_evolution seed (must not be None — keeps DE reproducible).
     return_fit_series : bool
@@ -514,10 +571,12 @@ def calibrate(
         raise ValueError(f"method '{method}' must be one of {sorted(_METHODS)}")
     if objective != "sse":
         raise ValueError(f"objective '{objective}' not supported; only 'sse' is available")
-    if seed is None:
-        raise ValueError("seed must not be null (it keeps differential_evolution reproducible)")
     if not isinstance(parameters, list) or not parameters:
         raise ValueError("calibrate requires at least one parameter (a non-empty array)")
+    max_nfev = _positive_int(max_nfev, "max_nfev")
+    maxiter = None if maxiter is None else _positive_int(maxiter, "maxiter")
+    popsize = _positive_int(popsize, "popsize")
+    seed = _seed_int(seed)
 
     obs = _load_observations(observations, model)
     specs = model.sim_specs
@@ -555,6 +614,14 @@ def calibrate(
             x_fit = np.asarray(result.x, dtype=float)
             nfev = int(result.nfev)
             converged = bool(result.status > 0)
+            optimizer_status: int | bool = int(result.status)
+            optimizer_message = str(result.message)
+            optimizer_config = {
+                "max_nfev": max_nfev,
+                "maxiter": None,
+                "popsize": None,
+                "seed": None,
+            }
             sse_final = float(2.0 * result.cost)
             at_bounds = _at_bounds_mask(x_fit, lower, upper)
             std_error, cov_warnings = _least_squares_std_error(
@@ -574,12 +641,24 @@ def calibrate(
             x_fit = np.asarray(result.x, dtype=float)
             nfev = int(result.nfev)
             converged = bool(result.success)
+            optimizer_status = bool(result.success)
+            optimizer_message = str(result.message)
+            optimizer_config = {
+                "max_nfev": None,
+                "maxiter": maxiter_eff,
+                "popsize": popsize,
+                "seed": seed,
+            }
             sse_final = float(result.fun)
             at_bounds = _at_bounds_mask(x_fit, lower, upper)
             std_error = None
 
         fit_params = {display_keys[i]: float(x_fit[i]) for i in range(n_params)}
-        fit_results = runner.run(params=fit_params)
+        try:
+            fit_results = runner.run(params=fit_params)
+        except Exception as exc:
+            raise ValueError("best-fit parameter set could not be simulated") from exc
+        target_metrics = _target_fit_metrics(fit_results, obs, model)
         fit_series = None
         if return_fit_series:
             report_keys = [key for key, _display, _values in obs["targets"]]
@@ -615,20 +694,25 @@ def calibrate(
             "at_bound": at_bounds[i],
         })
 
-    rmse = math.sqrt(sse_final / n_residuals) if n_residuals > 0 else None
     return {
-        "method": method,
-        "converged": converged,
         "objective": {
-            "metric": "sse",
+            "metric": "weighted_sse",
             "initial": sse_initial,
             "final": sse_final,
-            "rmse": rmse,
+            "weighted_rmse": math.sqrt(sse_final / n_residuals),
+        },
+        "optimizer": {
+            "method": method,
+            "converged": converged,
+            "status": optimizer_status,
+            "message": optimizer_message,
+            "n_function_evals": nfev,
+            "config": optimizer_config,
         },
         "parameters": parameters_payload,
         "targets": target_displays,
+        "target_metrics": target_metrics,
         "n_observations": n_residuals,
-        "n_function_evals": nfev,
         "time_units": specs.time_units,
         "fit_series": fit_series,
         "warnings": warnings_out,
