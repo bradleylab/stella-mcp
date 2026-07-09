@@ -7,15 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.10.0] - 2026-06-14
+## [0.10.0] - 2026-07-09
 
 ### Added
 
 - `calibrate` tool: fit constant model parameters to an observed time-series
   (the inverse of `simulate`). Supports a local `least_squares` optimizer
   (default, with a linearized `std_error` from the Jacobian) and a global,
-  seeded `differential_evolution` optimizer; per-target sum-of-squares
-  residuals with optional weights; observations supplied inline or from a CSV.
+  seeded `differential_evolution` optimizer; a weighted sum-of-squares
+  objective with optional residual multipliers; native-unit SSE and RMSE for
+  each target; observations supplied inline or from a CSV.
   Only constant auxiliaries and flows are calibratable — stocks are rejected
   because a parameter override pins a stock to a constant for the whole run
   rather than setting its initial value. Observation times outside the model's
@@ -23,10 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `scipy` is now declared explicitly in the `sim` extra. It was already a
-  `pysd` dependency, so this adds no new install; the calibration tool imports
-  `scipy.optimize` directly, so it is declared rather than relied upon
-  transitively.
+- `numpy`, `pandas`, and `scipy` are now declared explicitly in the `sim`
+  extra because the simulation, analysis, and calibration modules import them
+  directly rather than relying on PySD's transitive dependency declarations.
+- Calibration results now distinguish the weighted optimizer diagnostic from
+  per-target errors in native units and include the effective optimizer
+  configuration and backend termination details.
 
 ## [0.9.0] - 2026-06-11
 
