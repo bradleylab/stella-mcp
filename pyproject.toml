@@ -25,13 +25,18 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "packaging>=24",
+    "PyYAML>=6",
     "pytest>=8",
     "ruff>=0.8",
+    "twine>=6",
 ]
 sim = [
+    # Imported directly by simulate.py, analysis.py, and calibrate.py.
+    "numpy>=1.23",
+    "pandas",
     "pysd>=3.14",
-    # scipy is already a pysd dependency; declared explicitly because
-    # calibrate.py imports scipy.optimize directly (no new install).
+    # Imported directly by calibrate.py.
     "scipy>=1.10",
 ]
 
