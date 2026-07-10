@@ -28,7 +28,7 @@ keywords:
   - biogeochemistry
   - teaching
 license: MIT
-version: "0.6.0"
-date-released: "2026-05-22"
+version: "0.10.0"
+date-released: "2026-07-09"
 repository-code: "https://github.com/bradleylab/stella-mcp"
 url: "https://github.com/bradleylab/stella-mcp"

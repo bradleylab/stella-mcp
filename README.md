@@ -37,7 +37,7 @@ pip install -e .
 ### Requirements
 
 - Python 3.10+
-- `mcp>=1.0.0`
+- `mcp>=1.7.0`
 
 ## Configuration
 
@@ -195,6 +195,7 @@ Notes:
 | `simulate` | Run the model via PySD and return time series + summaries (`sim` extra) |
 | `compare_scenarios` | Run named what-if override sets against a baseline and report deltas (`sim` extra) |
 | `sensitivity_analysis` | Sweep parameters one-at-a-time and rank their effect on an output metric (`sim` extra) |
+| `calibrate` | Fit constant parameters to an observed time-series (inverse of simulate) (`sim` extra) |
 
 ### Batch Building
 
@@ -551,6 +552,50 @@ ranked by influence. Notes:
 - Like scenario comparison, the model is compiled once and reused across the
   whole sweep.
 
+## Calibration
+
+The `calibrate` tool is the inverse of `simulate`: given an observed
+time-series, it fits constant parameters so the model reproduces the data. Also
+requires the `sim` extra.
+
+```json
+{"name":"calibrate","arguments":{"model_id":"pop_v1","observations":{"time":[0,2,4,6,8,10],"targets":{"Population":[100,122,149,182,222,271]}},"parameters":[{"name":"growth_rate","initial":0.05,"min":0,"max":0.3}]}}
+```
+
+It returns the fitted parameters (each with its bounds, an `at_bound` flag, and
+a linearized `std_error`), the weighted objective trajectory
+(`initial`/`final` `weighted_sse` and `weighted_rmse`), native-unit error
+metrics for each target, optimizer status/configuration, and warnings. Notes:
+
+- **Only constant auxiliaries and flows are calibratable.** Stocks are
+  rejected: PySD's parameter override pins a stock to a constant for the whole
+  run rather than setting its initial value, which would silently flatten a
+  dynamic model. Fitting stock initial conditions is not supported.
+- **Two optimizers.** `least_squares` (default) is local and fast and reports a
+  `std_error`; `differential_evolution` is global, stochastic, **seeded** for
+  reproducibility, and **requires** `min`/`max` bounds on every parameter. Its
+  `maxiter` generation cap defaults to 100.
+- Each parameter's `initial` defaults to the model's current constant value.
+  Bounds are optional for `least_squares`, required for `differential_evolution`.
+- **`std_error` is a linearized approximation**, not a posterior: it is the
+  covariance `σ²·(JᵀJ)⁻¹` and is reported only when there are more observations
+  than parameters, the Jacobian is well-conditioned, and no parameter sits on a
+  bound; otherwise it is `null` with a warning. `differential_evolution`
+  returns `null` (no Jacobian). Under non-default `weights`, the standard-error
+  interpretation holds only for inverse-σ weights.
+- **Alignment.** The model runs over its native `[start, stop]` window and the
+  simulation is linearly interpolated onto the observation times. Observation
+  times **outside** the window are rejected (no extrapolation). All targets
+  share one strictly-increasing time grid; observations are loaded inline or
+  from a `csv_path` (first column time, the rest targets).
+- Optional per-target `weights` are residual multipliers: the optimizer uses
+  `weight * (simulated - observed)`. Inverse measurement-standard-deviation
+  values give normalized residuals. Because weighted errors may mix units,
+  `target_metrics` reports an unweighted SSE and RMSE in each target's native
+  units; no aggregate native-unit RMSE is reported. `save_fit_csv` writes a long
+  `time, target, observed, fitted` table; `return_fit_series` attaches the
+  best-fit series. The model is compiled once and reused across the whole fit.
+
 ## MCP Resources & Prompts
 
 Beyond tools, the server exposes MCP-native affordances:
@@ -601,17 +646,24 @@ The `validate_model` tool checks for:
 
 ```
 stella-mcp/
+├── CHANGELOG.md
+├── CITATION.cff
 ├── README.md
 ├── LICENSE
 ├── pyproject.toml
 └── stella_mcp/
     ├── __init__.py
-    ├── server.py      # MCP server wiring + schemas
-    ├── tool_handlers.py # Tool handler implementations/registration
-    ├── tool_schemas.py  # MCP tool schema definitions
-    ├── xmile.py       # Core model types + layout logic
-    ├── xmile_io.py    # XMILE parsing/export helpers
-    └── validator.py   # Model validation logic
+    ├── server.py         # MCP server lifecycle and protocol wiring
+    ├── tool_handlers.py  # Tool handlers; becomes a compatibility facade in 0.11
+    ├── tool_schemas.py   # Tool catalog; becomes a compatibility facade in 0.11
+    ├── mcp_resources.py  # MCP resources and prompts
+    ├── simulate.py       # PySD-backed simulation
+    ├── analysis.py       # Scenario comparison and sensitivity analysis
+    ├── calibrate.py      # Parameter fitting and native-unit error metrics
+    ├── render_svg.py     # Stock-and-flow SVG rendering
+    ├── xmile.py          # Core model types and layout behavior
+    ├── xmile_io.py       # XMILE parsing/export helpers
+    └── validator.py      # Model validation logic
 ```
 
 ## Contributing
@@ -623,11 +675,17 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 PyPI publishing is handled by `.github/workflows/publish.yml` using PyPI Trusted
 Publishing. To release a new version:
 
-1. Update the version in `pyproject.toml` and `stella_mcp/__init__.py`, and
-   move the `[Unreleased]` items in `CHANGELOG.md` under the new version
-   heading.
-2. Merge the release changes to `main`.
-3. Create and publish a GitHub release with a matching tag, for example `v0.5.0`.
+1. Synchronize the version in `pyproject.toml`, `stella_mcp/__init__.py`,
+   `CITATION.cff`, and `CHANGELOG.md`; keep the citation and changelog release
+   dates identical.
+2. Run `uv lock --check`, the core and simulation test suites, the MCP-floor
+   suite, and the package job. Prepare a release-notes file such as
+   `docs/releases/0.10.0.md`.
+3. Merge the release changes to `main` and wait for every main-branch CI job to
+   pass.
+4. Create and publish a GitHub release from `main` with the matching tag and
+   notes file, for example `v0.10.0`. The publish workflow validates that tag
+   against the package metadata before uploading.
 
 The GitHub release event builds the source distribution and wheel, then publishes
 them to PyPI through the configured trusted publisher.

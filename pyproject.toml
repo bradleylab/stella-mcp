@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stella-mcp"
-version = "0.9.0"
+version = "0.10.0"
 description = "MCP server for creating and manipulating Stella system dynamics models (.stmx files)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,11 +25,19 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "packaging>=24",
+    "PyYAML>=6",
     "pytest>=8",
     "ruff>=0.8",
+    "twine>=6",
 ]
 sim = [
+    # Imported directly by simulate.py, analysis.py, and calibrate.py.
+    "numpy>=1.23",
+    "pandas",
     "pysd>=3.14",
+    # Imported directly by calibrate.py.
+    "scipy>=1.10",
 ]
 
 [project.scripts]

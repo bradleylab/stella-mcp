@@ -31,6 +31,27 @@ def test_annotation_sets_partition_all_tools():
             assert not (a & b), f"overlap: {a & b}"
 
 
+def test_tool_schemas_match_registered_handlers():
+    schema_names = {tool.name for tool in build_tool_definitions()}
+    handler_names = set(server_mod._TOOL_HANDLERS)
+
+    assert schema_names == handler_names, (
+        f"schemas without handlers: {schema_names - handler_names}; "
+        f"handlers without schemas: {handler_names - schema_names}"
+    )
+
+
+def test_calibrate_schema_matches_optimizer_defaults():
+    calibrate_tool = next(tool for tool in build_tool_definitions() if tool.name == "calibrate")
+    properties = calibrate_tool.inputSchema["properties"]
+
+    assert properties["max_nfev"]["default"] == 1000
+    assert properties["maxiter"]["type"] == ["integer", "null"]
+    assert properties["maxiter"]["default"] == 100
+    assert properties["popsize"]["default"] == 15
+    assert properties["seed"]["default"] == 0
+
+
 def test_read_only_tools_are_annotated_read_only():
     tools = {t.name: t for t in build_tool_definitions()}
     for name in _READ_ONLY_TOOLS:
