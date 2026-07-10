@@ -2,8 +2,32 @@
 
 import pytest
 
+from stella_mcp import xmile
+from stella_mcp.model import StellaModel as ModelStellaModel
+from stella_mcp.model_types import (
+    Aux,
+    Flow,
+    GraphicalFunction,
+    Module,
+    SimSpecs,
+    Stock,
+)
+from stella_mcp.model_types import (
+    Connector as ModelConnector,
+)
 from stella_mcp.validator import validate_model
 from stella_mcp.xmile import Connector, StellaModel, parse_stmx
+
+
+def test_xmile_facade_reexports_model_types():
+    assert StellaModel is ModelStellaModel
+    assert Connector is ModelConnector
+    assert xmile.Stock is Stock
+    assert xmile.Flow is Flow
+    assert xmile.Aux is Aux
+    assert xmile.GraphicalFunction is GraphicalFunction
+    assert xmile.Module is Module
+    assert xmile.SimSpecs is SimSpecs
 
 
 def test_dt_export_uses_safe_reciprocal_only_when_exact():
