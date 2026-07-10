@@ -1,6 +1,8 @@
 """Tests for MCP tool annotations, resources, and prompts."""
 
 import asyncio
+import hashlib
+import json
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -13,6 +15,81 @@ from stella_mcp.tool_schemas import (
     _READ_ONLY_TOOLS,
     build_tool_definitions,
 )
+
+_TOOL_NAMES_0_10 = (
+    "create_model",
+    "build_model",
+    "add_variables",
+    "set_sim_specs",
+    "add_stock",
+    "update_stock",
+    "add_flow",
+    "update_flow",
+    "add_aux",
+    "update_aux",
+    "add_connector",
+    "sync_connectors_from_equations",
+    "set_connector_routing",
+    "rename_variable",
+    "delete_variable",
+    "create_module",
+    "add_to_module",
+    "remove_from_module",
+    "rename_module",
+    "delete_module",
+    "set_module_view",
+    "set_module_style",
+    "auto_place_module_boxes",
+    "save_model",
+    "render_diagram",
+    "read_model",
+    "list_templates",
+    "get_template_info",
+    "load_template",
+    "save_as_template",
+    "simulate",
+    "compare_scenarios",
+    "sensitivity_analysis",
+    "calibrate",
+    "list_models",
+    "delete_model",
+    "inspect_model",
+    "list_modules",
+    "list_connectors",
+    "validate_model",
+    "list_variables",
+    "get_model_xml",
+)
+_ANNOTATION_FIELDS = (
+    "title",
+    "readOnlyHint",
+    "destructiveHint",
+    "idempotentHint",
+    "openWorldHint",
+)
+_TOOL_CATALOG_SHA256_0_10 = "10b28141403d3fee5f36816efccc5ee9115f08384d3eaab8c6d7ff25b7360b83"
+
+
+def test_tool_catalog_matches_0_10_snapshot():
+    tools = build_tool_definitions()
+    payload = [
+        {
+            "name": tool.name,
+            "description": tool.description,
+            "inputSchema": tool.inputSchema,
+            "annotations": None
+            if tool.annotations is None
+            else {
+                field: getattr(tool.annotations, field, None)
+                for field in _ANNOTATION_FIELDS
+            },
+        }
+        for tool in tools
+    ]
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+    assert tuple(tool.name for tool in tools) == _TOOL_NAMES_0_10
+    assert hashlib.sha256(canonical.encode()).hexdigest() == _TOOL_CATALOG_SHA256_0_10
 
 
 def test_annotation_sets_partition_all_tools():
