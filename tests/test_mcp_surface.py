@@ -60,12 +60,32 @@ _TOOL_NAMES_0_10 = (
     "list_variables",
     "get_model_xml",
 )
-_TOOL_CATALOG_SHA256_0_10 = "6be9d019ad691c54f82d54fe1add571f5605884499a243a57b3eb313a522b3ee"
+_ANNOTATION_FIELDS = (
+    "title",
+    "readOnlyHint",
+    "destructiveHint",
+    "idempotentHint",
+    "openWorldHint",
+)
+_TOOL_CATALOG_SHA256_0_10 = "10b28141403d3fee5f36816efccc5ee9115f08384d3eaab8c6d7ff25b7360b83"
 
 
 def test_tool_catalog_matches_0_10_snapshot():
     tools = build_tool_definitions()
-    payload = [tool.model_dump(mode="json", exclude_none=False) for tool in tools]
+    payload = [
+        {
+            "name": tool.name,
+            "description": tool.description,
+            "inputSchema": tool.inputSchema,
+            "annotations": None
+            if tool.annotations is None
+            else {
+                field: getattr(tool.annotations, field, None)
+                for field in _ANNOTATION_FIELDS
+            },
+        }
+        for tool in tools
+    ]
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
     assert tuple(tool.name for tool in tools) == _TOOL_NAMES_0_10

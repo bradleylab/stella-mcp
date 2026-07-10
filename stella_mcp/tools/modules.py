@@ -1,10 +1,23 @@
-"""Schemas for module lifecycle and layout-box tools."""
+"""Schemas and handlers for module lifecycle and layout-box tools.
+
+This module is marginally above the approximate line guideline because eight
+small tool contracts stay adjacent to their handler registrations; splitting
+them again would make one domain require cross-file navigation.
+"""
 
 from __future__ import annotations
 
-from mcp.types import Tool
+from typing import Any
 
-from .shared import SharedSchemas, build_shared_schemas
+from mcp.types import TextContent, Tool
+
+from .shared import (
+    HandlerContext,
+    RegisterTool,
+    SharedSchemas,
+    ToolResponse,
+    build_shared_schemas,
+)
 
 
 def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
@@ -168,3 +181,133 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
             },
         ),
     ]
+
+
+def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
+    """Register module-domain handlers."""
+    get_model = context.get_model
+
+    @register("create_module")
+    def _handle_create_module(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        module = model.create_module(
+            name=arguments["name"],
+            members=arguments.get("members"),
+        )
+        return [TextContent(
+            type="text",
+            text=f"Created module '{module.name}' in model_id={model_id} with {len(module.members)} members"
+        )]
+
+    @register("add_to_module")
+    def _handle_add_to_module(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        module = model.add_to_module(
+            module_name=arguments["module_name"],
+            members=arguments["members"],
+        )
+        return [TextContent(
+            type="text",
+            text=(
+                f"Added {len(arguments['members'])} members to module '{module.name}' "
+                f"in model_id={model_id} (total members: {len(module.members)})"
+            ),
+        )]
+
+    @register("remove_from_module")
+    def _handle_remove_from_module(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        module = model.remove_from_module(
+            module_name=arguments["module_name"],
+            members=arguments["members"],
+        )
+        return [TextContent(
+            type="text",
+            text=(
+                f"Removed up to {len(arguments['members'])} members from module '{module.name}' "
+                f"in model_id={model_id} (total members: {len(module.members)})"
+            ),
+        )]
+
+    @register("rename_module")
+    def _handle_rename_module(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        module = model.rename_module(
+            module_name=arguments["module_name"],
+            new_name=arguments["new_name"],
+        )
+        return [TextContent(
+            type="text",
+            text=f"Renamed module '{arguments['module_name']}' to '{module.name}' in model_id={model_id}",
+        )]
+
+    @register("delete_module")
+    def _handle_delete_module(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        module = model.delete_module(arguments["module_name"])
+        return [TextContent(
+            type="text",
+            text=f"Deleted module '{module.name}' from model_id={model_id}",
+        )]
+
+    @register("set_module_view")
+    def _handle_set_module_view(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        module = model.set_module_view(
+            module_name=arguments["module_name"],
+            x=arguments["x"],
+            y=arguments["y"],
+            width=arguments["width"],
+            height=arguments["height"],
+        )
+        return [TextContent(
+            type="text",
+            text=(
+                f"Set module view for '{module.name}' in model_id={model_id} "
+                f"to center=({module.x}, {module.y}), size=({module.width}, {module.height})"
+            ),
+        )]
+
+    @register("set_module_style")
+    def _handle_set_module_style(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        module = model.set_module_style(
+            module_name=arguments["module_name"],
+            border_color=arguments.get("border_color"),
+            background=arguments.get("background"),
+            font_color=arguments.get("font_color"),
+            font_size=arguments.get("font_size"),
+            label_side=arguments.get("label_side"),
+        )
+        style_parts = []
+        if module.border_color is not None:
+            style_parts.append(f"border_color={module.border_color}")
+        if module.background is not None:
+            style_parts.append(f"background={module.background}")
+        if module.font_color is not None:
+            style_parts.append(f"font_color={module.font_color}")
+        if module.font_size is not None:
+            style_parts.append(f"font_size={module.font_size}")
+        if module.label_side is not None:
+            style_parts.append(f"label_side={module.label_side}")
+        return [TextContent(
+            type="text",
+            text=(
+                f"Set module style for '{module.name}' in model_id={model_id}: "
+                + ", ".join(style_parts)
+            ),
+        )]
+
+    @register("auto_place_module_boxes")
+    def _handle_auto_place_module_boxes(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        model.auto_place_module_boxes(
+            padding=arguments.get("padding", 40.0),
+            min_width=arguments.get("min_width", 180.0),
+            min_height=arguments.get("min_height", 120.0),
+            only_missing=arguments.get("only_missing", False),
+        )
+        return [TextContent(
+            type="text",
+            text=f"Auto-placed module boxes in model_id={model_id} for {len(model.modules)} modules",
+        )]

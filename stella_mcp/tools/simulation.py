@@ -8,9 +8,21 @@ boundary without introducing schema-only submodules.
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcp.types import Tool
 
-from .shared import SharedSchemas, build_shared_schemas
+from ..analysis import compare_scenarios, sensitivity_analysis
+from ..calibrate import calibrate
+from ..simulate import run_simulation
+from ..tool_results import success_result
+from .shared import (
+    HandlerContext,
+    RegisterTool,
+    SharedSchemas,
+    ToolResponse,
+    build_shared_schemas,
+)
 
 
 def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
@@ -391,3 +403,129 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
             },
         ),
     ]
+
+
+def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
+    """Register simulation-domain handlers."""
+    get_model = context.get_model
+
+    @register("simulate")
+    def _handle_simulate(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        result = run_simulation(
+            model,
+            overrides=arguments.get("overrides"),
+            max_points=arguments.get("max_points", 101),
+            include=arguments.get("include"),
+            save_results_csv=arguments.get("save_results_csv"),
+        )
+        finals = ", ".join(
+            f"{series['name']}={series['summary']['final']}"
+            for series in result["series"]
+        )
+        warn_text = f" ({len(result['warnings'])} warnings)" if result["warnings"] else ""
+        return success_result(
+            f"Simulated model_id={model_id} from {result['sim_specs']['start']} to "
+            f"{result['sim_specs']['stop']}{warn_text}. Final values: {finals}",
+            {"model_id": model_id, **result},
+        )
+
+    @register("compare_scenarios")
+    def _handle_compare_scenarios(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        result = compare_scenarios(
+            model,
+            scenarios=arguments.get("scenarios"),
+            baseline=arguments.get("baseline"),
+            include=arguments.get("include"),
+            max_points=arguments.get("max_points", 101),
+            save_comparison_csv=arguments.get("save_comparison_csv"),
+        )
+        lines = []
+        for scenario in result["scenarios"]:
+            deltas = ", ".join(
+                f"{var} {delta['final_abs']:+.4g}"
+                if delta["final_abs"] is not None
+                else f"{var} n/a"
+                for var, delta in scenario["delta_vs_baseline"].items()
+            )
+            lines.append(f"{scenario['name']}: {deltas}" if deltas else scenario["name"])
+        summary = "; ".join(lines) if lines else "none"
+        return success_result(
+            f"Compared {len(result['scenarios'])} scenario(s) for model_id={model_id} "
+            f"vs baseline. Final deltas: {summary}",
+            {"model_id": model_id, **result},
+        )
+
+    @register("sensitivity_analysis")
+    def _handle_sensitivity_analysis(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        result = sensitivity_analysis(
+            model,
+            parameters=arguments.get("parameters"),
+            output=arguments.get("output"),
+            mode=arguments.get("mode", "oat"),
+            max_runs=arguments.get("max_runs", 200),
+            include_series=arguments.get("include_series", False),
+            save_sweep_csv=arguments.get("save_sweep_csv"),
+        )
+        ranked = sorted(
+            result["parameters"],
+            key=lambda parameter: (
+                abs(parameter["elasticity"])
+                if parameter["elasticity"] is not None
+                else -1.0
+            ),
+            reverse=True,
+        )
+        ranking = ", ".join(
+            f"{parameter['name']} (elasticity {parameter['elasticity']:+.3g})"
+            if parameter["elasticity"] is not None
+            else f"{parameter['name']} (n/a)"
+            for parameter in ranked
+        )
+        return success_result(
+            f"Swept {len(result['parameters'])} parameter(s) over {result['total_runs']} "
+            f"run(s) for {result['output']['variable']} ({result['output']['metric']}) on "
+            f"model_id={model_id}. Ranked by |elasticity|: {ranking}",
+            {"model_id": model_id, **result},
+        )
+
+    @register("calibrate")
+    def _handle_calibrate(arguments: dict[str, Any]) -> ToolResponse:
+        model_id, model = get_model(arguments.get("model_id"))
+        # Required args use .get() so malformed input remains invalid_input.
+        result = calibrate(
+            model,
+            observations=arguments.get("observations"),
+            parameters=arguments.get("parameters"),
+            method=arguments.get("method", "least_squares"),
+            objective=arguments.get("objective", "sse"),
+            weights=arguments.get("weights"),
+            max_nfev=arguments.get("max_nfev", 1000),
+            maxiter=arguments.get("maxiter"),
+            popsize=arguments.get("popsize", 15),
+            seed=arguments.get("seed", 0),
+            return_fit_series=arguments.get("return_fit_series", False),
+            save_fit_csv=arguments.get("save_fit_csv"),
+        )
+        fitted = ", ".join(
+            f"{parameter['name']}={parameter['fitted']:.4g}"
+            + (
+                f"±{parameter['std_error']:.2g}"
+                if parameter["std_error"] is not None
+                else ""
+            )
+            for parameter in result["parameters"]
+        )
+        weighted_rmse = result["objective"]["weighted_rmse"]
+        status = (
+            "converged" if result["optimizer"]["converged"] else "did NOT converge"
+        )
+        warn_text = f" ({len(result['warnings'])} warnings)" if result["warnings"] else ""
+        return success_result(
+            f"Calibrated {len(result['parameters'])} parameter(s) on model_id={model_id} "
+            f"via {result['optimizer']['method']} ({status}, weighted RMSE="
+            f"{weighted_rmse:.4g}){warn_text}. Fitted: {fitted}",
+            {"model_id": model_id, **result},
+        )

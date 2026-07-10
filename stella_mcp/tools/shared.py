@@ -1,9 +1,45 @@
-"""Shared schema fragments and handler contracts for MCP tool domains."""
+"""Shared schema fragments and handler contracts for MCP tool domains.
+
+This module intentionally groups declarative schema fragments with the small
+set of cross-domain handler protocols and the atomic batch primitive. These are
+the only concepts shared by multiple tool domains, so keeping them here avoids
+both circular imports and a second generic-utilities layer.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
+
+from mcp.types import CallToolResult, TextContent
+
+from ..tool_results import BatchItemError
+from ..xmile import GraphicalFunction, StellaModel
+
+ToolResponse = list[TextContent] | CallToolResult
+ToolHandler = Callable[[dict[str, Any]], ToolResponse]
+RegisterTool = Callable[[str], Callable[[ToolHandler], ToolHandler]]
+
+
+class SessionModelsLike(Protocol):
+    """Minimal session model container needed by tool handlers."""
+
+    models: dict[str, StellaModel]
+    current_model_id: str | None
+
+
+@dataclass(frozen=True)
+class HandlerContext:
+    """Server-owned operations made available to domain handler registrars."""
+
+    get_model: Callable[[str | None], tuple[str, StellaModel]]
+    set_current_model: Callable[[StellaModel, str | None], str]
+    get_session_models: Callable[[], SessionModelsLike]
+    build_graphical_function: Callable[
+        [dict[str, Any] | None], GraphicalFunction | None
+    ]
+    compat_warning_suffix: Callable[[list[str]], str]
 
 
 @dataclass(frozen=True)
@@ -237,3 +273,117 @@ def build_shared_schemas() -> SharedSchemas:
         graphical_function=graphical_function_schema,
         batch_item_properties=batch_item_properties,
     )
+
+
+def apply_batch_items(
+    model: StellaModel,
+    arguments: dict[str, Any],
+    build_graphical_function: Callable[
+        [dict[str, Any] | None], GraphicalFunction | None
+    ],
+) -> dict[str, int]:
+    """Apply ordered batch items and identify any failing stage atomically."""
+    added = {"stocks": 0, "flows": 0, "auxiliaries": 0, "connectors": 0, "modules": 0}
+
+    def fail(stage: str, index: int, item: dict[str, Any], exc: Exception) -> BatchItemError:
+        message = (
+            f"missing required field {exc}" if isinstance(exc, KeyError) else str(exc)
+        )
+        name = item.get("name") if isinstance(item.get("name"), str) else item.get("to_var")
+        return BatchItemError(stage, index, name, message)
+
+    def name_field(item: dict[str, Any], field: str = "name") -> str:
+        value = item[field]
+        if not isinstance(value, str):
+            raise ValueError(f"field '{field}' must be a string")
+        return value
+
+    def text_field(item: dict[str, Any], field: str) -> str:
+        # Inputs are not schema-enforced at the server, and numbers are common
+        # for constant equations. Anything else must fail before model mutation.
+        value = item[field]
+        if isinstance(value, str):
+            return value
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return f"{value:g}" if isinstance(value, float) else str(value)
+        raise ValueError(f"field '{field}' must be a string (or number)")
+
+    for index, item in enumerate(arguments.get("stocks") or []):
+        try:
+            model.add_stock(
+                name=name_field(item),
+                initial_value=text_field(item, "initial_value"),
+                units=item.get("units", ""),
+                non_negative=item.get("non_negative", True),
+                x=item.get("x"),
+                y=item.get("y"),
+            )
+            added["stocks"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("stocks", index, item, exc) from exc
+
+    for index, item in enumerate(arguments.get("auxs") or []):
+        try:
+            model.add_aux(
+                name=name_field(item),
+                equation=text_field(item, "equation"),
+                units=item.get("units", ""),
+                x=item.get("x"),
+                y=item.get("y"),
+                graphical_function=build_graphical_function(item.get("graphical_function")),
+            )
+            added["auxiliaries"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("auxs", index, item, exc) from exc
+
+    for index, item in enumerate(arguments.get("flows") or []):
+        try:
+            model.add_flow(
+                name=name_field(item),
+                equation=text_field(item, "equation"),
+                units=item.get("units", ""),
+                from_stock=item.get("from_stock"),
+                to_stock=item.get("to_stock"),
+                non_negative=item.get("non_negative", True),
+                x=item.get("x"),
+                y=item.get("y"),
+                graphical_function=build_graphical_function(item.get("graphical_function")),
+            )
+            added["flows"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("flows", index, item, exc) from exc
+
+    for index, item in enumerate(arguments.get("connectors") or []):
+        try:
+            model.add_connector(item["from_var"], item["to_var"])
+            added["connectors"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("connectors", index, item, exc) from exc
+
+    for index, item in enumerate(arguments.get("modules") or []):
+        try:
+            model.create_module(item["name"], members=item.get("members"))
+            view = item.get("view")
+            if view is not None:
+                model.set_module_view(
+                    item["name"],
+                    x=view["x"],
+                    y=view["y"],
+                    width=view["width"],
+                    height=view["height"],
+                )
+            style = item.get("style")
+            if style is not None:
+                model.set_module_style(
+                    item["name"],
+                    border_color=style.get("border_color"),
+                    background=style.get("background"),
+                    font_color=style.get("font_color"),
+                    font_size=style.get("font_size"),
+                    label_side=style.get("label_side"),
+                )
+            added["modules"] += 1
+        except (KeyError, ValueError) as exc:
+            raise fail("modules", index, item, exc) from exc
+
+    return added
