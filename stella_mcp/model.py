@@ -3,14 +3,11 @@
 import math
 import re
 import uuid
-from html import escape
 
-from stella_mcp import model_layout
+from stella_mcp import model_layout, xmile_export
 from stella_mcp.equation_parser import extract_variable_references
 from stella_mcp.layout import BoundingBox
 from stella_mcp.model_types import (
-    ISEE_NS,
-    XMILE_NS,
     Aux,
     Connector,
     Flow,
@@ -57,62 +54,24 @@ class StellaModel:
     @staticmethod
     def _xml_local_name(tag: str) -> str:
         """Extract local XML tag name from namespaced or plain tags."""
-        if "}" in tag:
-            return tag.split("}", 1)[1]
-        return tag
+        return xmile_export._xml_local_name(tag)
 
     @staticmethod
     def _xml_attr_parts(attr_key: str) -> tuple[str | None, str]:
         """Split ElementTree attr key into (namespace_uri, local_name)."""
-        if attr_key.startswith("{") and "}" in attr_key:
-            namespace, local = attr_key[1:].split("}", 1)
-            return namespace, local
-        return None, attr_key
+        return xmile_export._xml_attr_parts(attr_key)
 
     def _xml_attr_name(self, attr_key: str) -> str:
         """Convert ElementTree attribute key to output-safe name."""
-        namespace, local = self._xml_attr_parts(attr_key)
-        if namespace is None or namespace == XMILE_NS:
-            return local
-        if namespace == ISEE_NS:
-            return f"isee:{local}"
-        prefix = self._export_ns_prefix_by_uri.get(namespace)
-        if prefix:
-            return f"{prefix}:{local}"
-        # Fallback for robustness; prefix should normally be precomputed.
-        return local
+        return xmile_export._xml_attr_name(self, attr_key)
 
     def _iter_all_extra_attrs(self):
         """Iterate over all preserved extra-attribute dictionaries."""
-        yield self.sim_specs.extra_attrs
-        yield self.view_extra_attrs
-        for stock in self.stocks.values():
-            yield stock.extra_attrs
-            yield stock.view_extra_attrs
-        for flow in self.flows.values():
-            yield flow.extra_attrs
-            yield flow.view_extra_attrs
-        for aux in self.auxs.values():
-            yield aux.extra_attrs
-            yield aux.view_extra_attrs
-        for module in self.modules.values():
-            yield module.extra_attrs
-            yield module.view_extra_attrs
-        for conn in self.connectors:
-            yield conn.extra_attrs
+        return xmile_export._iter_all_extra_attrs(self)
 
     def _build_export_ns_prefixes(self) -> dict[str, str]:
         """Build deterministic XML namespace prefixes for unknown attr namespaces."""
-        uris: set[str] = set()
-        for attrs in self._iter_all_extra_attrs():
-            for raw_key in attrs:
-                namespace, _ = self._xml_attr_parts(raw_key)
-                if namespace and namespace not in {XMILE_NS, ISEE_NS}:
-                    uris.add(namespace)
-        prefix_by_uri: dict[str, str] = {}
-        for index, uri in enumerate(sorted(uris), start=1):
-            prefix_by_uri[uri] = f"ns{index}"
-        return prefix_by_uri
+        return xmile_export._build_export_ns_prefixes(self)
 
     def _format_extra_attrs(
         self,
@@ -120,24 +79,11 @@ class StellaModel:
         reserved_names: set[str] | None = None,
     ) -> str:
         """Format preserved extra XML attrs while avoiding known fields."""
-        if not attrs:
-            return ""
-        reserved = reserved_names or set()
-        rendered: list[str] = []
-        for raw_key in sorted(attrs):
-            key = self._xml_attr_name(raw_key)
-            if key in reserved:
-                continue
-            rendered.append(f'{key}="{escape(attrs[raw_key])}"')
-        return (" " + " ".join(rendered)) if rendered else ""
+        return xmile_export._format_extra_attrs(self, attrs, reserved_names)
 
     def _append_xml_fragment(self, lines: list[str], fragment: str, indent: str):
         """Append a preserved XML fragment with target indentation."""
-        text = fragment.strip()
-        if not text:
-            return
-        for line in text.splitlines():
-            lines.append(f"{indent}{line}")
+        return xmile_export._append_xml_fragment(self, lines, fragment, indent)
 
     def _next_connector_uid(self) -> int:
         """Get the next unique connector ID."""
@@ -164,7 +110,7 @@ class StellaModel:
     @staticmethod
     def _format_number(value: float) -> str:
         """Format numbers for XMILE with stable precision."""
-        return f"{value:.12g}"
+        return xmile_export._format_number(value)
 
     def _dt_xml(self, dt: float | None = None) -> str:
         """Format dt for XMILE with compatibility-safe reciprocal usage.
@@ -173,14 +119,7 @@ class StellaModel:
         (e.g., 0.25 -> reciprocal 4). For non-exact values, writing reciprocal
         with truncation can change dt on round-trip, so export plain dt instead.
         """
-        dt = float(self.sim_specs.dt if dt is None else dt)
-        if dt <= 0:
-            raise ValueError("sim_specs.dt must be > 0")
-        reciprocal = 1.0 / dt
-        nearest = round(reciprocal)
-        if dt < 1.0 and abs(reciprocal - nearest) < 1e-9 and nearest >= 1:
-            return f'<dt reciprocal="true">{int(nearest)}</dt>'
-        return f"<dt>{self._format_number(dt)}</dt>"
+        return xmile_export._dt_xml(self, dt)
 
     def _build_dependency_graph(self) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
         """Build bidirectional adjacency lists from connectors and flow-stock relationships.
@@ -1056,9 +995,7 @@ class StellaModel:
         compat_mode: str = "permissive",
     ) -> str:
         """Generate XMILE XML string for the model."""
-        from .xmile_io import model_to_xml
-
-        return model_to_xml(
+        return xmile_export.model_to_xml(
             self,
             auto_layout=auto_layout,
             resolve_layout_violations=resolve_layout_violations,
@@ -1067,53 +1004,16 @@ class StellaModel:
 
     def _add_view_styles_str(self, lines: list[str]):
         """Add the default view styles as strings."""
-        lines.append(
-            '\t\t\t<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">'
-        )
-        lines.append(
-            '\t\t\t\t<text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt"/>'
-        )
-        lines.append("\t\t\t</style>")
+        return xmile_export._add_view_styles_str(self, lines)
 
     def _add_inner_view_styles_str(self, lines: list[str]):
         """Add the inner view styles as strings."""
-        lines.append(
-            '\t\t\t\t<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">'
-        )
-        lines.append(
-            '\t\t\t\t\t<stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">'
-        )
-        lines.append('\t\t\t\t\t\t<shape type="rectangle" width="45" height="35"/>')
-        lines.append("\t\t\t\t\t</stock>")
-        lines.append(
-            '\t\t\t\t\t<flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom"/>'
-        )
-        lines.append(
-            '\t\t\t\t\t<aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">'
-        )
-        lines.append('\t\t\t\t\t\t<shape type="circle" radius="18"/>')
-        lines.append("\t\t\t\t\t</aux>")
-        lines.append(
-            '\t\t\t\t\t<group color="#666666" background="#F5F5F5" font_color="black" font_size="9pt" label_side="top"/>'
-        )
-        lines.append(
-            '\t\t\t\t\t<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>'
-        )
-        lines.append("\t\t\t\t</style>")
+        return xmile_export._add_inner_view_styles_str(self, lines)
 
     def _format_point_list(self, points: list[float]) -> str:
         # XMILE defines point lists as comma-separated (the sep attribute can
         # override, but readers like Stella and PySD assume the spec default).
-        return ",".join(f"{p:g}" for p in points)
+        return xmile_export._format_point_list(self, points)
 
     def _add_graphical_function_str(self, lines: list[str], gf: GraphicalFunction):
-        attrs = f' type="{escape(gf.gf_type)}"' if gf.gf_type else ""
-        lines.append(f"\t\t\t\t<gf{attrs}>")
-        if gf.xpts is not None:
-            lines.append(f"\t\t\t\t\t<xpts>{self._format_point_list(gf.xpts)}</xpts>")
-        elif gf.xscale is not None:
-            lines.append(f'\t\t\t\t\t<xscale min="{gf.xscale[0]:g}" max="{gf.xscale[1]:g}"/>')
-        if gf.yscale is not None:
-            lines.append(f'\t\t\t\t\t<yscale min="{gf.yscale[0]:g}" max="{gf.yscale[1]:g}"/>')
-        lines.append(f"\t\t\t\t\t<ypts>{self._format_point_list(gf.ypts)}</ypts>")
-        lines.append("\t\t\t\t</gf>")
+        return xmile_export._add_graphical_function_str(self, lines, gf)
