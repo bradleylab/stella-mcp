@@ -102,7 +102,7 @@ def test_auto_place_module_boxes_sets_geometry():
 
 def test_server_module_tools(monkeypatch):
     """Server tools can create/list/update modules."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1111)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "ModuleServer", "model_id": "m1"}))
@@ -135,7 +135,7 @@ def test_server_module_tools(monkeypatch):
 
 def test_server_set_and_auto_module_view_tools(monkeypatch):
     """Server module view tools should set and auto-place module geometry."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1212)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "ModuleViewServer", "model_id": "m1"}))
@@ -161,7 +161,7 @@ def test_server_set_and_auto_module_view_tools(monkeypatch):
 
 def test_server_set_module_style_tool(monkeypatch):
     """Server should set module style and include it in module listing."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1414)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "ModuleStyleServer", "model_id": "m1"}))
@@ -209,7 +209,7 @@ def test_module_lifecycle_methods():
 
 def test_server_module_lifecycle_tools(monkeypatch):
     """Server module lifecycle tools should perform expected actions."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1313)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "LifecycleServer", "model_id": "m1"}))

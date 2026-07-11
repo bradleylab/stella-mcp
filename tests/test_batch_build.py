@@ -44,7 +44,7 @@ def _call(name, arguments):
 
 
 def _fresh_session(monkeypatch, key):
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: key)
 
 

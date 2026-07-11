@@ -497,7 +497,7 @@ def test_malformed_observation_values_raise_value_error():
 # --- tool wiring -------------------------------------------------------------
 
 def _build_accumulator_tool(model_id: str) -> None:
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     asyncio.run(server_mod.call_tool("build_model", {
         "name": "Accumulator", "model_id": model_id,
         "sim_specs": {"start": 0, "stop": 10, "dt": 1.0},

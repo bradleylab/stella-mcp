@@ -146,13 +146,13 @@ def test_destructive_and_idempotent_hints():
 
 def test_get_model_xml_is_read_only_in_practice(monkeypatch):
     """Annotated read-only -> must not mutate the session model."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 5000)
     asyncio.run(server_mod.call_tool("create_model", {"name": "X", "model_id": "x"}))
     asyncio.run(server_mod.call_tool(
         "add_stock", {"model_id": "x", "name": "S", "initial_value": "1"}
     ))
-    model = server_mod._get_session_models().models["x"]
+    _, model = server_mod.get_model("x")
     assert model.stocks["S"].x is None  # unpositioned before preview
 
     asyncio.run(server_mod.call_tool("get_model_xml", {"model_id": "x"}))
@@ -162,7 +162,7 @@ def test_get_model_xml_is_read_only_in_practice(monkeypatch):
 
 
 def _fresh_session(monkeypatch, key):
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: key)
 
 
@@ -199,7 +199,7 @@ def test_read_model_resource_does_not_mutate_session(monkeypatch):
     asyncio.run(server_mod.call_tool(
         "add_stock", {"model_id": "m", "name": "S", "initial_value": "1"}
     ))
-    model = server_mod._get_session_models().models["m"]
+    _, model = server_mod.get_model("m")
 
     contents = asyncio.run(server_mod.read_resource(AnyUrl("stella://models/m")))
 

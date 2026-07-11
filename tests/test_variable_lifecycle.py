@@ -123,7 +123,7 @@ def test_duplicate_variable_names_are_rejected():
 
 def test_server_rename_and_delete_variable_tools(monkeypatch):
     """Server variable lifecycle tools should update and report consistent state."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1616)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "LifecycleServer", "model_id": "m1"}))
@@ -159,7 +159,7 @@ def test_server_rename_and_delete_variable_tools(monkeypatch):
 
 def test_server_delete_variable_requires_force(monkeypatch):
     """delete_variable should return invalid_input when force is required."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1717)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "LifecycleForce", "model_id": "m1"}))

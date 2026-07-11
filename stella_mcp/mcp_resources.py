@@ -12,23 +12,18 @@ Resource URIs:
 from __future__ import annotations
 
 import copy
-from typing import Protocol
+from collections.abc import Sequence
 from urllib.parse import quote, unquote
 
 from mcp.types import GetPromptResult, Prompt, PromptArgument, PromptMessage, Resource, TextContent
 
+from .session_store import SessionModelEntry
 from .templates import list_templates as list_available_templates
-from .xmile import StellaModel
 
 _TEMPLATE_SCHEME = "stella://templates/"
 _MODEL_SCHEME = "stella://models/"
 
 BUILD_MODEL_PROMPT = "build-stella-model"
-
-
-class SessionModelsLike(Protocol):
-    models: dict[str, StellaModel]
-    current_model_id: str | None
 
 
 def list_template_resources() -> list[Resource]:
@@ -47,26 +42,27 @@ def list_template_resources() -> list[Resource]:
     return resources
 
 
-def list_model_resources(session_models: SessionModelsLike) -> list[Resource]:
+def list_model_resources(session_models: Sequence[SessionModelEntry]) -> list[Resource]:
     """One resource per model currently loaded in the session."""
     resources: list[Resource] = []
-    for model_id in sorted(session_models.models):
-        model = session_models.models[model_id]
+    for entry in session_models:
         resources.append(Resource(
-            uri=f"{_MODEL_SCHEME}{quote(model_id, safe='')}",  # type: ignore[arg-type]
-            name=model_id,
-            title=model.name,
-            description=f"Session model '{model_id}' as XMILE",
+            uri=f"{_MODEL_SCHEME}{quote(entry.model_id, safe='')}",  # type: ignore[arg-type]
+            name=entry.model_id,
+            title=entry.model.name,
+            description=f"Session model '{entry.model_id}' as XMILE",
             mimeType="application/xml",
         ))
     return resources
 
 
-def list_all_resources(session_models: SessionModelsLike) -> list[Resource]:
+def list_all_resources(session_models: Sequence[SessionModelEntry]) -> list[Resource]:
     return list_template_resources() + list_model_resources(session_models)
 
 
-def read_resource_content(uri: str, session_models: SessionModelsLike) -> tuple[str, str]:
+def read_resource_content(
+    uri: str, session_models: Sequence[SessionModelEntry]
+) -> tuple[str, str]:
     """Resolve a ``stella://`` URI to (content, mime_type).
 
     Raises ValueError for unknown schemes or missing resources.
@@ -81,7 +77,10 @@ def read_resource_content(uri: str, session_models: SessionModelsLike) -> tuple[
         raise ValueError(f"Unknown template resource '{name}'")
     if uri.startswith(_MODEL_SCHEME):
         model_id = unquote(uri[len(_MODEL_SCHEME):].rstrip("/"))
-        model = session_models.models.get(model_id)
+        model = next(
+            (entry.model for entry in session_models if entry.model_id == model_id),
+            None,
+        )
         if model is None:
             raise ValueError(f"Unknown model resource '{model_id}'")
         # Export mutates layout state, so render from a copy — a resource

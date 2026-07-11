@@ -449,7 +449,8 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
     """Register construction-domain handlers."""
     get_model = context.get_model
     set_current_model = context.set_current_model
-    get_session_models = context.get_session_models
+    contains_session_model = context.contains_session_model
+    replace_session_model = context.replace_session_model
     build_graphical_function = context.build_graphical_function
 
     @register("create_model")
@@ -512,7 +513,7 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
     @register("build_model")
     def _handle_build_model(arguments: dict[str, Any]) -> ToolResponse:
         requested_id = arguments.get("model_id")
-        if requested_id and requested_id in get_session_models().models:
+        if requested_id and contains_session_model(requested_id):
             raise ValueError(f"model_id '{requested_id}' already exists in this session")
 
         sim = arguments.get("sim_specs") or {}
@@ -542,7 +543,7 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
         scratch = copy.deepcopy(model)
         added = apply_batch_items(scratch, arguments, build_graphical_function)
         extras = _finalize_batch(scratch, arguments)
-        get_session_models().models[model_id] = scratch
+        replace_session_model(model_id, scratch)
         return _batch_response("Updated", model_id, scratch, added, extras)
 
     @register("set_sim_specs")

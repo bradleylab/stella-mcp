@@ -112,7 +112,7 @@ def test_user_template_overrides_builtin_name(monkeypatch, tmp_path):
 def test_server_template_discovery_tools(monkeypatch, tmp_path):
     """Server template tools should expose metadata and discovery filters."""
     monkeypatch.setenv("STELLA_MCP_TEMPLATE_DIR", str(tmp_path))
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1515)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "TemplateServer", "model_id": "m1"}))

@@ -150,7 +150,7 @@ def test_comparison_csv_has_per_scenario_columns(tmp_path):
 
 
 def test_compare_scenarios_tool(monkeypatch):
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 7001)
     asyncio.run(server_mod.call_tool("build_model", {
         "name": "Growth", "model_id": "g",
@@ -304,7 +304,7 @@ def test_sweep_csv_has_long_rows(tmp_path):
 
 
 def test_sensitivity_tool(monkeypatch):
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 7002)
     asyncio.run(server_mod.call_tool("build_model", {
         "name": "Accumulator", "model_id": "acc",

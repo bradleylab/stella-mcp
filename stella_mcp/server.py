@@ -1,9 +1,7 @@
 """MCP server for Stella system dynamics models."""
 
 import math
-import uuid
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from typing import Any
 
 from mcp.server import Server
@@ -18,20 +16,17 @@ from .mcp_resources import (
     list_prompt_definitions,
     read_resource_content,
 )
+from .session_store import (
+    SessionDeleteResult,
+    SessionModelEntry,
+    SessionStore,
+    session_key_for,
+)
 from .tool_handlers import register_tool_handlers
 from .tool_schemas import build_tool_definitions
 from .xmile import GraphicalFunction, StellaModel
 
-
-@dataclass
-class SessionModels:
-    """Model state for a single MCP session."""
-    models: dict[str, StellaModel] = field(default_factory=dict)
-    current_model_id: str | None = None
-
-
-# Session-keyed model registry (key is id(server.request_context.session))
-_session_models: dict[int, SessionModels] = {}
+_session_store = SessionStore()
 _GF_TYPES = {"continuous", "discrete"}
 
 
@@ -42,42 +37,45 @@ server = Server("stella-mcp")
 def _get_session_key() -> int:
     """Get a stable key for the current MCP session context."""
     try:
-        return id(server.request_context.session)
+        session = server.request_context.session
     except LookupError:
-        # Fallback for non-request contexts (tests/scripts)
-        return -1
+        session = None
+    return session_key_for(session)
 
 
-def _get_session_models() -> SessionModels:
-    """Get or create model state for the current session."""
-    session_key = _get_session_key()
-    if session_key not in _session_models:
-        _session_models[session_key] = SessionModels()
-    return _session_models[session_key]
+def _list_session_models() -> tuple[SessionModelEntry, ...]:
+    """List models for the current session."""
+    return _session_store.list(_get_session_key())
+
+
+def _delete_session_model(model_id: str) -> SessionDeleteResult:
+    """Delete a model from the current session."""
+    return _session_store.delete(_get_session_key(), model_id)
+
+
+def _contains_session_model(model_id: str) -> bool:
+    """Return whether the current session contains a model ID."""
+    return _session_store.contains(_get_session_key(), model_id)
+
+
+def _replace_session_model(model_id: str, model: StellaModel) -> None:
+    """Replace an existing model in the current session."""
+    _session_store.replace(_get_session_key(), model_id, model)
+
+
+def _clear_session_store(session_key: int | None = None) -> None:
+    """Explicit test/lifecycle hook for clearing session state."""
+    _session_store.clear(session_key)
 
 
 def _set_current_model(model: StellaModel, model_id: str | None = None) -> str:
     """Store model in session and set as current."""
-    session_models = _get_session_models()
-    resolved_id = model_id or f"model_{uuid.uuid4().hex[:8]}"
-    if resolved_id in session_models.models:
-        raise ValueError(f"model_id '{resolved_id}' already exists in this session")
-    session_models.models[resolved_id] = model
-    session_models.current_model_id = resolved_id
-    return resolved_id
+    return _session_store.set_current(_get_session_key(), model, model_id)
 
 
 def get_model(model_id: str | None = None) -> tuple[str, StellaModel]:
     """Get current (or requested) model for this session."""
-    session_models = _get_session_models()
-    resolved_id = model_id or session_models.current_model_id
-    if not resolved_id:
-        raise ValueError("No model created in this session. Use create_model first.")
-    model = session_models.models.get(resolved_id)
-    if model is None:
-        raise ValueError(f"Unknown model_id '{resolved_id}' for this session")
-    session_models.current_model_id = resolved_id
-    return resolved_id, model
+    return _session_store.get(_get_session_key(), model_id)
 
 
 def _validate_scale(name: str, data: dict[str, Any]) -> tuple[float, float]:
@@ -200,13 +198,13 @@ async def list_tools() -> list[Tool]:
 @server.list_resources()
 async def list_resources() -> list[Resource]:
     """Expose templates and session models as MCP resources."""
-    return list_all_resources(_get_session_models())
+    return list_all_resources(_list_session_models())
 
 
 @server.read_resource()
 async def read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
     """Return the content of a stella:// resource."""
-    content, mime_type = read_resource_content(str(uri), _get_session_models())
+    content, mime_type = read_resource_content(str(uri), _list_session_models())
     return [ReadResourceContents(content=content, mime_type=mime_type)]
 
 
@@ -242,7 +240,10 @@ register_tool_handlers(
     _register_tool_handler,
     get_model=get_model,
     set_current_model=_set_current_model,
-    get_session_models=_get_session_models,
+    list_session_models=_list_session_models,
+    delete_session_model=_delete_session_model,
+    contains_session_model=_contains_session_model,
+    replace_session_model=_replace_session_model,
     build_graphical_function=build_graphical_function,
     compat_warning_suffix=_compat_warning_suffix,
 )

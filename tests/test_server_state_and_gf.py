@@ -19,7 +19,7 @@ def _tool_text(result):
 
 def test_session_scoped_models_are_isolated(monkeypatch):
     """Models with the same model_id in different sessions should not collide."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
 
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 101)
     server_mod._set_current_model(StellaModel("SessionOne"), model_id="m1")
@@ -83,7 +83,7 @@ def test_graphical_function_valid_payload():
 
 def test_list_models_reports_current(monkeypatch):
     """list_models should return all session model IDs and mark current."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 303)
 
     server_mod._set_current_model(StellaModel("First"), model_id="m1")
@@ -97,7 +97,7 @@ def test_list_models_reports_current(monkeypatch):
 
 def test_list_models_empty_session(monkeypatch):
     """list_models should return a clear message when session has no models."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 404)
 
     result = asyncio.run(server_mod.call_tool("list_models", {}))
@@ -106,7 +106,7 @@ def test_list_models_empty_session(monkeypatch):
 
 def test_get_model_xml_respects_auto_layout_flag(monkeypatch):
     """get_model_xml(auto_layout=False) should skip auto-positioning."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 505)
     server_mod._set_current_model(StellaModel("NoLayout"), model_id="m1")
     model_id, model = server_mod.get_model("m1")
@@ -124,7 +124,7 @@ def test_get_model_xml_respects_auto_layout_flag(monkeypatch):
 
 def test_save_model_respects_auto_layout_flag(monkeypatch, tmp_path: Path):
     """save_model(auto_layout=False) should write XML without auto-positioning."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 606)
     server_mod._set_current_model(StellaModel("NoLayoutSave"), model_id="m1")
     model_id, model = server_mod.get_model("m1")
@@ -143,7 +143,7 @@ def test_save_model_respects_auto_layout_flag(monkeypatch, tmp_path: Path):
 
 def test_get_model_xml_resolve_layout_violations_flag(monkeypatch):
     """get_model_xml(resolve_layout_violations=True) should invoke resolver."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 707)
     server_mod._set_current_model(StellaModel("Resolve"), model_id="m1")
     model_id, model = server_mod.get_model("m1")
@@ -175,7 +175,7 @@ def test_unknown_tool_returns_structured_error():
 
 def test_model_not_found_returns_structured_error(monkeypatch):
     """Model lookup errors should return model_not_found code."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 808)
 
     result = asyncio.run(server_mod.call_tool("list_variables", {"model_id": "missing"}))
@@ -187,7 +187,7 @@ def test_model_not_found_returns_structured_error(monkeypatch):
 
 def test_internal_error_returns_structured_error(monkeypatch):
     """Unexpected exceptions should return internal_error."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 909)
     server_mod._set_current_model(StellaModel("Boom"), model_id="m1")
     _, model = server_mod.get_model("m1")
@@ -205,7 +205,7 @@ def test_internal_error_returns_structured_error(monkeypatch):
 
 def test_call_tool_session_isolation_end_to_end(monkeypatch):
     """End-to-end tool calls should isolate model registries per session key."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     state = {"session_key": 1}
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: state["session_key"])
 
@@ -242,7 +242,7 @@ def test_list_templates_tool_includes_builtin():
 
 def test_set_connector_routing_tool_updates_connector_points(monkeypatch):
     """set_connector_routing should update connector angle/points metadata."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1101)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "Routing", "model_id": "m1"}))
@@ -302,7 +302,7 @@ def test_set_connector_routing_tool_updates_connector_points(monkeypatch):
 
 def test_set_connector_routing_requires_lookup_fields(monkeypatch):
     """set_connector_routing should fail if neither uid nor endpoint pair is provided."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1102)
     asyncio.run(server_mod.call_tool("create_model", {"name": "RoutingFail", "model_id": "m1"}))
 
@@ -319,7 +319,7 @@ def test_set_connector_routing_requires_lookup_fields(monkeypatch):
 
 def test_list_connectors_empty(monkeypatch):
     """list_connectors should return clear message when no connectors exist."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1103)
     asyncio.run(server_mod.call_tool("create_model", {"name": "NoConn", "model_id": "m1"}))
 
@@ -329,7 +329,7 @@ def test_list_connectors_empty(monkeypatch):
 
 def test_list_connectors_includes_routing_metadata(monkeypatch):
     """list_connectors should expose uid, endpoints, angle, and point lock metadata."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1104)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "ConnList", "model_id": "m1"}))
@@ -372,7 +372,7 @@ def test_list_connectors_includes_routing_metadata(monkeypatch):
 
 def test_save_and_load_template_tools(monkeypatch, tmp_path):
     """save_as_template and load_template should work through tool API."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1001)
     monkeypatch.setenv("STELLA_MCP_TEMPLATE_DIR", str(tmp_path))
 
@@ -410,7 +410,7 @@ def test_save_and_load_template_tools(monkeypatch, tmp_path):
 
 def test_read_model_reports_compatibility_warnings(monkeypatch, tmp_path):
     """read_model in permissive mode should report import compatibility warnings."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2001)
     path = tmp_path / "compat_warn.stmx"
     path.write_text(
@@ -432,7 +432,7 @@ def test_read_model_reports_compatibility_warnings(monkeypatch, tmp_path):
 
 def test_read_model_strict_returns_invalid_input(monkeypatch, tmp_path):
     """read_model strict mode should fail on compatibility issues."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2002)
     path = tmp_path / "compat_strict.stmx"
     path.write_text(
@@ -459,7 +459,7 @@ def test_read_model_strict_returns_invalid_input(monkeypatch, tmp_path):
 
 def test_get_model_xml_strict_mode_returns_invalid_input(monkeypatch):
     """get_model_xml strict mode should fail fast on export compatibility issues."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2003)
     server_mod._set_current_model(StellaModel("CompatExportStrict"), model_id="m1")
     _, model = server_mod.get_model("m1")
@@ -476,7 +476,7 @@ def test_get_model_xml_strict_mode_returns_invalid_input(monkeypatch):
 
 def test_list_models_returns_structured_content(monkeypatch):
     """list_models should return a machine-readable model list."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2101)
     asyncio.run(server_mod.call_tool("create_model", {"name": "M1", "model_id": "m1"}))
     result = asyncio.run(server_mod.call_tool("list_models", {}))
@@ -489,7 +489,7 @@ def test_list_models_returns_structured_content(monkeypatch):
 
 def test_validate_model_returns_structured_issues(monkeypatch):
     """validate_model should expose validation issues as dictionaries."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2102)
     asyncio.run(server_mod.call_tool("create_model", {"name": "Broken", "model_id": "m1"}))
     asyncio.run(
@@ -507,7 +507,7 @@ def test_validate_model_returns_structured_issues(monkeypatch):
 
 def test_inspect_model_returns_complete_structured_summary(monkeypatch):
     """inspect_model should be the primary structured model introspection tool."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2103)
     asyncio.run(server_mod.call_tool("create_model", {"name": "Inspect", "model_id": "m1"}))
     asyncio.run(
@@ -535,7 +535,7 @@ def test_inspect_model_returns_complete_structured_summary(monkeypatch):
 
 def test_update_tools_return_structured_content(monkeypatch):
     """Update tools should mutate model fields and return structured payloads."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2104)
     asyncio.run(server_mod.call_tool("create_model", {"name": "Update", "model_id": "m1"}))
     asyncio.run(
@@ -573,7 +573,7 @@ def test_update_tools_return_structured_content(monkeypatch):
 
 def test_sync_connectors_from_equations_tool(monkeypatch):
     """Tool should add missing equation connectors and report counts."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2105)
     asyncio.run(server_mod.call_tool("create_model", {"name": "Sync", "model_id": "m1"}))
     asyncio.run(
@@ -598,7 +598,7 @@ def test_sync_connectors_from_equations_tool(monkeypatch):
 
 def test_delete_model_removes_from_session(monkeypatch):
     """delete_model should drop the model and report remaining session state."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2106)
     asyncio.run(server_mod.call_tool("create_model", {"name": "A", "model_id": "a"}))
     asyncio.run(server_mod.call_tool("create_model", {"name": "B", "model_id": "b"}))
@@ -613,7 +613,7 @@ def test_delete_model_removes_from_session(monkeypatch):
 
 def test_delete_model_clears_current_pointer(monkeypatch):
     """Deleting the current model should leave the session with no current model."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2107)
     asyncio.run(server_mod.call_tool("create_model", {"name": "A", "model_id": "a"}))
 
@@ -627,7 +627,7 @@ def test_delete_model_clears_current_pointer(monkeypatch):
 
 def test_delete_model_unknown_id_is_structured_error(monkeypatch):
     """Unknown model_id should map to the model_not_found error code."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2108)
 
     result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "nope"}))
@@ -693,7 +693,7 @@ def test_simulate_without_pysd_is_structured_error(monkeypatch):
     """
     import sys
 
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2109)
     asyncio.run(server_mod.call_tool("create_model", {"name": "M", "model_id": "m"}))
     asyncio.run(
@@ -756,7 +756,7 @@ def test_gf_equation_nested_parens_stripped_correctly():
 
 def test_render_diagram_tool_returns_svg(monkeypatch, tmp_path):
     """render_diagram returns inline SVG and optionally writes a file."""
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2110)
     asyncio.run(server_mod.call_tool("build_model", {
         "name": "Diag", "model_id": "d",
@@ -781,7 +781,7 @@ def test_render_diagram_tool_returns_svg(monkeypatch, tmp_path):
 
 
 def test_render_diagram_inline_only_without_filepath(monkeypatch):
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2111)
     asyncio.run(server_mod.call_tool("create_model", {"name": "D", "model_id": "d"}))
     asyncio.run(server_mod.call_tool(
