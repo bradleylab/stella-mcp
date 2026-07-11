@@ -10,10 +10,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any
 
 from mcp.types import CallToolResult, TextContent
 
+from ..session_store import SessionDeleteResult, SessionModelEntry
 from ..tool_results import BatchItemError
 from ..xmile import GraphicalFunction, StellaModel
 
@@ -22,20 +23,16 @@ ToolHandler = Callable[[dict[str, Any]], ToolResponse]
 RegisterTool = Callable[[str], Callable[[ToolHandler], ToolHandler]]
 
 
-class SessionModelsLike(Protocol):
-    """Minimal session model container needed by tool handlers."""
-
-    models: dict[str, StellaModel]
-    current_model_id: str | None
-
-
 @dataclass(frozen=True)
 class HandlerContext:
     """Server-owned operations made available to domain handler registrars."""
 
     get_model: Callable[[str | None], tuple[str, StellaModel]]
     set_current_model: Callable[[StellaModel, str | None], str]
-    get_session_models: Callable[[], SessionModelsLike]
+    list_session_models: Callable[[], tuple[SessionModelEntry, ...]]
+    delete_session_model: Callable[[str], SessionDeleteResult]
+    contains_session_model: Callable[[str], bool]
+    replace_session_model: Callable[[str, StellaModel], None]
     build_graphical_function: Callable[
         [dict[str, Any] | None], GraphicalFunction | None
     ]

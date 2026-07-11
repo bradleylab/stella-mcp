@@ -142,45 +142,40 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
 def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
     """Register inspection-domain handlers."""
     get_model = context.get_model
-    get_session_models = context.get_session_models
+    list_session_models = context.list_session_models
+    delete_session_model = context.delete_session_model
 
     @register("list_models")
     def _handle_list_models(arguments: dict[str, Any]) -> ToolResponse:
-        session_models = get_session_models()
-        if not session_models.models:
+        session_models = list_session_models()
+        if not session_models:
             return success_result("No models created in this session.", {"models": []})
 
         lines = ["Session models:"]
-        for model_id, model in sorted(session_models.models.items()):
-            current = " (current)" if model_id == session_models.current_model_id else ""
-            lines.append(f"  - {model_id}: {model.name}{current}")
+        for entry in session_models:
+            current = " (current)" if entry.current else ""
+            lines.append(f"  - {entry.model_id}: {entry.model.name}{current}")
         models_payload = [
             {
-                "model_id": model_id,
-                "name": model.name,
-                "current": model_id == session_models.current_model_id,
+                "model_id": entry.model_id,
+                "name": entry.model.name,
+                "current": entry.current,
             }
-            for model_id, model in sorted(session_models.models.items())
+            for entry in session_models
         ]
         return success_result("\n".join(lines), {"models": models_payload})
 
     @register("delete_model")
     def _handle_delete_model(arguments: dict[str, Any]) -> ToolResponse:
-        session_models = get_session_models()
         model_id = arguments["model_id"]
-        if model_id not in session_models.models:
-            raise ValueError(f"Unknown model_id '{model_id}' for this session")
-        del session_models.models[model_id]
-        if session_models.current_model_id == model_id:
-            session_models.current_model_id = None
-        remaining = sorted(session_models.models)
+        result = delete_session_model(model_id)
         return success_result(
-            f"Deleted model_id={model_id} from session ({len(remaining)} remaining). "
+            f"Deleted model_id={model_id} from session ({len(result.remaining)} remaining). "
             "Saved .stmx files are not affected.",
             {
-                "deleted": model_id,
-                "remaining": remaining,
-                "current_model_id": session_models.current_model_id,
+                "deleted": result.deleted,
+                "remaining": list(result.remaining),
+                "current_model_id": result.current_model_id,
             },
         )
 

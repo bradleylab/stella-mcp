@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from .session_store import SessionDeleteResult, SessionModelEntry
 from .tools import build, inspect, io, modules, simulation
 from .tools.shared import (
     HandlerContext,
-    SessionModelsLike,
     ToolHandler,
     ToolResponse,
 )
@@ -16,7 +16,8 @@ from .tools.shared import apply_batch_items as _apply_batch_items
 from .xmile import GraphicalFunction, StellaModel
 
 __all__ = [
-    "SessionModelsLike",
+    "SessionDeleteResult",
+    "SessionModelEntry",
     "ToolHandler",
     "ToolResponse",
     "_apply_batch_items",
@@ -29,7 +30,10 @@ def register_tool_handlers(
     *,
     get_model: Callable[[str | None], tuple[str, StellaModel]],
     set_current_model: Callable[[StellaModel, str | None], str],
-    get_session_models: Callable[[], SessionModelsLike],
+    list_session_models: Callable[[], tuple[SessionModelEntry, ...]],
+    delete_session_model: Callable[[str], SessionDeleteResult],
+    contains_session_model: Callable[[str], bool],
+    replace_session_model: Callable[[str, StellaModel], None],
     build_graphical_function: Callable[
         [dict[str, Any] | None], GraphicalFunction | None
     ],
@@ -39,7 +43,10 @@ def register_tool_handlers(
     context = HandlerContext(
         get_model=get_model,
         set_current_model=set_current_model,
-        get_session_models=get_session_models,
+        list_session_models=list_session_models,
+        delete_session_model=delete_session_model,
+        contains_session_model=contains_session_model,
+        replace_session_model=replace_session_model,
         build_graphical_function=build_graphical_function,
         compat_warning_suffix=compat_warning_suffix,
     )

@@ -19,7 +19,7 @@ def _call(name, arguments):
 
 
 def _fresh_session(monkeypatch, key):
-    server_mod._session_models.clear()
+    server_mod._clear_session_store()
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: key)
 
 
@@ -124,8 +124,7 @@ def test_simulate_does_not_mutate_session_model(monkeypatch):
             }
         ],
     })
-    session = server_mod._get_session_models()
-    model = session.models["gf"]
+    _, model = server_mod.get_model("gf")
     export_warnings_before = list(model.last_export_warnings)
 
     result = _call("simulate", {"model_id": "gf"})
