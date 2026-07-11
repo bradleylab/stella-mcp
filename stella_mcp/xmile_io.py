@@ -1,12 +1,11 @@
-"""XMILE parse/export IO helpers split from xmile.py for maintainability."""
+"""Compatibility facade for XMILE parsing and export."""
 
 from __future__ import annotations
 
-import re
 import xml.etree.ElementTree as ET
-from html import escape
 
-from .xmile import (
+from .model import StellaModel
+from .model_types import (
     ISEE_NS,
     XMILE_NS,
     Aux,
@@ -14,405 +13,11 @@ from .xmile import (
     Flow,
     GraphicalFunction,
     Module,
-    StellaModel,
     Stock,
 )
+from .xmile_export import gf_eqn_text, model_to_xml
 
-# This package's tool input accepts the Stella textual convention
-# GRAPH(input) for graphical-function equations, but spec XMILE puts only
-# the input expression in <eqn> when a <gf> is present — Stella and PySD
-# both reject the GRAPH() wrapper on import.
-_GRAPH_CALL = re.compile(r"^\s*GRAPH\s*\((.*)\)\s*$", re.IGNORECASE | re.DOTALL)
-
-
-def gf_eqn_text(equation: str) -> str:
-    """Equation text to export for a gf-bearing variable (spec form)."""
-    match = _GRAPH_CALL.match(equation)
-    return match.group(1).strip() if match else equation
-
-
-def model_to_xml(
-    model,
-    auto_layout: bool = True,
-    resolve_layout_violations: bool = False,
-    compat_mode: str = "permissive",
-) -> str:
-    """Generate XMILE XML string for the model.
-
-    Args:
-        auto_layout: If True, run automatic layout before export.
-        resolve_layout_violations: If True, run post-processing to reduce
-            overlaps/crossings before export.
-        compat_mode: "permissive" emits best-effort XML and records warnings;
-            "strict" raises on compatibility issues.
-    """
-    mode = model._validate_compat_mode(compat_mode)
-    export_warnings: list[str] = []
-
-    def compat_issue(message: str):
-        if mode == "strict":
-            raise ValueError(message)
-        export_warnings.append(message)
-
-    if model.sim_specs.dt <= 0:
-        compat_issue(
-            f"sim_specs.dt={model.sim_specs.dt} is invalid; exporting with default dt=0.25"
-        )
-
-    for flow in model.flows.values():
-        if flow.from_stock is not None and flow.from_stock not in model.stocks:
-            compat_issue(
-                f"Flow '{flow.name}' references missing from_stock '{flow.from_stock}'"
-            )
-        if flow.to_stock is not None and flow.to_stock not in model.stocks:
-            compat_issue(
-                f"Flow '{flow.name}' references missing to_stock '{flow.to_stock}'"
-            )
-
-    for stock in model.stocks.values():
-        for inflow in stock.inflows:
-            if inflow not in model.flows:
-                compat_issue(
-                    f"Stock '{stock.name}' references missing inflow '{inflow}'"
-                )
-        for outflow in stock.outflows:
-            if outflow not in model.flows:
-                compat_issue(
-                    f"Stock '{stock.name}' references missing outflow '{outflow}'"
-                )
-
-    for connector in model.connectors:
-        if connector.from_var not in model.stocks and connector.from_var not in model.flows and connector.from_var not in model.auxs:
-            compat_issue(
-                f"Connector uid={connector.uid} source '{connector.from_var}' is missing"
-            )
-        if connector.to_var not in model.stocks and connector.to_var not in model.flows and connector.to_var not in model.auxs:
-            compat_issue(
-                f"Connector uid={connector.uid} target '{connector.to_var}' is missing"
-            )
-
-    for module in model.modules.values():
-        for member in module.members:
-            if member not in model.stocks and member not in model.flows and member not in model.auxs:
-                compat_issue(
-                    f"Module '{module.name}' references missing member '{member}'"
-                )
-
-    model.last_export_warnings = export_warnings
-
-    if auto_layout:
-        model._auto_layout()
-        if model.modules:
-            model.auto_place_module_boxes(only_missing=True)
-    else:
-        # Even with fixed/manual positions, derive dependent visual metadata:
-        # flow paths (when unlocked) and connector angles.
-        model._recalculate_flow_points()
-        model._calculate_connector_angles()
-    if resolve_layout_violations:
-        model._resolve_layout_violations()
-
-    model._export_ns_prefix_by_uri = model._build_export_ns_prefixes()
-    extra_ns_decls = " ".join(
-        f'xmlns:{prefix}="{uri}"'
-        for uri, prefix in sorted(model._export_ns_prefix_by_uri.items())
-    )
-    ns_suffix = f" {extra_ns_decls}" if extra_ns_decls else ""
-
-    lines = []
-    lines.append('<?xml version="1.0" encoding="utf-8"?>')
-    lines.append(
-        f'<xmile version="1.0" xmlns="{XMILE_NS}" xmlns:isee="{ISEE_NS}"{ns_suffix}>'
-    )
-
-    # Header
-    lines.append('\t<header>')
-    lines.append('\t\t<smile version="1.0" namespace="std, isee"/>')
-    lines.append(f'\t\t<name>{escape(model.name)}</name>')
-    lines.append(f'\t\t<uuid>{model.uuid}</uuid>')
-    lines.append('\t\t<vendor>isee systems, inc.</vendor>')
-    lines.append('\t\t<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>')
-    for fragment in model.header_extra_children_xml:
-        model._append_xml_fragment(lines, fragment, '\t\t')
-    lines.append('\t</header>')
-
-    # Sim specs
-    export_dt = model.sim_specs.dt if model.sim_specs.dt > 0 else 0.25
-    dt_str = model._dt_xml(export_dt)
-    sim_attr_extra = model._format_extra_attrs(
-        model.sim_specs.extra_attrs,
-        reserved_names={
-            "isee:sim_duration",
-            "isee:simulation_delay",
-            "isee:restore_on_start",
-            "method",
-            "time_units",
-            "isee:instantaneous_flows",
-        },
-    )
-    lines.append(
-        f'\t<sim_specs isee:sim_duration="1.5" isee:simulation_delay="0.0015" '
-        f'isee:restore_on_start="false" method="{escape(model.sim_specs.method)}" '
-        f'time_units="{escape(model.sim_specs.time_units)}" isee:instantaneous_flows="false"{sim_attr_extra}>'
-    )
-    lines.append(f'\t\t<start>{model._format_number(model.sim_specs.start)}</start>')
-    lines.append(f'\t\t<stop>{model._format_number(model.sim_specs.stop)}</stop>')
-    lines.append(f'\t\t{dt_str}')
-    for fragment in model.sim_specs.extra_children_xml:
-        model._append_xml_fragment(lines, fragment, '\t\t')
-    lines.append('\t</sim_specs>')
-
-    # Preferences
-    if model.prefs_xml:
-        model._append_xml_fragment(lines, model.prefs_xml, '\t')
-    else:
-        lines.append('\t<isee:prefs show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true"/>')
-
-    # Model
-    lines.append('\t<model>')
-    lines.append('\t\t<variables>')
-
-    # Stocks
-    for name in sorted(model.stocks):
-        stock = model.stocks[name]
-        display = escape(model._display_name(stock.name))
-        stock_extra_attrs = model._format_extra_attrs(
-            stock.extra_attrs,
-            reserved_names={"name"},
-        )
-        lines.append(f'\t\t\t<stock name="{display}"{stock_extra_attrs}>')
-        lines.append(f'\t\t\t\t<eqn>{escape(stock.initial_value)}</eqn>')
-        for inflow in stock.inflows:
-            lines.append(f'\t\t\t\t<inflow>{escape(inflow)}</inflow>')
-        for outflow in stock.outflows:
-            lines.append(f'\t\t\t\t<outflow>{escape(outflow)}</outflow>')
-        if stock.non_negative:
-            lines.append('\t\t\t\t<non_negative/>')
-        if stock.units:
-            lines.append(f'\t\t\t\t<units>{escape(stock.units)}</units>')
-        for fragment in stock.extra_children_xml:
-            model._append_xml_fragment(lines, fragment, '\t\t\t\t')
-        lines.append('\t\t\t</stock>')
-
-    # Flows
-    for name in sorted(model.flows):
-        flow = model.flows[name]
-        display = escape(model._display_name(flow.name))
-        flow_extra_attrs = model._format_extra_attrs(
-            flow.extra_attrs,
-            reserved_names={"name"},
-        )
-        lines.append(f'\t\t\t<flow name="{display}"{flow_extra_attrs}>')
-        if flow.graphical_function is not None:
-            lines.append(f'\t\t\t\t<eqn>{escape(gf_eqn_text(flow.equation))}</eqn>')
-            model._add_graphical_function_str(lines, flow.graphical_function)
-        else:
-            lines.append(f'\t\t\t\t<eqn>{escape(flow.equation)}</eqn>')
-        if flow.non_negative:
-            lines.append('\t\t\t\t<non_negative/>')
-        if flow.units:
-            lines.append(f'\t\t\t\t<units>{escape(flow.units)}</units>')
-        for fragment in flow.extra_children_xml:
-            model._append_xml_fragment(lines, fragment, '\t\t\t\t')
-        lines.append('\t\t\t</flow>')
-
-    # Auxiliaries
-    for name in sorted(model.auxs):
-        aux = model.auxs[name]
-        display = escape(model._display_name(aux.name))
-        aux_extra_attrs = model._format_extra_attrs(
-            aux.extra_attrs,
-            reserved_names={"name"},
-        )
-        lines.append(f'\t\t\t<aux name="{display}"{aux_extra_attrs}>')
-        if aux.graphical_function is not None:
-            lines.append(f'\t\t\t\t<eqn>{escape(gf_eqn_text(aux.equation))}</eqn>')
-            model._add_graphical_function_str(lines, aux.graphical_function)
-        else:
-            lines.append(f'\t\t\t\t<eqn>{escape(aux.equation)}</eqn>')
-        if aux.units:
-            lines.append(f'\t\t\t\t<units>{escape(aux.units)}</units>')
-        for fragment in aux.extra_children_xml:
-            model._append_xml_fragment(lines, fragment, '\t\t\t\t')
-        lines.append('\t\t\t</aux>')
-
-    # Modules/groups
-    for name in sorted(model.modules):
-        module = model.modules[name]
-        display = escape(model._display_name(module.name))
-        module_extra_attrs = model._format_extra_attrs(
-            module.extra_attrs,
-            reserved_names={"name"},
-        )
-        lines.append(f'\t\t\t<group name="{display}"{module_extra_attrs}>')
-        for member in sorted(module.members):
-            member_display = escape(model._display_name(member))
-            lines.append(f'\t\t\t\t<entity name="{member_display}"/>')
-        for fragment in module.extra_children_xml:
-            model._append_xml_fragment(lines, fragment, '\t\t\t\t')
-        lines.append('\t\t\t</group>')
-
-    lines.append('\t\t</variables>')
-
-    # Views
-    lines.append('\t\t<views>')
-    if model.views_style_xml:
-        model._append_xml_fragment(lines, model.views_style_xml, '\t\t\t')
-    else:
-        model._add_view_styles_str(lines)
-
-    # Main view
-    view_extra_attrs = model._format_extra_attrs(
-        model.view_extra_attrs,
-        reserved_names={
-            "isee:show_pages",
-            "background",
-            "page_width",
-            "page_height",
-            "isee:page_cols",
-            "isee:page_rows",
-            "isee:popup_graphs_are_comparative",
-            "type",
-        },
-    )
-    lines.append(
-        '\t\t\t<view isee:show_pages="false" background="white" page_width="768" '
-        'page_height="596" isee:page_cols="2" isee:page_rows="2" '
-        f'isee:popup_graphs_are_comparative="true" type="stock_flow"{view_extra_attrs}>'
-    )
-    if model.inner_view_style_xml:
-        model._append_xml_fragment(lines, model.inner_view_style_xml, '\t\t\t\t')
-    else:
-        model._add_inner_view_styles_str(lines)
-
-    # Module/group visuals (if view geometry is set)
-    for module_name in sorted(model.modules):
-        module = model.modules[module_name]
-        has_geometry = None not in (module.x, module.y, module.width, module.height)
-        has_style = any(
-            value is not None
-            for value in (
-                module.border_color,
-                module.background,
-                module.font_color,
-                module.font_size,
-                module.label_side,
-            )
-        )
-        has_view_extras = bool(module.view_extra_attrs or module.view_extra_children_xml)
-        if not has_geometry and not has_style and not has_view_extras:
-            continue
-        display = escape(model._display_name(module.name))
-        attrs = [f'name="{display}"']
-        if module.x is not None:
-            attrs.append(f'x="{int(module.x)}"')
-        if module.y is not None:
-            attrs.append(f'y="{int(module.y)}"')
-        if module.width is not None:
-            attrs.append(f'width="{int(module.width)}"')
-        if module.height is not None:
-            attrs.append(f'height="{int(module.height)}"')
-        if module.border_color is not None:
-            attrs.append(f'color="{escape(module.border_color)}"')
-        if module.background is not None:
-            attrs.append(f'background="{escape(module.background)}"')
-        if module.font_color is not None:
-            attrs.append(f'font_color="{escape(module.font_color)}"')
-        if module.font_size is not None:
-            attrs.append(f'font_size="{escape(module.font_size)}"')
-        if module.label_side is not None:
-            attrs.append(f'label_side="{escape(module.label_side)}"')
-        module_view_extra_attrs = model._format_extra_attrs(
-            module.view_extra_attrs,
-            reserved_names={"x", "y", "width", "height", "name", "color", "background", "font_color", "font_size", "label_side"},
-        )
-        if module.view_extra_children_xml:
-            lines.append(f'\t\t\t\t<group {" ".join(attrs)}{module_view_extra_attrs}>')
-            for fragment in module.view_extra_children_xml:
-                model._append_xml_fragment(lines, fragment, '\t\t\t\t\t')
-            lines.append('\t\t\t\t</group>')
-        else:
-            lines.append(f'\t\t\t\t<group {" ".join(attrs)}{module_view_extra_attrs}/>')  # self-closing
-
-    # Stock visuals (positions guaranteed by _auto_layout)
-    for name in sorted(model.stocks):
-        stock = model.stocks[name]
-        display = escape(model._display_name(stock.name))
-        sx = int(stock.x) if stock.x is not None else 0
-        sy = int(stock.y) if stock.y is not None else 0
-        stock_view_extra_attrs = model._format_extra_attrs(
-            stock.view_extra_attrs,
-            reserved_names={"x", "y", "width", "height", "name"},
-        )
-        lines.append(f'\t\t\t\t<stock x="{sx}" y="{sy}" width="{stock.width}" height="{stock.height}" name="{display}"{stock_view_extra_attrs}/>')
-
-    # Flow visuals (positions guaranteed by _auto_layout)
-    for name in sorted(model.flows):
-        flow = model.flows[name]
-        display = escape(model._display_name(flow.name))
-        fx = flow.x if flow.x is not None else 0
-        fy = int(flow.y) if flow.y is not None else 0
-        flow_view_extra_attrs = model._format_extra_attrs(
-            flow.view_extra_attrs,
-            reserved_names={"x", "y", "name"},
-        )
-        if flow.points or flow.view_extra_children_xml:
-            lines.append(f'\t\t\t\t<flow x="{fx}" y="{fy}" name="{display}"{flow_view_extra_attrs}>')
-            if flow.points:
-                lines.append('\t\t\t\t\t<pts>')
-                for px, py in flow.points:
-                    lines.append(f'\t\t\t\t\t\t<pt x="{px}" y="{py}"/>')
-                lines.append('\t\t\t\t\t</pts>')
-            for fragment in flow.view_extra_children_xml:
-                model._append_xml_fragment(lines, fragment, '\t\t\t\t\t')
-            lines.append('\t\t\t\t</flow>')
-        else:
-            lines.append(f'\t\t\t\t<flow x="{fx}" y="{fy}" name="{display}"{flow_view_extra_attrs}/>')
-
-    # Aux visuals (positions guaranteed by _auto_layout)
-    for name in sorted(model.auxs):
-        aux = model.auxs[name]
-        display = escape(model._display_name(aux.name))
-        ax = int(aux.x) if aux.x is not None else 0
-        ay = int(aux.y) if aux.y is not None else 0
-        aux_view_extra_attrs = model._format_extra_attrs(
-            aux.view_extra_attrs,
-            reserved_names={"x", "y", "name"},
-        )
-        lines.append(f'\t\t\t\t<aux x="{ax}" y="{ay}" name="{display}"{aux_view_extra_attrs}/>')
-
-    # Connector visuals
-    for conn in sorted(model.connectors, key=lambda c: c.uid):
-        conn_extra_attrs = model._format_extra_attrs(
-            conn.extra_attrs,
-            reserved_names={"uid", "angle"},
-        )
-        lines.append(f'\t\t\t\t<connector uid="{conn.uid}" angle="{conn.angle}"{conn_extra_attrs}>')
-        lines.append(f'\t\t\t\t\t<from>{escape(conn.from_var)}</from>')
-        lines.append(f'\t\t\t\t\t<to>{escape(conn.to_var)}</to>')
-        if conn.points:
-            lines.append('\t\t\t\t\t<pts>')
-            for px, py in conn.points:
-                lines.append(f'\t\t\t\t\t\t<pt x="{px}" y="{py}"/>')
-            lines.append('\t\t\t\t\t</pts>')
-        for fragment in conn.extra_children_xml:
-            model._append_xml_fragment(lines, fragment, '\t\t\t\t\t')
-        lines.append('\t\t\t\t</connector>')
-
-    for fragment in model.view_extra_children_xml:
-        model._append_xml_fragment(lines, fragment, '\t\t\t\t')
-    lines.append('\t\t\t</view>')
-    for fragment in model.views_extra_children_xml:
-        model._append_xml_fragment(lines, fragment, '\t\t\t')
-    lines.append('\t\t</views>')
-    for fragment in model.model_extra_children_xml:
-        model._append_xml_fragment(lines, fragment, '\t\t')
-    lines.append('\t</model>')
-    lines.append('</xmile>')
-
-    return '\n'.join(lines)
-
-
+__all__ = ["gf_eqn_text", "model_to_xml", "parse_stmx_file"]
 
 
 def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaModel:
@@ -475,9 +80,7 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             extras.append(ET.tostring(child, encoding="unicode"))
         return extras
 
-    def parse_point_list(
-        text: str | None, context: str, sep: str | None = None
-    ) -> list[float]:
+    def parse_point_list(text: str | None, context: str, sep: str | None = None) -> list[float]:
         if not text:
             return []
         # XMILE point lists are comma-separated by default, with an optional
@@ -642,13 +245,17 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                 continue
             name, norm_name = parsed_name
             if name_collides(norm_name):
-                compat_issue(f"Duplicate variable name '{name}' encountered; later occurrence skipped")
+                compat_issue(
+                    f"Duplicate variable name '{name}' encountered; later occurrence skipped"
+                )
                 continue
 
             eqn = find_child(stock_elem, "eqn")
             initial_value = eqn.text if eqn is not None and eqn.text is not None else "0"
             units_elem = find_child(stock_elem, "units")
-            units = units_elem.text if units_elem is not None and units_elem.text is not None else ""
+            units = (
+                units_elem.text if units_elem is not None and units_elem.text is not None else ""
+            )
 
             inflows = [inf.text for inf in findall_children(stock_elem, "inflow") if inf.text]
             outflows = [outf.text for outf in findall_children(stock_elem, "outflow") if outf.text]
@@ -677,14 +284,18 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                 continue
             name, norm_name = parsed_name
             if name_collides(norm_name):
-                compat_issue(f"Duplicate variable name '{name}' encountered; later occurrence skipped")
+                compat_issue(
+                    f"Duplicate variable name '{name}' encountered; later occurrence skipped"
+                )
                 continue
 
             eqn = find_child(flow_elem, "eqn")
             equation = eqn.text if eqn is not None and eqn.text is not None else "0"
             gf = parse_gf(find_child(flow_elem, "gf"), f"flow '{name}'")
             units_elem = find_child(flow_elem, "units")
-            units = units_elem.text if units_elem is not None and units_elem.text is not None else ""
+            units = (
+                units_elem.text if units_elem is not None and units_elem.text is not None else ""
+            )
             non_negative = find_child(flow_elem, "non_negative") is not None
 
             model.flows[norm_name] = Flow(
@@ -707,14 +318,18 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                 continue
             name, norm_name = parsed_name
             if name_collides(norm_name):
-                compat_issue(f"Duplicate variable name '{name}' encountered; later occurrence skipped")
+                compat_issue(
+                    f"Duplicate variable name '{name}' encountered; later occurrence skipped"
+                )
                 continue
 
             eqn = find_child(aux_elem, "eqn")
             equation = eqn.text if eqn is not None and eqn.text is not None else "0"
             gf = parse_gf(find_child(aux_elem, "gf"), f"aux '{name}'")
             units_elem = find_child(aux_elem, "units")
-            units = units_elem.text if units_elem is not None and units_elem.text is not None else ""
+            units = (
+                units_elem.text if units_elem is not None and units_elem.text is not None else ""
+            )
 
             model.auxs[norm_name] = Aux(
                 name=name,
@@ -751,9 +366,7 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                 merged = existing.members + [m for m in members if m not in existing.members]
                 existing.members = merged
                 existing.extra_attrs.update(collect_extra_attrs(group_elem, {"name"}))
-                existing.extra_children_xml.extend(
-                    collect_extra_children(group_elem, {"entity"})
-                )
+                existing.extra_children_xml.extend(collect_extra_children(group_elem, {"entity"}))
             else:
                 model.modules[norm_name] = Module(name=name, members=members)
                 model.modules[norm_name].extra_attrs = collect_extra_attrs(group_elem, {"name"})
@@ -799,13 +412,11 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
         )
         if len(styles) > 1:
             model.views_extra_children_xml.extend(
-                ET.tostring(style_elem, encoding="unicode")
-                for style_elem in styles[1:]
+                ET.tostring(style_elem, encoding="unicode") for style_elem in styles[1:]
             )
         if len(view_elems) > 1:
             model.views_extra_children_xml.extend(
-                ET.tostring(view_elem, encoding="unicode")
-                for view_elem in view_elems[1:]
+                ET.tostring(view_elem, encoding="unicode") for view_elem in view_elems[1:]
             )
     view = find_child(views, "view") if views is not None else None
 
@@ -832,8 +443,7 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
         )
         if len(inner_styles) > 1:
             model.view_extra_children_xml.extend(
-                ET.tostring(style_elem, encoding="unicode")
-                for style_elem in inner_styles[1:]
+                ET.tostring(style_elem, encoding="unicode") for style_elem in inner_styles[1:]
             )
 
         # Extract stock positions from view
@@ -844,8 +454,12 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             _, norm_name = parsed_name
             x_attr = parse_optional_float(stock_elem.get("x"), f"view.stock[{norm_name}].x")
             y_attr = parse_optional_float(stock_elem.get("y"), f"view.stock[{norm_name}].y")
-            width_attr = parse_optional_float(stock_elem.get("width"), f"view.stock[{norm_name}].width")
-            height_attr = parse_optional_float(stock_elem.get("height"), f"view.stock[{norm_name}].height")
+            width_attr = parse_optional_float(
+                stock_elem.get("width"), f"view.stock[{norm_name}].width"
+            )
+            height_attr = parse_optional_float(
+                stock_elem.get("height"), f"view.stock[{norm_name}].height"
+            )
             if norm_name in model.stocks:
                 if x_attr is not None:
                     model.stocks[norm_name].x = x_attr
@@ -927,8 +541,12 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
 
             x_attr = parse_optional_float(group_elem.get("x"), f"view.group[{norm_name}].x")
             y_attr = parse_optional_float(group_elem.get("y"), f"view.group[{norm_name}].y")
-            width_attr = parse_optional_float(group_elem.get("width"), f"view.group[{norm_name}].width")
-            height_attr = parse_optional_float(group_elem.get("height"), f"view.group[{norm_name}].height")
+            width_attr = parse_optional_float(
+                group_elem.get("width"), f"view.group[{norm_name}].width"
+            )
+            height_attr = parse_optional_float(
+                group_elem.get("height"), f"view.group[{norm_name}].height"
+            )
             color_attr = group_elem.get("color")
             border_color_attr = group_elem.get("border_color")
             background_attr = group_elem.get("background")
@@ -957,7 +575,19 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                 module.label_side = label_side_attr
             module.view_extra_attrs = collect_extra_attrs(
                 group_elem,
-                {"x", "y", "width", "height", "name", "color", "border_color", "background", "font_color", "font_size", "label_side"},
+                {
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "name",
+                    "color",
+                    "border_color",
+                    "background",
+                    "font_color",
+                    "font_size",
+                    "label_side",
+                },
             )
             module.view_extra_children_xml = collect_extra_children(group_elem, set())
 
@@ -983,9 +613,13 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             from_norm = model._normalize_name(from_elem.text)
             to_norm = model._normalize_name(to_elem.text)
             if not model._has_variable(from_norm):
-                compat_issue(f"Connector uid={uid} source '{from_norm}' does not match a model variable")
+                compat_issue(
+                    f"Connector uid={uid} source '{from_norm}' does not match a model variable"
+                )
             if not model._has_variable(to_norm):
-                compat_issue(f"Connector uid={uid} target '{to_norm}' does not match a model variable")
+                compat_issue(
+                    f"Connector uid={uid} target '{to_norm}' does not match a model variable"
+                )
 
             connector = Connector(
                 uid=uid,
