@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-11
+
+### Added
+
+- Architecture documentation covering dependency boundaries, module ownership,
+  session lifecycle assumptions, compatibility facades, extension points, and
+  the release contract.
+- Focused regression coverage for tool-catalog composition, model snapshots,
+  XMILE parsing and export, and session-store lifecycle behavior.
+
+### Changed
+
+- Split MCP tool schemas and handlers into build, I/O, inspection, module, and
+  simulation domains while retaining the existing `tool_schemas` and
+  `tool_handlers` compatibility facades.
+- Separated model types and lifecycle operations from layout calculations while
+  retaining the public imports and method delegates exposed by `xmile` and
+  `StellaModel`.
+- Separated XMILE parsing and export behind the existing `xmile_io` facade,
+  preserving strict and permissive import behavior, unknown XML content, and
+  generated output.
+- Encapsulated per-session model registries and current-model state in a tested
+  `SessionStore` with explicit cleanup support.
+
+This release is intended to preserve the public tool, XMILE, simulation, and
+calibration behavior of 0.10.0.
+
 ## [0.10.0] - 2026-07-09
 
 ### Added
@@ -181,7 +208,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tool_handlers.py`, `xmile_io.py`, `equation_parser.py`,
   `templates.py`).
 
-[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/bradleylab/stella-mcp/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/bradleylab/stella-mcp/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/bradleylab/stella-mcp/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/bradleylab/stella-mcp/compare/v0.7.0...v0.8.0

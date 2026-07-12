@@ -644,6 +644,9 @@ The `validate_model` tool checks for:
 
 ## Project Structure
 
+See [`docs/architecture.md`](docs/architecture.md) for dependency boundaries,
+module ownership, session lifecycle assumptions, and compatibility contracts.
+
 ```
 stella-mcp/
 ├── CHANGELOG.md
@@ -654,15 +657,22 @@ stella-mcp/
 └── stella_mcp/
     ├── __init__.py
     ├── server.py         # MCP server lifecycle and protocol wiring
-    ├── tool_handlers.py  # Tool handlers; becomes a compatibility facade in 0.11
-    ├── tool_schemas.py   # Tool catalog; becomes a compatibility facade in 0.11
+    ├── tool_handlers.py  # Compatibility facade for domain handlers
+    ├── tool_schemas.py   # Compatibility facade for the tool catalog
+    ├── tools/            # Domain schemas and handlers
     ├── mcp_resources.py  # MCP resources and prompts
+    ├── session_store.py  # Session-scoped model state
     ├── simulate.py       # PySD-backed simulation
     ├── analysis.py       # Scenario comparison and sensitivity analysis
     ├── calibrate.py      # Parameter fitting and native-unit error metrics
     ├── render_svg.py     # Stock-and-flow SVG rendering
-    ├── xmile.py          # Core model types and layout behavior
-    ├── xmile_io.py       # XMILE parsing/export helpers
+    ├── model_types.py     # Model records and XMILE constants
+    ├── model.py           # StellaModel lifecycle and compatibility delegates
+    ├── model_layout.py    # Layout and collision resolution
+    ├── xmile.py           # Public model compatibility facade
+    ├── xmile_io.py        # XMILE I/O compatibility facade
+    ├── xmile_parse.py     # XMILE parser and compatibility warnings
+    ├── xmile_export.py    # XMILE serialization and fragment retention
     └── validator.py      # Model validation logic
 ```
 
@@ -680,11 +690,11 @@ Publishing. To release a new version:
    dates identical.
 2. Run `uv lock --check`, the core and simulation test suites, the MCP-floor
    suite, and the package job. Prepare a release-notes file such as
-   `docs/releases/0.10.0.md`.
+   `docs/releases/0.11.0.md`.
 3. Merge the release changes to `main` and wait for every main-branch CI job to
    pass.
 4. Create and publish a GitHub release from `main` with the matching tag and
-   notes file, for example `v0.10.0`. The publish workflow validates that tag
+   notes file, for example `v0.11.0`. The publish workflow validates that tag
    against the package metadata before uploading.
 
 The GitHub release event builds the source distribution and wheel, then publishes
