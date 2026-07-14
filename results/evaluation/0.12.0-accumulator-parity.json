@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "engines": {
+    "pysd": {
+      "version": "3.14.3"
+    },
+    "stella": {
+      "application": "Stella Professional",
+      "version": "4.1.1"
+    }
+  },
+  "artifacts": {
+    "model": {
+      "path": "tests/fixtures/compat_corpus/stella_4_1_1_accumulator.stmx",
+      "sha256": "e2bfad57a3d2e1dd460d8182915c980e8c4085ccac3cb29684bff108da0c9068"
+    },
+    "pysd_csv": {
+      "path": "results/evaluation/0.12.0-accumulator-pysd.csv",
+      "sha256": "7e99183ca65188ab8ca71be271f5b6fbc4e1e41743e5dad24d015b0101d1de80"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.12.0-accumulator-stella.csv",
+      "sha256": "029140438e224a3cb91cb3174cdadf0ec6a7ecee459ad909d1cc2e3c6b0fc90d"
+    }
+  },
+  "simulation": {
+    "sim_specs": {
+      "start": 0.0,
+      "stop": 4.0,
+      "dt": 1.0,
+      "method": "Euler",
+      "time_units": "Years"
+    },
+    "warnings": []
+  },
+  "comparison": {
+    "schema_version": 1,
+    "reference": "results/evaluation/0.12.0-accumulator-pysd.csv",
+    "candidate": "results/evaluation/0.12.0-accumulator-stella.csv",
+    "time_columns": {
+      "reference": "time",
+      "candidate": "Years"
+    },
+    "points": 5,
+    "comparison_policy": {
+      "time_alignment": "exact; no interpolation",
+      "relative_error_denominator": "max(abs(reference), abs(candidate))",
+      "pass_threshold": null
+    },
+    "columns": [
+      {
+        "reference_column": "Accumulator",
+        "candidate_column": "Accumulator",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "input",
+        "candidate_column": "input",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "rate",
+        "candidate_column": "rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      }
+    ]
+  }
+}

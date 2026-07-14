@@ -41,21 +41,27 @@ the [SIR layout follow-up](2026-07-13-sir-layout-followup.md).
 
 ## Numeric Comparison
 
-When Stella produces a non-empty CSV export, compare it to an MCP/PySD CSV on
-the same time grid:
+The first desktop comparison is documented in
+[`2026-07-13-numeric-parity.md`](2026-07-13-numeric-parity.md). Reproduce its
+PySD run and machine-readable report with:
 
 ```bash
-uv run python -m evaluation.compare_runs \
-  results/pysd.csv results/stella.csv \
-  --reference-time time \
-  --candidate-time Time \
+uv run --extra sim python -m evaluation.desktop_parity \
+  tests/fixtures/compat_corpus/stella_4_1_1_accumulator.stmx \
+  results/evaluation/0.12.0-accumulator-stella.csv \
+  --pysd-output results/evaluation/0.12.0-accumulator-pysd.csv \
+  --output-json results/evaluation/0.12.0-accumulator-parity.json \
+  --stella-version 4.1.1 \
+  --stella-time Years \
   --column Accumulator=Accumulator \
-  --output-json results/evaluation/accumulator-parity.json
+  --column input=input \
+  --column rate=rate
 ```
 
-The comparator performs no interpolation and sets no pass threshold. It rejects
-missing, non-numeric, or non-finite values and reports maximum absolute and
-relative discrepancies for each explicit column mapping.
+The orchestration command records artifact hashes and engine versions. Its
+underlying comparator performs no interpolation and sets no pass threshold. It
+rejects missing, non-numeric, or non-finite values and reports maximum absolute
+and relative discrepancies for each explicit column mapping.
 
 ## Interpretation
 
