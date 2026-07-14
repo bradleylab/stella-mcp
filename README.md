@@ -708,11 +708,11 @@ Publishing. To release a new version:
    dates identical.
 2. Run `uv lock --check`, the core and simulation test suites, the MCP-floor
    suite, and the package job. Prepare a release-notes file such as
-   `docs/releases/0.11.0.md`.
+   `docs/releases/0.12.0.md`.
 3. Merge the release changes to `main` and wait for every main-branch CI job to
    pass.
 4. Create and publish a GitHub release from `main` with the matching tag and
-   notes file, for example `v0.11.0`. The publish workflow validates that tag
+   notes file, for example `v0.12.0`. The publish workflow validates that tag
    against the package metadata before uploading.
 
 The GitHub release event builds the source distribution and wheel, then publishes
