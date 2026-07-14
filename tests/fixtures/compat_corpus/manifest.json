@@ -17,6 +17,60 @@
       "strict_import": true
     },
     {
+      "file": "stella_4_1_1_accumulator.stmx",
+      "strict_import": true,
+      "provenance": {
+        "origin": "stella_mcp_generated_then_stella_saved",
+        "application": "Stella Professional",
+        "application_version": "4.1.1",
+        "saved_at": "2026-07-13",
+        "source": "evaluation/scenarios.json#analysis_stack",
+        "acceptance": {
+          "opened_without_repair": true,
+          "run_completed": true,
+          "run_final_time": 4,
+          "visual_review": "pass",
+          "notes": "The stock, inflow, converter, and connector were visible without overlap."
+        }
+      }
+    },
+    {
+      "file": "stella_4_1_1_growth.stmx",
+      "strict_import": true,
+      "provenance": {
+        "origin": "stella_mcp_generated_then_stella_saved",
+        "application": "Stella Professional",
+        "application_version": "4.1.1",
+        "saved_at": "2026-07-13",
+        "source": "evaluation/scenarios.json#build_growth",
+        "acceptance": {
+          "opened_without_repair": true,
+          "run_completed": true,
+          "run_final_time": 5,
+          "visual_review": "pass",
+          "notes": "The stock, inflow, converter, and connector were visible without overlap."
+        }
+      }
+    },
+    {
+      "file": "stella_4_1_1_sir.stmx",
+      "strict_import": true,
+      "provenance": {
+        "origin": "stella_mcp_generated_then_stella_saved",
+        "application": "Stella Professional",
+        "application_version": "4.1.1",
+        "saved_at": "2026-07-13",
+        "source": "evaluation/scenarios.json#template_sir",
+        "acceptance": {
+          "opened_without_repair": true,
+          "run_completed": true,
+          "run_final_time": 100,
+          "visual_review": "layout_issue",
+          "notes": "A connector exits the visible canvas and another spans most of the view."
+        }
+      }
+    },
+    {
       "file": "unknown_attrs.stmx",
       "strict_import": true,
       "preserve_markers": [

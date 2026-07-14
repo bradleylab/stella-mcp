@@ -15,6 +15,47 @@ from pathlib import Path
 from typing import Any
 
 
+def normalize_provenance(raw: Any, file_name: str) -> dict[str, Any]:
+    """Validate provenance for an operator-reviewed compatibility fixture."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"'provenance' must be an object for {file_name}")
+    required_strings = ("origin", "application", "application_version", "saved_at", "source")
+    normalized: dict[str, Any] = {}
+    for key in required_strings:
+        value = raw.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"provenance.{key} must be a non-empty string for {file_name}")
+        normalized[key] = value.strip()
+
+    acceptance = raw.get("acceptance")
+    if not isinstance(acceptance, dict):
+        raise ValueError(f"provenance.acceptance must be an object for {file_name}")
+    for key in ("opened_without_repair", "run_completed"):
+        if not isinstance(acceptance.get(key), bool):
+            raise ValueError(f"provenance.acceptance.{key} must be boolean for {file_name}")
+    final_time = acceptance.get("run_final_time")
+    if isinstance(final_time, bool) or not isinstance(final_time, (int, float)):
+        raise ValueError(
+            f"provenance.acceptance.run_final_time must be numeric for {file_name}"
+        )
+    visual_review = acceptance.get("visual_review")
+    if visual_review not in {"pass", "layout_issue"}:
+        raise ValueError(
+            f"provenance.acceptance.visual_review must be pass or layout_issue for {file_name}"
+        )
+    notes = acceptance.get("notes")
+    if not isinstance(notes, str) or not notes.strip():
+        raise ValueError(f"provenance.acceptance.notes must be non-empty for {file_name}")
+    normalized["acceptance"] = {
+        "opened_without_repair": acceptance["opened_without_repair"],
+        "run_completed": acceptance["run_completed"],
+        "run_final_time": final_time,
+        "visual_review": visual_review,
+        "notes": notes.strip(),
+    }
+    return normalized
+
+
 def load_manifest(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"fixtures": []}
@@ -48,6 +89,8 @@ def normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(markers, list) or not all(isinstance(x, str) for x in markers):
             raise ValueError(f"'preserve_markers' must be list[str] for {file_name}")
         normalized["preserve_markers"] = markers
+    if "provenance" in entry:
+        normalized["provenance"] = normalize_provenance(entry["provenance"], file_name)
     return normalized
 
 

@@ -1,0 +1,401 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-14T01:20:07.586764+00:00",
+  "environment": {
+    "python": "3.11.13",
+    "platform": "Darwin",
+    "stella_mcp": "0.11.0",
+    "mcp": "1.27.1",
+    "capabilities": [
+      "sim"
+    ]
+  },
+  "protocol": {
+    "server_name": "stella-mcp",
+    "tool_count": 42,
+    "tool_catalog_sha256": "6be9d019ad691c54f82d54fe1add571f5605884499a243a57b3eb313a522b3ee",
+    "resource_count_at_start": 5,
+    "prompt_count": 1
+  },
+  "summary": {
+    "scenarios": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "tool_calls": 19,
+    "duration_ms": 2130.608
+  },
+  "scenarios": [
+    {
+      "id": "build_growth",
+      "description": "Build, validate, render, and save a one-stock growth model.",
+      "status": "passed",
+      "duration_ms": 19.58,
+      "steps": [
+        {
+          "index": 0,
+          "tool": "build_model",
+          "status": "passed",
+          "duration_ms": 12.527,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "added",
+            "connector_sync",
+            "model",
+            "model_id",
+            "validation"
+          ],
+          "text": "Built model_id=eval_growth: added 1 stocks, 1 flows, 1 auxiliaries",
+          "failures": []
+        },
+        {
+          "index": 1,
+          "tool": "validate_model",
+          "status": "passed",
+          "duration_ms": 1.771,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "issues",
+            "model_id",
+            "passed"
+          ],
+          "text": "Model validation passed with no errors or warnings.",
+          "failures": []
+        },
+        {
+          "index": 2,
+          "tool": "render_diagram",
+          "status": "passed",
+          "duration_ms": 2.332,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "filepath",
+            "model_id",
+            "svg"
+          ],
+          "text": "Rendered model_id=eval_growth to SVG (1448 bytes)",
+          "failures": []
+        },
+        {
+          "index": 3,
+          "tool": "save_model",
+          "status": "passed",
+          "duration_ms": 2.714,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [],
+          "text": "Saved model_id=eval_growth to ${ARTIFACT_DIR}/growth.stmx",
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "growth.stmx",
+          "exists": true,
+          "bytes": 3468,
+          "sha256": "a03625f95c0aed78f256bcd20ecf9a4748632130e2b6a5217930e14c721312af"
+        }
+      ],
+      "missing_artifacts": []
+    },
+    {
+      "id": "template_sir",
+      "description": "Load the SIR template, validate it, simulate it, and save it.",
+      "status": "passed",
+      "duration_ms": 1479.65,
+      "steps": [
+        {
+          "index": 0,
+          "tool": "load_template",
+          "status": "passed",
+          "duration_ms": 3.984,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "model",
+            "model_id",
+            "template"
+          ],
+          "text": "Loaded template 'sir' [builtin] as model_id=eval_sir with 3 stocks, 2 flows, 3 auxiliaries",
+          "failures": []
+        },
+        {
+          "index": 1,
+          "tool": "validate_model",
+          "status": "passed",
+          "duration_ms": 1.671,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "issues",
+            "model_id",
+            "passed"
+          ],
+          "text": "Model validation passed with no errors or warnings.",
+          "failures": []
+        },
+        {
+          "index": 2,
+          "tool": "simulate",
+          "status": "passed",
+          "duration_ms": 1468.927,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "csv_path",
+            "model_id",
+            "overrides",
+            "series",
+            "sim_specs",
+            "warnings"
+          ],
+          "text": "Simulated model_id=eval_sir from 0.0 to 100.0. Final values: Susceptible=57.583116920020764, Infected=1.4646410259216718, Recovered=940.952242054058",
+          "failures": []
+        },
+        {
+          "index": 3,
+          "tool": "save_model",
+          "status": "passed",
+          "duration_ms": 4.88,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [],
+          "text": "Saved model_id=eval_sir to ${ARTIFACT_DIR}/sir.stmx",
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "sir.stmx",
+          "exists": true,
+          "bytes": 5417,
+          "sha256": "c92186e91d53f36e77dfa8ef52869fd26211361489f422246a7a5f344c769b5e"
+        },
+        {
+          "path": "sir.csv",
+          "exists": true,
+          "bytes": 56051,
+          "sha256": "fd78f1fadaa8f86e42df80f4d43d373b44a01fe5fbe6c5dae4bf668ae59de8fd"
+        }
+      ],
+      "missing_artifacts": []
+    },
+    {
+      "id": "import_roundtrip",
+      "description": "Import a namespaced XMILE fixture, inspect it, and export it strictly.",
+      "status": "passed",
+      "duration_ms": 5.242,
+      "steps": [
+        {
+          "index": 0,
+          "tool": "read_model",
+          "status": "passed",
+          "duration_ms": 1.697,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [],
+          "text": "Loaded model 'Modern Namespaced' as model_id=eval_import with 1 stocks, 1 flows, 1 auxiliaries",
+          "failures": []
+        },
+        {
+          "index": 1,
+          "tool": "inspect_model",
+          "status": "passed",
+          "duration_ms": 1.392,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "model",
+            "validation"
+          ],
+          "text": "Model eval_import: Modern Namespaced (1 stocks, 1 flows, 1 auxiliaries)",
+          "failures": []
+        },
+        {
+          "index": 2,
+          "tool": "save_model",
+          "status": "passed",
+          "duration_ms": 2.051,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [],
+          "text": "Saved model_id=eval_import to ${ARTIFACT_DIR}/modern_namespaced_roundtrip.stmx",
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "modern_namespaced_roundtrip.stmx",
+          "exists": true,
+          "bytes": 2941,
+          "sha256": "af85d335bf3dc45b905f6c4e8766571fcf4289e56d160dfeef8973a253df36ca"
+        }
+      ],
+      "missing_artifacts": []
+    },
+    {
+      "id": "error_recovery",
+      "description": "Observe a structured batch error and recover in the same session.",
+      "status": "passed",
+      "duration_ms": 22.433,
+      "steps": [
+        {
+          "index": 0,
+          "tool": "build_model",
+          "status": "passed",
+          "duration_ms": 10.777,
+          "is_error": true,
+          "error_code": "invalid_input",
+          "structured_keys": [
+            "error"
+          ],
+          "text": "[invalid_input] flows[0] ('broken'): from_stock 'Missing' is not a known stock",
+          "failures": []
+        },
+        {
+          "index": 1,
+          "tool": "build_model",
+          "status": "passed",
+          "duration_ms": 11.626,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "added",
+            "connector_sync",
+            "model",
+            "model_id",
+            "validation"
+          ],
+          "text": "Built model_id=eval_recovered: added 1 stocks",
+          "failures": []
+        }
+      ],
+      "artifacts": [],
+      "missing_artifacts": []
+    },
+    {
+      "id": "analysis_stack",
+      "description": "Exercise simulation, scenarios, sensitivity, and calibration on one model.",
+      "status": "passed",
+      "duration_ms": 110.747,
+      "steps": [
+        {
+          "index": 0,
+          "tool": "build_model",
+          "status": "passed",
+          "duration_ms": 11.817,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "added",
+            "connector_sync",
+            "model",
+            "model_id",
+            "validation"
+          ],
+          "text": "Built model_id=eval_analysis: added 1 stocks, 1 flows, 1 auxiliaries",
+          "failures": []
+        },
+        {
+          "index": 1,
+          "tool": "simulate",
+          "status": "passed",
+          "duration_ms": 20.221,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "csv_path",
+            "model_id",
+            "overrides",
+            "series",
+            "sim_specs",
+            "warnings"
+          ],
+          "text": "Simulated model_id=eval_analysis from 0.0 to 4.0. Final values: Accumulator=4.0",
+          "failures": []
+        },
+        {
+          "index": 2,
+          "tool": "compare_scenarios",
+          "status": "passed",
+          "duration_ms": 20.838,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "baseline",
+            "csv_path",
+            "model_id",
+            "scenarios",
+            "sim_specs"
+          ],
+          "text": "Compared 1 scenario(s) for model_id=eval_analysis vs baseline. Final deltas: higher rate: Accumulator +4",
+          "failures": []
+        },
+        {
+          "index": 3,
+          "tool": "sensitivity_analysis",
+          "status": "passed",
+          "duration_ms": 21.676,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "baseline",
+            "model_id",
+            "output",
+            "parameters",
+            "total_runs",
+            "warnings"
+          ],
+          "text": "Swept 1 parameter(s) over 3 run(s) for Accumulator (final) on model_id=eval_analysis. Ranked by |elasticity|: rate (elasticity +1)",
+          "failures": []
+        },
+        {
+          "index": 4,
+          "tool": "calibrate",
+          "status": "passed",
+          "duration_ms": 33.288,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [
+            "csv_path",
+            "fit_series",
+            "model_id",
+            "n_observations",
+            "objective",
+            "optimizer",
+            "parameters",
+            "target_metrics",
+            "targets",
+            "time_units",
+            "warnings"
+          ],
+          "text": "Calibrated 1 parameter(s) on model_id=eval_analysis via least_squares (converged, weighted RMSE=2.416e-15). Fitted: rate=3\u00b14.9e-16",
+          "failures": []
+        },
+        {
+          "index": 5,
+          "tool": "save_model",
+          "status": "passed",
+          "duration_ms": 2.739,
+          "is_error": false,
+          "error_code": null,
+          "structured_keys": [],
+          "text": "Saved model_id=eval_analysis to ${ARTIFACT_DIR}/analysis_accumulator.stmx",
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "analysis_accumulator.stmx",
+          "exists": true,
+          "bytes": 3237,
+          "sha256": "2bb27b8578b3d2492a9ba9980e056dc002f75031417a2f227aec93577321e9b0"
+        }
+      ],
+      "missing_artifacts": []
+    }
+  ]
+}

@@ -7,7 +7,11 @@ live in focused modules.
 
 ## Dependency Boundaries
 
-The package has one unconditional runtime dependency: `mcp>=1.7.0`.
+The package has one unconditional runtime dependency: `mcp>=1.19.0,<2`.
+MCP 1.19.0 is the first tested SDK release whose low-level stdio server
+correctly transports this package's direct `CallToolResult` responses with
+structured content. The upper bound keeps the package on the v1 API until an
+MCP v2 migration is tested.
 
 | Layer | Modules | Dependency rule |
 | --- | --- | --- |

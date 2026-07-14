@@ -64,6 +64,11 @@ def test_distribution_dependency_contract():
     assert unconditional == {"mcp"}
     assert sim == {"numpy", "pandas", "pysd", "scipy"}
 
+    [mcp_requirement] = [
+        requirement for requirement in requirements if requirement.name.lower() == "mcp"
+    ]
+    assert mcp_requirement.specifier == Requirement("mcp>=1.19.0,<2").specifier
+
 
 def test_server_import_does_not_load_simulation_dependencies():
     blocker = """

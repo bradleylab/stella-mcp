@@ -2326,7 +2326,7 @@ sim = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mcp", specifier = ">=1.7.0" },
+    { name = "mcp", specifier = ">=1.19.0,<2" },
     { name = "numpy", marker = "extra == 'sim'", specifier = ">=1.23" },
     { name = "packaging", marker = "extra == 'dev'", specifier = ">=24" },
     { name = "pandas", marker = "extra == 'sim'" },
