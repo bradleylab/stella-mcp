@@ -69,3 +69,26 @@ This harness measures deterministic MCP and model workflows. A free-form LLM
 agent evaluation would be a separate experiment because it introduces model,
 prompt, endpoint, sampling, and scoring choices. Those variables are not part of
 the 0.11.0 baseline.
+
+## Free-Form Agent Protocol
+
+The separate protocol is specified in
+[`../plans/2026-07-13-free-form-agent-evaluation-spec.md`](../plans/2026-07-13-free-form-agent-evaluation-spec.md)
+and versioned in `evaluation/agent_scenarios.json`. From a source checkout, run
+it with an explicitly approved provider, model, and supported sampling mode:
+
+```bash
+uv run --group agent-eval --extra sim \
+  python -m evaluation.run_agent_evaluation \
+  --provider PROVIDER \
+  --model MODEL_ID \
+  --sampling-mode SAMPLING_MODE \
+  --artifact-dir results/evaluation/0.12.0-agent-artifacts \
+  --output-json results/evaluation/0.12.0-agent-evaluation.json \
+  --output-markdown results/evaluation/0.12.0-agent-evaluation.md
+```
+
+`PROVIDER` is `openai` or `washu`. `SAMPLING_MODE` declares which of the
+protocol's requested `temperature` and `seed` fields the chosen endpoint/model
+supports: `both`, `temperature`, `seed`, or `none`. The command refuses to
+replace existing expected artifacts or result files.
