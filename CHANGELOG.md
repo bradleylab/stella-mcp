@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-14
+
 ### Added
 
 - Deterministic native-stdio evaluation scenarios covering model construction,
@@ -14,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sensitivity analysis, and calibration, with machine-readable evidence.
 - Stella Professional 4.1.1-saved compatibility fixtures with desktop open,
   run, save, provenance, and semantic round-trip checks.
+- A no-interpolation Stella-versus-PySD comparison workflow with versioned CSV
+  and JSON evidence. The linear accumulator fixture matched exactly at every
+  saved time point for the three compared variables.
+- A separately versioned free-form tool-use evaluation protocol, OpenAI-compatible
+  backend, deterministic postchecks, preserved tool traces, and checksummed
+  artifacts. The recorded sample completed all three scenarios without an MCP
+  tool error and passed every preregistered criterion in two scenarios. The
+  construction workflow completed but retained a failed exact check because it
+  used `Year` where the protocol required `Years`.
 
 ### Changed
 
@@ -22,13 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CallToolResult` responses; 1.19.0 is the first tested working floor.
 - The simulation CI job now runs the complete deterministic MCP evaluation.
 
-### Known Issues
+### Fixed
 
-- The generated SIR diagram opens and runs in Stella but has two poor connector
-  routes, including one that leaves the visible canvas.
-- Stella desktop numeric parity remains unmeasured because the automated 4.1.1
-  export attempt exited before writing values. The evaluation utilities include
-  a no-interpolation CSV comparator for the next successful export.
+- Reworked the built-in SIR layout into a compact, one-page left-to-right model
+  so its connectors remain on the visible canvas in Stella Professional 4.1.1.
 
 ## [0.11.0] - 2026-07-13
 
@@ -231,7 +239,8 @@ calibration behavior of 0.10.0.
   `tool_handlers.py`, `xmile_io.py`, `equation_parser.py`,
   `templates.py`).
 
-[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/bradleylab/stella-mcp/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/bradleylab/stella-mcp/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/bradleylab/stella-mcp/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/bradleylab/stella-mcp/compare/v0.8.0...v0.9.0
