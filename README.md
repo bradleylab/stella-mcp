@@ -37,7 +37,7 @@ pip install -e .
 ### Requirements
 
 - Python 3.10+
-- `mcp>=1.7.0`
+- `mcp>=1.19.0,<2`
 
 ## Configuration
 
@@ -641,6 +641,24 @@ The `validate_model` tool checks for:
 - Import/export preserves unknown attrs/elements on supported sections (header, sim_specs, variables, views/model extras) to reduce round-trip data loss
 - Compatibility corpus regression tests live in `tests/fixtures/compat_corpus/` and run in CI
 - Maintainer helper: `python scripts/sync_compat_corpus_manifest.py --check` validates corpus manifest sync
+
+## Evaluation
+
+The repository includes a deterministic maintainer evaluation that launches the
+server through a real MCP stdio client. It covers build, validation, rendering,
+strict save/import, structured error recovery, simulation, scenario comparison,
+sensitivity analysis, and calibration. Run the complete baseline from a source
+checkout with:
+
+```bash
+uv run --extra sim python -m evaluation.runner --require sim
+```
+
+The runner writes JSON and Markdown reports under `results/evaluation/` by
+default. Stella-saved desktop fixtures and their review provenance live in
+`tests/fixtures/compat_corpus/`. See
+[`docs/evaluation/README.md`](docs/evaluation/README.md) for the evidence scope,
+desktop workflow, and the no-interpolation CSV comparison command.
 
 ## Project Structure
 

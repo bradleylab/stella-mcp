@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Deterministic native-stdio evaluation scenarios covering model construction,
+  strict round-trips, structured error recovery, simulation, scenario analysis,
+  sensitivity analysis, and calibration, with machine-readable evidence.
+- Stella Professional 4.1.1-saved compatibility fixtures with desktop open,
+  run, save, provenance, and semantic round-trip checks.
+
+### Changed
+
+- The supported MCP SDK range is now `>=1.19.0,<2`. Native stdio testing found
+  that 1.18.0 and older cannot transport the server's direct structured
+  `CallToolResult` responses; 1.19.0 is the first tested working floor.
+- The simulation CI job now runs the complete deterministic MCP evaluation.
+
+### Known Issues
+
+- The generated SIR diagram opens and runs in Stella but has two poor connector
+  routes, including one that leaves the visible canvas.
+- Stella desktop numeric parity remains unmeasured because the automated 4.1.1
+  export attempt exited before writing values. The evaluation utilities include
+  a no-interpolation CSV comparator for the next successful export.
+
 ## [0.11.0] - 2026-07-13
 
 ### Added
