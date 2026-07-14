@@ -71,6 +71,24 @@
       }
     },
     {
+      "file": "stella_4_1_1_sir_compact.stmx",
+      "strict_import": true,
+      "provenance": {
+        "origin": "stella_mcp_builtin_template_then_stella_saved",
+        "application": "Stella Professional",
+        "application_version": "4.1.1",
+        "saved_at": "2026-07-13",
+        "source": "stella_mcp/builtin_templates/sir.stmx",
+        "acceptance": {
+          "opened_without_repair": true,
+          "run_completed": true,
+          "run_final_time": 100,
+          "visual_review": "pass",
+          "notes": "The left-to-right stock-flow chain and all information connectors fit on one visible page with readable labels."
+        }
+      }
+    },
+    {
       "file": "unknown_attrs.stmx",
       "strict_import": true,
       "preserve_markers": [

@@ -36,6 +36,9 @@ fixture under Stella Professional 4.1.1.
 
 ![SIR model open in Stella Professional 4.1.1](images/stella-4.1.1-sir.jpg)
 
+The corrected built-in template and its Stella-saved fixture are documented in
+the [SIR layout follow-up](2026-07-13-sir-layout-followup.md).
+
 ## Numeric Comparison
 
 When Stella produces a non-empty CSV export, compare it to an MCP/PySD CSV on

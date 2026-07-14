@@ -53,7 +53,7 @@
 			<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
 				<text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt"/>
 			</style>
-			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="2" isee:page_rows="2" isee:popup_graphs_are_comparative="true" type="stock_flow">
+			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="1" isee:page_rows="1" isee:popup_graphs_are_comparative="true" type="stock_flow">
 				<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
 					<stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
 						<shape type="rectangle" width="45" height="35"/>
@@ -64,57 +64,57 @@
 					</aux>
 					<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>
 				</style>
-				<stock x="405" y="433" width="45" height="35" name="Susceptible"/>
-				<stock x="755" y="518" width="45" height="35" name="Infected"/>
-				<stock x="1113" y="315" width="45" height="35" name="Recovered"/>
-				<flow x="580.7012599635407" y="475" name="infection">
+				<stock x="170" y="280" width="45" height="35" name="Susceptible"/>
+				<stock x="380" y="280" width="45" height="35" name="Infected"/>
+				<stock x="590" y="280" width="45" height="35" name="Recovered"/>
+				<flow x="275" y="280" name="infection">
 					<pts>
-						<pt x="428.14531909488073" y="433.1976949704033"/>
-						<pt x="733.2572008322006" y="518.2103877102478"/>
+						<pt x="192.5" y="280"/>
+						<pt x="357.5" y="280"/>
 					</pts>
 				</flow>
-				<flow x="934.3996698852932" y="417" name="recovery">
+				<flow x="485" y="280" name="recovery">
 					<pts>
-						<pt x="778.2572008322006" y="518.2103877102478"/>
-						<pt x="1090.5421389383857" y="315.9891869798381"/>
+						<pt x="402.5" y="280"/>
+						<pt x="567.5" y="280"/>
 					</pts>
 				</flow>
-				<aux x="237" y="866" name="beta"/>
-				<aux x="1362" y="694" name="gamma"/>
-				<aux x="656" y="133" name="population total"/>
-				<connector uid="1" angle="48.69206088514181">
+				<aux x="275" y="140" name="beta"/>
+				<aux x="485" y="140" name="gamma"/>
+				<aux x="380" y="430" name="population total"/>
+				<connector uid="1" angle="-90">
 					<from>beta</from>
 					<to>infection</to>
 				</connector>
-				<connector uid="2" angle="-13.64818166559937">
+				<connector uid="2" angle="0">
 					<from>Susceptible</from>
 					<to>infection</to>
 				</connector>
-				<connector uid="3" angle="166.35181833440063">
+				<connector uid="3" angle="-180">
 					<from>Infected</from>
 					<to>infection</to>
 				</connector>
-				<connector uid="4" angle="-102.47494927149135">
+				<connector uid="4" angle="124.99202019855868">
 					<from>population_total</from>
 					<to>infection</to>
 				</connector>
-				<connector uid="5" angle="147.02204669350078">
+				<connector uid="5" angle="-90">
 					<from>gamma</from>
 					<to>recovery</to>
 				</connector>
-				<connector uid="6" angle="29.50960913893892">
+				<connector uid="6" angle="0">
 					<from>Infected</from>
 					<to>recovery</to>
 				</connector>
-				<connector uid="7" angle="50.074081788276885">
+				<connector uid="7" angle="-35.53767779197438">
 					<from>Susceptible</from>
 					<to>population_total</to>
 				</connector>
-				<connector uid="8" angle="104.4855306118299">
+				<connector uid="8" angle="-90">
 					<from>Infected</from>
 					<to>population_total</to>
 				</connector>
-				<connector uid="9" angle="158.22643642596077">
+				<connector uid="9" angle="-144.46232220802563">
 					<from>Recovered</from>
 					<to>population_total</to>
 				</connector>

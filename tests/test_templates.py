@@ -1,6 +1,8 @@
 """Tests for template storage and loading."""
 
 import asyncio
+import math
+import xml.etree.ElementTree as ET
 
 import stella_mcp.server as server_mod
 from stella_mcp.templates import (
@@ -40,6 +42,37 @@ def test_builtin_templates_include_metadata_and_counts():
     assert sir.stocks > 0
     assert sir.flows > 0
     assert sir.auxiliaries > 0
+
+
+def test_sir_template_layout_fits_one_page_with_compact_connectors():
+    """The built-in SIR model should open as a usable first-page diagram."""
+    info, model = load_template_model("sir")
+    root = ET.parse(info.path).getroot()
+    view = root.find(".//{*}view")
+    assert view is not None
+    page_width = float(view.attrib["page_width"])
+    page_height = float(view.attrib["page_height"])
+    assert view.attrib["{http://iseesystems.com/XMILE}page_cols"] == "1"
+    assert view.attrib["{http://iseesystems.com/XMILE}page_rows"] == "1"
+
+    elements = {**model.stocks, **model.flows, **model.auxs}
+    positions = {name: (element.x, element.y) for name, element in elements.items()}
+    assert all(x is not None and 0 <= x <= page_width for x, _ in positions.values())
+    assert all(y is not None and 0 <= y <= page_height for _, y in positions.values())
+
+    susceptible_x, susceptible_y = positions["Susceptible"]
+    infected_x, infected_y = positions["Infected"]
+    recovered_x, recovered_y = positions["Recovered"]
+    infection_x, _ = positions["infection"]
+    recovery_x, _ = positions["recovery"]
+    assert susceptible_x < infection_x < infected_x < recovery_x < recovered_x
+    assert susceptible_y == infected_y == recovered_y
+
+    max_connector_length = min(page_width, page_height) / 2
+    for connector in model.connectors:
+        source = positions[connector.from_var]
+        target = positions[connector.to_var]
+        assert math.dist(source, target) <= max_connector_length
 
 
 def test_save_and_load_user_template(monkeypatch, tmp_path):
