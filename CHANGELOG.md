@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that 1.18.0 and older cannot transport the server's direct structured
   `CallToolResult` responses; 1.19.0 is the first tested working floor.
 - The simulation CI job now runs the complete deterministic MCP evaluation.
+- Refreshed the locked MCP and web-stack dependencies to versions outside all
+  16 Dependabot advisory ranges while retaining MCP 1.19.0 as the tested
+  compatibility floor.
 
 ### Fixed
 
