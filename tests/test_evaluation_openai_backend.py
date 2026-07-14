@@ -22,6 +22,8 @@ class FakeCompletions:
 
     async def create(self, **kwargs: Any) -> Any:
         self.request = kwargs
+        if isinstance(self.response, Exception):
+            raise self.response
         return self.response
 
 
@@ -64,6 +66,7 @@ def test_openai_chat_backend_converts_tools_messages_and_usage() -> None:
         model="requested-model",
         endpoint="https://api.openai.com/v1",
         sampling_mode="temperature",
+        reasoning_effort="none",
     )
     messages = [
         {"role": "system", "content": "system"},
@@ -106,6 +109,7 @@ def test_openai_chat_backend_converts_tools_messages_and_usage() -> None:
     assert completions.request["temperature"] == 0
     assert "seed" not in completions.request
     assert completions.request["max_completion_tokens"] == 4096
+    assert completions.request["reasoning_effort"] == "none"
     assert completions.request["parallel_tool_calls"] is False
     assert completions.request["tools"][0]["function"]["strict"] is False
     assert completions.request["messages"][2]["tool_calls"][0]["function"] == {
@@ -116,6 +120,7 @@ def test_openai_chat_backend_converts_tools_messages_and_usage() -> None:
     assert backend.metadata()["effective_model_request"] == {
         "temperature": 0,
         "max_completion_tokens": 4096,
+        "reasoning_effort": "none",
     }
     assert backend.metadata()["resolved_model"] == "resolved-model"
 
@@ -129,6 +134,50 @@ def test_openai_chat_backend_rejects_unknown_sampling_mode() -> None:
             endpoint="https://api.openai.com/v1",
             sampling_mode="unsupported",
         )
+
+
+def test_openai_chat_backend_rejects_unknown_reasoning_effort() -> None:
+    with pytest.raises(ValueError, match="reasoning effort"):
+        OpenAIChatBackend(
+            object(),
+            provider="openai",
+            model="model",
+            endpoint="https://api.openai.com/v1",
+            sampling_mode="none",
+            reasoning_effort="unsupported",
+        )
+
+
+def test_openai_chat_backend_records_request_controls_before_provider_error() -> None:
+    client, _ = _client(RuntimeError("provider rejected request"))
+    backend = OpenAIChatBackend(
+        client,
+        provider="openai",
+        model="requested-model",
+        endpoint="https://api.openai.com/v1",
+        sampling_mode="none",
+        reasoning_effort="none",
+    )
+
+    with pytest.raises(RuntimeError, match="provider rejected request"):
+        asyncio.run(
+            backend.complete(
+                [{"role": "user", "content": "task"}],
+                [
+                    {
+                        "name": "inspect_model",
+                        "description": "Inspect a model",
+                        "inputSchema": {"type": "object", "properties": {}},
+                    }
+                ],
+                {"temperature": 0, "seed": 20260713, "max_completion_tokens": 4096},
+            )
+        )
+
+    assert backend.metadata()["effective_model_request"] == {
+        "max_completion_tokens": 4096,
+        "reasoning_effort": "none",
+    }
 
 
 def test_personal_backend_ignores_ambient_base_url(

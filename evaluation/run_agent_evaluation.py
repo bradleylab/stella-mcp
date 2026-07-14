@@ -13,7 +13,11 @@ from .agent_runner import (
     preflight_agent_artifacts,
     run_agent_evaluation,
 )
-from .openai_chat_backend import SAMPLING_MODES, build_openai_chat_backend
+from .openai_chat_backend import (
+    REASONING_EFFORTS,
+    SAMPLING_MODES,
+    build_openai_chat_backend,
+)
 
 
 def main() -> int:
@@ -21,6 +25,7 @@ def main() -> int:
     parser.add_argument("--provider", choices=["openai", "washu"], required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--sampling-mode", choices=sorted(SAMPLING_MODES), required=True)
+    parser.add_argument("--reasoning-effort", choices=REASONING_EFFORTS)
     parser.add_argument("--scenarios", type=Path, default=DEFAULT_AGENT_SCENARIOS)
     parser.add_argument("--scenario", action="append", default=[])
     parser.add_argument(
@@ -53,6 +58,7 @@ def main() -> int:
         provider=args.provider,
         model=args.model,
         sampling_mode=args.sampling_mode,
+        reasoning_effort=args.reasoning_effort,
     )
     report = asyncio.run(
         run_agent_evaluation(

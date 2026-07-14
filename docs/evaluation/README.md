@@ -83,6 +83,7 @@ uv run --group agent-eval --extra sim \
   --provider PROVIDER \
   --model MODEL_ID \
   --sampling-mode SAMPLING_MODE \
+  --reasoning-effort REASONING_EFFORT \
   --artifact-dir results/evaluation/0.12.0-agent-artifacts \
   --output-json results/evaluation/0.12.0-agent-evaluation.json \
   --output-markdown results/evaluation/0.12.0-agent-evaluation.md
@@ -91,4 +92,10 @@ uv run --group agent-eval --extra sim \
 `PROVIDER` is `openai` or `washu`. `SAMPLING_MODE` declares which of the
 protocol's requested `temperature` and `seed` fields the chosen endpoint/model
 supports: `both`, `temperature`, `seed`, or `none`. The command refuses to
-replace existing expected artifacts or result files.
+replace existing expected artifacts or result files. `REASONING_EFFORT` is an
+optional endpoint/model run parameter; GPT-5.6 Chat Completions with function
+tools requires `none`.
+
+The recorded 0.12.0 run, endpoint preflight, manual review, and evidence limits
+are documented in
+[`2026-07-13-free-form-agent-evaluation.md`](2026-07-13-free-form-agent-evaluation.md).

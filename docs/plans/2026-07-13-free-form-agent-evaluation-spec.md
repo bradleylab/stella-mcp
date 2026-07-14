@@ -1,6 +1,6 @@
 # Free-Form Agent Evaluation Specification
 
-Status: in progress on `codex/agent-evaluation`
+Status: completed on `codex/agent-evaluation`
 
 ## Objective
 
@@ -8,6 +8,9 @@ Measure whether an LLM can plan and complete representative Stella MCP
 workflows from user-level requests. Keep this experiment separate from the
 deterministic MCP baseline because its behavior depends on the selected model,
 endpoint, prompt, sampling controls, and tool-call decisions.
+
+The recorded result and endpoint compatibility preflight are documented in
+[`../evaluation/2026-07-13-free-form-agent-evaluation.md`](../evaluation/2026-07-13-free-form-agent-evaluation.md).
 
 ## Fixed Inputs
 
@@ -21,9 +24,9 @@ endpoint, prompt, sampling controls, and tool-call decisions.
 - the required tool order for each requested workflow;
 - deterministic post-run MCP checks and expected artifacts.
 
-The endpoint, model, and supported sampling controls are run parameters rather
-than scenario inputs. The report must record their identifiers and which
-requested sampling controls were sent. The completion cap is always sent.
+The endpoint, model, supported sampling controls, and optional reasoning effort
+are run parameters rather than scenario inputs. The report must record their
+identifiers and the exact controls sent. The completion cap is always sent.
 
 ## Agent Loop
 
@@ -50,6 +53,8 @@ than inheriting an ambient institutional URL. The WashU route reads
 `WUSTL_CLIENT_SECRET`, and `WUSTL_API_SCOPE`; it exchanges the institutional
 credentials for a short-lived access token at run time. Endpoint URLs must be
 absolute HTTPS URLs without embedded credentials, query strings, or fragments.
+For GPT-5.6 through Chat Completions, reasoning effort is set to `none` because
+that endpoint rejects function tools at higher/default reasoning effort.
 
 ## Deterministic Scoring
 

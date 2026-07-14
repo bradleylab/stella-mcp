@@ -68,5 +68,7 @@ def render_agent_markdown(report: dict[str, Any]) -> str:
                     lines.append(f"- `{artifact['path']}`: missing")
         if scenario.get("final_response") is not None:
             lines.extend(["", "Final response:", ""])
-            lines.extend(f"> {line}" for line in scenario["final_response"].splitlines())
+            lines.extend(
+                f"> {line}" if line else ">" for line in scenario["final_response"].splitlines()
+            )
     return "\n".join(lines)

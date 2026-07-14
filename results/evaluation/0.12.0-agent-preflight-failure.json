@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-14T04:16:58.871188+00:00",
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Darwin",
+    "stella_mcp": "0.11.0",
+    "mcp": "1.27.1",
+    "capabilities": [
+      "sim"
+    ]
+  },
+  "backend": {
+    "provider": "openai",
+    "api": "chat.completions",
+    "model": "gpt-5.6-sol",
+    "resolved_model": null,
+    "endpoint": "https://api.openai.com/v1",
+    "openai_sdk": "2.45.0",
+    "parallel_tool_calls": false,
+    "tool_schema_strict": false,
+    "effective_model_request": null,
+    "request_timeout_seconds": 120.0,
+    "automatic_retries": 0
+  },
+  "protocol": {
+    "scenario_path": "evaluation/agent_scenarios.json",
+    "scenario_sha256": "ceef33f31f618dd9293d6859afb204e1bdddfd538b80106bb91b965f54b937d2",
+    "requested_model_request": {
+      "temperature": 0,
+      "seed": 20260713,
+      "max_completion_tokens": 4096
+    },
+    "max_tool_rounds": 12,
+    "scenario_timeout_seconds": 600,
+    "server_name": "stella-mcp",
+    "tool_count": 42,
+    "tool_catalog_sha256": "6be9d019ad691c54f82d54fe1add571f5605884499a243a57b3eb313a522b3ee"
+  },
+  "summary": {
+    "scenarios": 3,
+    "passed": 0,
+    "failed": 3,
+    "skipped": 0,
+    "tool_calls": 0,
+    "tool_errors": 0,
+    "usage": {},
+    "duration_ms": 4297.436
+  },
+  "scenarios": [
+    {
+      "id": "construct_growth",
+      "description": "Plan and complete a build, validation, simulation, rendering, and strict save workflow from a user-level specification.",
+      "status": "failed",
+      "duration_ms": 1968.432,
+      "prompt": "Create a Stella model named Agent Evaluation Growth with model ID agent_growth. Simulate from year 0 through year 5 with a time step of 1 using Euler integration. The Population stock starts at 100 people. The growth inflow is Population * growth_rate in people/Year, and growth_rate is 0.1 1/Year. Validate the model, run it, render its diagram, and save it in strict mode to ${ARTIFACT_DIR}/agent_growth.stmx.",
+      "stop_reason": "backend_error",
+      "final_response": null,
+      "usage": {},
+      "required_tool_order": [
+        "build_model",
+        "validate_model",
+        "simulate",
+        "render_diagram",
+        "save_model"
+      ],
+      "successful_tool_order": [],
+      "tool_calls": [],
+      "checks": [
+        {
+          "index": 0,
+          "tool": "inspect_model",
+          "status": "failed",
+          "is_error": true,
+          "error_code": "model_not_found",
+          "structured_keys": [
+            "error"
+          ],
+          "text": "[model_not_found] Unknown model_id 'agent_growth' for this session",
+          "failures": [
+            "is_error expected False, got True",
+            "missing structured field model.name",
+            "missing structured field model.sim_specs.start",
+            "missing structured field model.sim_specs.stop",
+            "missing structured field model.sim_specs.dt",
+            "missing structured field model.sim_specs.method",
+            "missing structured field model.sim_specs.time_units",
+            "missing structured field model.counts.stocks",
+            "missing structured field model.counts.flows",
+            "missing structured field model.counts.auxiliaries",
+            "missing structured field model.variables.stocks.0.name",
+            "missing structured field model.variables.stocks.0.initial_value",
+            "missing structured field model.variables.flows.0.name",
+            "missing structured field model.variables.flows.0.equation",
+            "missing structured field model.variables.flows.0.to_stock",
+            "missing structured field model.variables.auxiliaries.0.name",
+            "missing structured field model.variables.auxiliaries.0.equation",
+            "missing structured field validation.passed"
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "agent_growth.stmx",
+          "exists": false
+        }
+      ],
+      "missing_artifacts": [
+        "agent_growth.stmx"
+      ],
+      "failures": [
+        "required successful tool order not observed; missing from ['build_model', 'validate_model', 'simulate', 'render_diagram', 'save_model'] after actual sequence []",
+        "check 0: is_error expected False, got True",
+        "check 0: missing structured field model.name",
+        "check 0: missing structured field model.sim_specs.start",
+        "check 0: missing structured field model.sim_specs.stop",
+        "check 0: missing structured field model.sim_specs.dt",
+        "check 0: missing structured field model.sim_specs.method",
+        "check 0: missing structured field model.sim_specs.time_units",
+        "check 0: missing structured field model.counts.stocks",
+        "check 0: missing structured field model.counts.flows",
+        "check 0: missing structured field model.counts.auxiliaries",
+        "check 0: missing structured field model.variables.stocks.0.name",
+        "check 0: missing structured field model.variables.stocks.0.initial_value",
+        "check 0: missing structured field model.variables.flows.0.name",
+        "check 0: missing structured field model.variables.flows.0.equation",
+        "check 0: missing structured field model.variables.flows.0.to_stock",
+        "check 0: missing structured field model.variables.auxiliaries.0.name",
+        "check 0: missing structured field model.variables.auxiliaries.0.equation",
+        "check 0: missing structured field validation.passed",
+        "no final response: backend_error",
+        "BadRequestError: Error code: 400 - {'error': {'message': \"Function tools with reasoning_effort are not supported for gpt-5.6-sol in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'.\", 'type': 'invalid_request_error', 'param': 'reasoning_effort', 'code': None}}",
+        "missing artifact: agent_growth.stmx"
+      ]
+    },
+    {
+      "id": "modify_sir_template",
+      "description": "Plan and complete a template load, parameter edit, validation, simulation, rendering, and strict save workflow.",
+      "status": "failed",
+      "duration_ms": 643.448,
+      "prompt": "Load the built-in SIR template as model ID agent_sir. Change beta to 0.2 while leaving gamma and the initial stocks unchanged. Validate and simulate the edited model, render the diagram, and save it in strict mode to ${ARTIFACT_DIR}/agent_sir.stmx.",
+      "stop_reason": "backend_error",
+      "final_response": null,
+      "usage": {},
+      "required_tool_order": [
+        "load_template",
+        "update_aux",
+        "validate_model",
+        "simulate",
+        "render_diagram",
+        "save_model"
+      ],
+      "successful_tool_order": [],
+      "tool_calls": [],
+      "checks": [
+        {
+          "index": 0,
+          "tool": "inspect_model",
+          "status": "failed",
+          "is_error": true,
+          "error_code": "model_not_found",
+          "structured_keys": [
+            "error"
+          ],
+          "text": "[model_not_found] Unknown model_id 'agent_sir' for this session",
+          "failures": [
+            "is_error expected False, got True",
+            "missing structured field model.counts.stocks",
+            "missing structured field model.counts.flows",
+            "missing structured field model.counts.auxiliaries",
+            "missing structured field model.variables.auxiliaries.0.name",
+            "missing structured field model.variables.auxiliaries.0.equation",
+            "missing structured field model.variables.auxiliaries.1.name",
+            "missing structured field model.variables.auxiliaries.1.equation",
+            "missing structured field validation.passed"
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "agent_sir.stmx",
+          "exists": false
+        }
+      ],
+      "missing_artifacts": [
+        "agent_sir.stmx"
+      ],
+      "failures": [
+        "required successful tool order not observed; missing from ['load_template', 'update_aux', 'validate_model', 'simulate', 'render_diagram', 'save_model'] after actual sequence []",
+        "check 0: is_error expected False, got True",
+        "check 0: missing structured field model.counts.stocks",
+        "check 0: missing structured field model.counts.flows",
+        "check 0: missing structured field model.counts.auxiliaries",
+        "check 0: missing structured field model.variables.auxiliaries.0.name",
+        "check 0: missing structured field model.variables.auxiliaries.0.equation",
+        "check 0: missing structured field model.variables.auxiliaries.1.name",
+        "check 0: missing structured field model.variables.auxiliaries.1.equation",
+        "check 0: missing structured field validation.passed",
+        "no final response: backend_error",
+        "BadRequestError: Error code: 400 - {'error': {'message': \"Function tools with reasoning_effort are not supported for gpt-5.6-sol in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'.\", 'type': 'invalid_request_error', 'param': 'reasoning_effort', 'code': None}}",
+        "missing artifact: agent_sir.stmx"
+      ]
+    },
+    {
+      "id": "analyze_accumulator",
+      "description": "Plan and complete an imported-model inspection, baseline run, scenario comparison, sensitivity analysis, and strict save workflow.",
+      "status": "failed",
+      "duration_ms": 546.348,
+      "prompt": "Read ${REPO_ROOT}/tests/fixtures/compat_corpus/stella_4_1_1_accumulator.stmx as model ID agent_analysis and inspect it. Run the baseline simulation. Compare it with a scenario named double rate that sets rate to 2 and save the comparison CSV to ${ARTIFACT_DIR}/agent_accumulator_scenarios.csv. Then run a one-at-a-time sensitivity analysis for rate from 1 through 3 at 3 evenly spaced values, using the final Accumulator value as the output, and save the sweep to ${ARTIFACT_DIR}/agent_accumulator_sensitivity.csv. Save the model in strict mode to ${ARTIFACT_DIR}/agent_accumulator.stmx and summarize the numerical findings.",
+      "stop_reason": "backend_error",
+      "final_response": null,
+      "usage": {},
+      "required_tool_order": [
+        "read_model",
+        "inspect_model",
+        "simulate",
+        "compare_scenarios",
+        "sensitivity_analysis",
+        "save_model"
+      ],
+      "successful_tool_order": [],
+      "tool_calls": [],
+      "checks": [
+        {
+          "index": 0,
+          "tool": "inspect_model",
+          "status": "failed",
+          "is_error": true,
+          "error_code": "model_not_found",
+          "structured_keys": [
+            "error"
+          ],
+          "text": "[model_not_found] Unknown model_id 'agent_analysis' for this session",
+          "failures": [
+            "is_error expected False, got True",
+            "missing structured field model.sim_specs.start",
+            "missing structured field model.sim_specs.stop",
+            "missing structured field model.sim_specs.dt",
+            "missing structured field model.sim_specs.method",
+            "missing structured field model.counts.stocks",
+            "missing structured field model.counts.flows",
+            "missing structured field model.counts.auxiliaries",
+            "missing structured field model.variables.stocks.0.name",
+            "missing structured field model.variables.flows.0.name",
+            "missing structured field model.variables.auxiliaries.0.name",
+            "missing structured field validation.passed"
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "agent_accumulator_scenarios.csv",
+          "exists": false
+        },
+        {
+          "path": "agent_accumulator_sensitivity.csv",
+          "exists": false
+        },
+        {
+          "path": "agent_accumulator.stmx",
+          "exists": false
+        }
+      ],
+      "missing_artifacts": [
+        "agent_accumulator_scenarios.csv",
+        "agent_accumulator_sensitivity.csv",
+        "agent_accumulator.stmx"
+      ],
+      "failures": [
+        "required successful tool order not observed; missing from ['read_model', 'inspect_model', 'simulate', 'compare_scenarios', 'sensitivity_analysis', 'save_model'] after actual sequence []",
+        "check 0: is_error expected False, got True",
+        "check 0: missing structured field model.sim_specs.start",
+        "check 0: missing structured field model.sim_specs.stop",
+        "check 0: missing structured field model.sim_specs.dt",
+        "check 0: missing structured field model.sim_specs.method",
+        "check 0: missing structured field model.counts.stocks",
+        "check 0: missing structured field model.counts.flows",
+        "check 0: missing structured field model.counts.auxiliaries",
+        "check 0: missing structured field model.variables.stocks.0.name",
+        "check 0: missing structured field model.variables.flows.0.name",
+        "check 0: missing structured field model.variables.auxiliaries.0.name",
+        "check 0: missing structured field validation.passed",
+        "no final response: backend_error",
+        "BadRequestError: Error code: 400 - {'error': {'message': \"Function tools with reasoning_effort are not supported for gpt-5.6-sol in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'.\", 'type': 'invalid_request_error', 'param': 'reasoning_effort', 'code': None}}",
+        "missing artifact: agent_accumulator_scenarios.csv",
+        "missing artifact: agent_accumulator_sensitivity.csv",
+        "missing artifact: agent_accumulator.stmx"
+      ]
+    }
+  ]
+}

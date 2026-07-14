@@ -17,6 +17,7 @@ SAMPLING_MODES = {
     "seed": {"seed"},
     "none": set(),
 }
+REASONING_EFFORTS = ("none", "low", "medium", "high", "xhigh", "max")
 
 
 class OpenAIChatBackend:
@@ -30,14 +31,18 @@ class OpenAIChatBackend:
         model: str,
         endpoint: str,
         sampling_mode: str,
+        reasoning_effort: str | None = None,
     ) -> None:
         if sampling_mode not in SAMPLING_MODES:
             raise ValueError(f"Unknown sampling mode: {sampling_mode}")
+        if reasoning_effort is not None and reasoning_effort not in REASONING_EFFORTS:
+            raise ValueError(f"Unknown reasoning effort: {reasoning_effort}")
         self._client = client
         self._provider = provider
         self._model = model
         self._endpoint = endpoint.rstrip("/")
         self._sampling_controls = SAMPLING_MODES[sampling_mode]
+        self._reasoning_effort = reasoning_effort
         self._effective_model_request: dict[str, Any] | None = None
         self._resolved_model: str | None = None
 
@@ -51,6 +56,9 @@ class OpenAIChatBackend:
             name: model_request[name] for name in self._sampling_controls if name in model_request
         }
         request_controls["max_completion_tokens"] = model_request["max_completion_tokens"]
+        if self._reasoning_effort is not None:
+            request_controls["reasoning_effort"] = self._reasoning_effort
+        self._effective_model_request = dict(request_controls)
         chat_tools = [
             {
                 "type": "function",
@@ -74,7 +82,6 @@ class OpenAIChatBackend:
         if not completion.choices:
             raise RuntimeError("Chat Completions response contained no choices")
 
-        self._effective_model_request = request_controls
         self._resolved_model = getattr(completion, "model", None)
         choice = completion.choices[0]
         message = choice.message
@@ -107,6 +114,7 @@ class OpenAIChatBackend:
             "openai_sdk": sdk_version,
             "parallel_tool_calls": False,
             "tool_schema_strict": False,
+            "configured_reasoning_effort": self._reasoning_effort,
             "effective_model_request": self._effective_model_request,
             "request_timeout_seconds": REQUEST_TIMEOUT_SECONDS,
             "automatic_retries": 0,
@@ -206,7 +214,11 @@ def _async_openai_class() -> Any:
 
 
 def build_openai_chat_backend(
-    *, provider: str, model: str, sampling_mode: str
+    *,
+    provider: str,
+    model: str,
+    sampling_mode: str,
+    reasoning_effort: str | None = None,
 ) -> OpenAIChatBackend:
     """Build a credential-safe backend from the selected environment route."""
     async_openai = _async_openai_class()
@@ -232,4 +244,5 @@ def build_openai_chat_backend(
         model=model,
         endpoint=endpoint,
         sampling_mode=sampling_mode,
+        reasoning_effort=reasoning_effort,
     )
