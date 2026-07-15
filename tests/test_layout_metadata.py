@@ -257,11 +257,11 @@ def test_stella_saved_format_spike_matches_manifest_and_round_trips():
 
 def test_stella_omitted_page_counts_default_to_one():
     one_page = parse_stmx(
-        str(FIXTURES / "0.12_sir_stella_4_1_1_release.stmx"),
+        str(FIXTURES / "0.12_sir_stella_4_1_1_roundtrip.stmx"),
         compat_mode="strict",
     )
     two_columns = parse_stmx(
-        str(FIXTURES / "0.12_chain_stella_4_1_1_release.stmx"),
+        str(FIXTURES / "0.12_chain_stella_4_1_1_roundtrip.stmx"),
         compat_mode="strict",
     )
 
