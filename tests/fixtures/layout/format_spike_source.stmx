@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+	<header>
+		<smile version="1.0" namespace="std, isee"/>
+		<name>Layout Format Spike</name>
+		<uuid>3b614d1d-a4e1-48f5-bf15-8da0d7f608a7</uuid>
+		<vendor>isee systems, inc.</vendor>
+		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
+	</header>
+	<sim_specs method="Euler" time_units="Years">
+		<start>0</start>
+		<stop>10</stop>
+		<dt>1</dt>
+	</sim_specs>
+	<model>
+		<variables>
+			<stock name="Reservoir">
+				<eqn>0</eqn>
+				<inflow>routed input</inflow>
+			</stock>
+			<flow name="routed input">
+				<eqn>left_control</eqn>
+			</flow>
+			<aux name="left control">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="right note">
+				<eqn>Reservoir</eqn>
+			</aux>
+		</variables>
+		<views>
+			<view isee:show_pages="true" background="white" page_width="640" page_height="480" isee:page_cols="3" isee:page_rows="2" type="stock_flow">
+				<stock x="400" y="300" width="45" height="35" name="Reservoir" label_side="top"/>
+				<flow x="260" y="220" name="routed input" label_side="bottom">
+					<pts>
+						<pt x="80" y="300"/>
+						<pt x="200" y="300"/>
+						<pt x="200" y="220"/>
+						<pt x="320" y="220"/>
+						<pt x="320" y="300"/>
+						<pt x="377.5" y="300"/>
+					</pts>
+				</flow>
+				<aux x="100" y="100" name="left control" label_side="left"/>
+				<aux x="500" y="120" name="right note" label_side="right"/>
+				<connector uid="1" angle="0">
+					<from>left control</from>
+					<to>routed input</to>
+					<pts>
+						<pt x="100" y="118"/>
+						<pt x="100" y="160"/>
+						<pt x="180" y="160"/>
+						<pt x="180" y="220"/>
+						<pt x="260" y="220"/>
+					</pts>
+				</connector>
+				<connector uid="2" angle="0">
+					<from>Reservoir</from>
+					<to>right note</to>
+				</connector>
+			</view>
+		</views>
+	</model>
+</xmile>

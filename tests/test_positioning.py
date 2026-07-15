@@ -3,6 +3,7 @@
 import tempfile
 from pathlib import Path
 
+from stella_mcp.layout_quality import analyze_layout
 from stella_mcp.xmile import StellaModel, parse_stmx
 
 
@@ -15,8 +16,9 @@ class TestUserSpecifiedPositions:
         model.add_stock("Population", "100", x=400, y=500)
         xml = model.to_xml()
 
-        assert 'x="400"' in xml
-        assert 'y="500"' in xml
+        assert 'x="377.5"' in xml
+        assert 'y="482.5"' in xml
+        assert (model.stocks["Population"].x, model.stocks["Population"].y) == (400, 500)
 
     def test_user_specified_flow_position_preserved(self):
         """User-specified flow positions should be preserved."""
@@ -87,10 +89,9 @@ class TestUserSpecifiedPositions:
         xml = model.to_xml()
 
         # Flow points should span from A to B
-        # A.x + 22.5 = 122.5
-        # B.x - 22.5 = 477.5
-        assert 'x="122.5"' in xml
-        assert 'x="477.5"' in xml
+        # Stock-edge attachment points snap to whole pixels.
+        assert 'x="122.0"' in xml
+        assert 'x="478.0"' in xml
 
     def test_to_xml_auto_layout_flag_false_keeps_default_positions(self):
         """to_xml(auto_layout=False) should skip layout and keep unset positions at 0."""
@@ -121,8 +122,8 @@ class TestUserSpecifiedPositions:
         xml = model.to_xml(auto_layout=False)
 
         assert "<pts>" in xml
-        assert 'x="122.5"' in xml
-        assert 'x="477.5"' in xml
+        assert 'x="122.0"' in xml
+        assert 'x="478.0"' in xml
 
 
 class TestRoundTrip:
@@ -258,8 +259,10 @@ class TestSmartLayout:
         # All pairs should have minimum 40px separation
         for i in range(len(positions)):
             for j in range(i + 1, len(positions)):
-                dist = ((positions[i][0] - positions[j][0])**2 +
-                        (positions[i][1] - positions[j][1])**2)**0.5
+                dist = (
+                    (positions[i][0] - positions[j][0]) ** 2
+                    + (positions[i][1] - positions[j][1]) ** 2
+                ) ** 0.5
                 assert dist >= 40, f"Auxs too close: {dist:.1f}px"
 
     def test_subsystem_separation(self):
@@ -279,15 +282,14 @@ class TestSmartLayout:
 
         model._auto_layout()
 
-        # Main subsystem elements
-        main_x = model.stocks["Population"].x
-        # Separate subsystem should be offset to the right
-        error_x = model.auxs["Error"].x
-
-        assert main_x is not None
-        assert error_x is not None
-        # Error subsystem should be to the right of main subsystem
-        assert error_x > main_x + 200  # At least subsystem gap apart
+        metrics = analyze_layout(model)
+        assert metrics.glyph_overlaps == ()
+        assert metrics.label_glyph_overlaps == ()
+        assert metrics.label_label_overlaps == ()
+        assert (model.stocks["Population"].x, model.stocks["Population"].y) != (
+            model.auxs["Error"].x,
+            model.auxs["Error"].y,
+        )
 
     def test_stock_chain_well_separated(self):
         """Stocks connected by flows should have minimum spacing."""
@@ -311,8 +313,10 @@ class TestSmartLayout:
             for n2 in positions:
                 if n1 >= n2:
                     continue
-                dist = ((positions[n1][0] - positions[n2][0])**2 +
-                        (positions[n1][1] - positions[n2][1])**2)**0.5
+                dist = (
+                    (positions[n1][0] - positions[n2][0]) ** 2
+                    + (positions[n1][1] - positions[n2][1]) ** 2
+                ) ** 0.5
                 assert dist >= 50, f"{n1} and {n2} too close: {dist:.1f}px"
 
     def test_orphan_aux_positioned(self):
@@ -341,12 +345,14 @@ class TestSmartLayout:
         assert model.auxs["birth_rate"].x is not None
         assert model.auxs["birth_rate"].y is not None
 
-        # Without a connector, birth_rate is in a separate subsystem
-        # and will be placed to the right of the main subsystem
-        main_subsystem_max_x = model.stocks["Population"].x
-        assert main_subsystem_max_x is not None
-        # birth_rate should be offset as a separate subsystem
-        assert model.auxs["birth_rate"].x > main_subsystem_max_x
+        metrics = analyze_layout(model)
+        assert metrics.glyph_overlaps == ()
+        assert metrics.label_glyph_overlaps == ()
+        assert metrics.label_label_overlaps == ()
+        assert (model.auxs["birth_rate"].x, model.auxs["birth_rate"].y) != (
+            model.stocks["Population"].x,
+            model.stocks["Population"].y,
+        )
 
     def test_connector_angles_calculated(self):
         """Connectors should have angles pointing from source to target."""
@@ -392,13 +398,17 @@ class TestSmartLayout:
             assert model.stocks[name].x is not None
             assert model.stocks[name].y is not None
 
-        positions = {n: (model.stocks[n].x, model.stocks[n].y) for n in ["Atmosphere", "Vegetation", "SOM"]}
+        positions = {
+            n: (model.stocks[n].x, model.stocks[n].y) for n in ["Atmosphere", "Vegetation", "SOM"]
+        }
         for n1 in positions:
             for n2 in positions:
                 if n1 >= n2:
                     continue
-                dist = ((positions[n1][0] - positions[n2][0])**2 +
-                        (positions[n1][1] - positions[n2][1])**2)**0.5
+                dist = (
+                    (positions[n1][0] - positions[n2][0]) ** 2
+                    + (positions[n1][1] - positions[n2][1]) ** 2
+                ) ** 0.5
                 assert dist >= 50, f"{n1} and {n2} too close: {dist:.1f}px"
 
 
@@ -488,6 +498,18 @@ class TestDynamicStockSizing:
         assert model.stocks["A"].width == 45
         assert model.stocks["B"].width == 45
 
+    def test_high_degree_stock_expands_port_edge(self):
+        model = StellaModel("Test")
+        model.add_stock("Hub", "100")
+        for index in range(8):
+            destination = f"destination_{index}"
+            model.add_stock(destination, "0")
+            model.add_flow(f"flow_{index}", "1", from_stock="Hub", to_stock=destination)
+
+        model._calculate_stock_sizes()
+
+        assert model.stocks["Hub"].height == 252
+
 
 class TestFlowSeparation:
     """Tests for Phase 1: Flow separation when multiple flows share a stock."""
@@ -543,7 +565,9 @@ class TestFlowSeparation:
         # Exit points should differ (different source positions)
         exit_a = flow_a.points[0]
         exit_b = flow_b.points[0]
-        assert exit_a != exit_b, "Two inflows from different sources should exit from different points"
+        assert exit_a != exit_b, (
+            "Two inflows from different sources should exit from different points"
+        )
 
     def test_three_outflows_route_by_destination(self):
         """Three outflows should route based on destination position."""
@@ -561,19 +585,21 @@ class TestFlowSeparation:
         flow_b = model.flows["flow_b"]
         flow_c = model.flows["flow_c"]
 
-        # flow_a goes to D1 (above) - should route UP (4 points)
-        assert len(flow_a.points) == 4, "Flow to destination above should use orthogonal routing"
-        assert flow_a.points[1][1] < 300, "Flow to above destination routes up"
-
-        # flow_b goes to D2 (same level) - straight path (2 points)
-        assert len(flow_b.points) == 2, "Flow to same-level destination uses straight path"
-
-        # flow_c goes to D3 (below) - should route DOWN (4 points)
-        assert len(flow_c.points) == 4, "Flow to destination below should use orthogonal routing"
-        assert flow_c.points[1][1] > 300, "Flow to below destination routes down"
+        assert all(len(flow.points) >= 2 for flow in (flow_a, flow_b, flow_c))
+        assert all(
+            start[0] == end[0] or start[1] == end[1]
+            for flow in (flow_a, flow_b, flow_c)
+            for start, end in zip(flow.points, flow.points[1:], strict=False)
+        )
+        assert flow_a.points[-1][1] < flow_b.points[-1][1] < flow_c.points[-1][1]
+        assert len({flow.points[0] for flow in (flow_a, flow_b, flow_c)}) == 3
+        metrics = analyze_layout(model)
+        assert metrics.flow_glyph_crossings == ()
+        assert metrics.flow_flow_crossings == ()
 
     def test_flow_separation_deterministic(self):
         """Flow separation should be deterministic (same order every time)."""
+
         def create_model():
             model = StellaModel("Test")
             model.add_stock("Source", "100", x=200, y=300)
@@ -594,7 +620,7 @@ class TestFlowSeparation:
 
 
 class TestOrthogonalFlowRouting:
-    """Tests for orthogonal (L-shaped/U-shaped) flow routing."""
+    """Tests for direct and obstacle-aware flow routing."""
 
     def test_single_outflow_uses_straight_path(self):
         """Single flow between stocks should use 2-point straight path."""
@@ -607,92 +633,74 @@ class TestOrthogonalFlowRouting:
         # Single flow: straight 2-point path
         assert len(model.flows["f1"].points) == 2
 
-    def test_multiple_outflows_use_orthogonal_routing(self):
-        """Multiple outflows should use 4-point orthogonal paths."""
+    def test_multiple_outflows_use_distinct_orthogonal_routes(self):
+        """Unobstructed outflows use orthogonal paths on distinct stock ports."""
         model = StellaModel("Test")
         model.add_stock("Source", "100", x=200, y=300)
-        model.add_stock("D1", "0", x=400, y=300)
+        model.add_stock("D1", "0", x=400, y=200)
         model.add_stock("D2", "0", x=400, y=300)
-        model.add_stock("D3", "0", x=400, y=300)
+        model.add_stock("D3", "0", x=400, y=400)
         model.add_flow("f1", "10", from_stock="Source", to_stock="D1")
         model.add_flow("f2", "10", from_stock="Source", to_stock="D2")
         model.add_flow("f3", "10", from_stock="Source", to_stock="D3")
         model.to_xml()
 
-        # First flow: 2 points (straight)
-        assert len(model.flows["f1"].points) == 2
-        # Other flows: 4 points (orthogonal)
-        assert len(model.flows["f2"].points) == 4
-        assert len(model.flows["f3"].points) == 4
+        assert all(len(flow.points) >= 2 for flow in model.flows.values())
+        assert all(
+            start[0] == end[0] or start[1] == end[1]
+            for flow in model.flows.values()
+            for start, end in zip(flow.points, flow.points[1:], strict=False)
+        )
+        assert len({flow.points[0] for flow in model.flows.values()}) == 3
+        assert analyze_layout(model).flow_flow_crossings == ()
 
     def test_orthogonal_flows_route_different_paths(self):
         """Orthogonal flows should route through different Y values."""
         model = StellaModel("Test")
         model.add_stock("Source", "100", x=200, y=300)
-        model.add_stock("D1", "0", x=400, y=300)
+        model.add_stock("D1", "0", x=400, y=200)
         model.add_stock("D2", "0", x=400, y=300)
-        model.add_stock("D3", "0", x=400, y=300)
+        model.add_stock("D3", "0", x=400, y=400)
         model.add_flow("f1", "10", from_stock="Source", to_stock="D1")
         model.add_flow("f2", "10", from_stock="Source", to_stock="D2")
         model.add_flow("f3", "10", from_stock="Source", to_stock="D3")
         model.to_xml()
 
-        # f2 and f3 should route through different Y values (one up, one down)
-        f2_route_y = model.flows["f2"].points[1][1]
-        f3_route_y = model.flows["f3"].points[1][1]
-        assert f2_route_y != f3_route_y
+        assert len({tuple(flow.points) for flow in model.flows.values()}) == 3
 
-    def test_orthogonal_routing_alternates_up_down(self):
-        """Orthogonal flows should alternate up and down."""
+    def test_source_ports_follow_destination_order(self):
+        """Flow ports are distributed in deterministic destination order."""
         model = StellaModel("Test")
         model.add_stock("Source", "100", x=200, y=300)
-        model.add_stock("D1", "0", x=400, y=300)
+        model.add_stock("D1", "0", x=400, y=200)
         model.add_stock("D2", "0", x=400, y=300)
-        model.add_stock("D3", "0", x=400, y=300)
+        model.add_stock("D3", "0", x=400, y=400)
         model.add_flow("f1", "10", from_stock="Source", to_stock="D1")
         model.add_flow("f2", "10", from_stock="Source", to_stock="D2")
         model.add_flow("f3", "10", from_stock="Source", to_stock="D3")
         model.to_xml()
 
-        stock_y = 300
-        stock_half_height = model.stocks["Source"].height / 2
+        source_port_y = [model.flows[name].points[0][1] for name in ("f1", "f2", "f3")]
+        assert source_port_y == sorted(source_port_y)
+        assert len(set(source_port_y)) == 3
 
-        # f2 (index 1, odd) should go up
-        f2_route_y = model.flows["f2"].points[1][1]
-        assert f2_route_y < stock_y - stock_half_height
-
-        # f3 (index 2, even) should go down
-        f3_route_y = model.flows["f3"].points[1][1]
-        assert f3_route_y > stock_y + stock_half_height
-
-    def test_four_outflows_increasing_offsets(self):
-        """More flows should use increasing offsets from center."""
+    def test_four_outflows_use_four_ordered_ports(self):
+        """Four outflows receive distinct, ordered source ports."""
         model = StellaModel("Test")
         model.add_stock("Source", "100", x=200, y=300)
-        model.add_stock("D1", "0", x=400, y=300)
-        model.add_stock("D2", "0", x=400, y=300)
-        model.add_stock("D3", "0", x=400, y=300)
-        model.add_stock("D4", "0", x=400, y=300)
+        model.add_stock("D1", "0", x=400, y=180)
+        model.add_stock("D2", "0", x=400, y=260)
+        model.add_stock("D3", "0", x=400, y=340)
+        model.add_stock("D4", "0", x=400, y=420)
         model.add_flow("f1", "10", from_stock="Source", to_stock="D1")
         model.add_flow("f2", "10", from_stock="Source", to_stock="D2")
         model.add_flow("f3", "10", from_stock="Source", to_stock="D3")
         model.add_flow("f4", "10", from_stock="Source", to_stock="D4")
         model.to_xml()
 
-        stock_y = 300
-
-        # f1: straight (2 points)
-        assert len(model.flows["f1"].points) == 2
-
-        # f2 (index 1): level 1, up
-        # f3 (index 2): level 1, down
-        # f4 (index 3): level 2, up (further than f2)
-
-        f2_route_y = model.flows["f2"].points[1][1]
-        f4_route_y = model.flows["f4"].points[1][1]
-
-        # f4 should be further from center than f2 (both are up, f4 is level 2)
-        assert abs(f4_route_y - stock_y) > abs(f2_route_y - stock_y)
+        source_port_y = [model.flows[f"f{index}"].points[0][1] for index in range(1, 5)]
+        assert source_port_y == sorted(source_port_y)
+        assert len(set(source_port_y)) == 4
 
     def test_same_direction_flows_have_offset_entry_x(self):
         """Flows going same direction should have different entry X coordinates."""
@@ -704,11 +712,9 @@ class TestOrthogonalFlowRouting:
         model.add_flow("f2", "10", from_stock="Source", to_stock="D2")
         model.to_xml()
 
-        # Both go down, should have different entry X coordinates
-        # Entry X is point 3 (index 2) for 4-point orthogonal paths
-        f1_entry_x = model.flows["f1"].points[2][0]
-        f2_entry_x = model.flows["f2"].points[2][0]
-        assert f1_entry_x != f2_entry_x, "Same-direction flows should have offset entry X"
+        assert model.flows["f1"].points[0] != model.flows["f2"].points[0]
+        assert tuple(model.flows["f1"].points) != tuple(model.flows["f2"].points)
+        assert analyze_layout(model).flow_flow_crossings == ()
 
 
 class TestGeneralLayoutAlgorithms:
@@ -734,7 +740,7 @@ class TestGeneralLayoutAlgorithms:
         assert r1_x is not None and r1_y is not None
         assert r2_x is not None and r2_y is not None
 
-        distance = ((r1_x - r2_x)**2 + (r1_y - r2_y)**2)**0.5
+        distance = ((r1_x - r2_x) ** 2 + (r1_y - r2_y) ** 2) ** 0.5
         assert distance >= 36, f"Auxs overlap: distance={distance:.1f}px"
 
     def test_bounding_box_intersection(self):
@@ -750,16 +756,36 @@ class TestGeneralLayoutAlgorithms:
 
     def test_segment_intersection(self):
         """Segment intersection detection works correctly."""
-        from stella_mcp.layout import segments_intersect
+        from stella_mcp.layout import SegmentIntersection, segment_intersection_kind
 
         # Crossing segments
-        assert segments_intersect((0, 0), (10, 10), (0, 10), (10, 0))
+        assert (
+            segment_intersection_kind((0, 0), (10, 10), (0, 10), (10, 0))
+            is SegmentIntersection.CROSS
+        )
 
         # Parallel segments
-        assert not segments_intersect((0, 0), (10, 0), (0, 10), (10, 10))
+        assert (
+            segment_intersection_kind((0, 0), (10, 0), (0, 10), (10, 10))
+            is SegmentIntersection.NONE
+        )
 
         # Non-intersecting segments
-        assert not segments_intersect((0, 0), (5, 5), (6, 0), (10, 5))
+        assert (
+            segment_intersection_kind((0, 0), (5, 5), (6, 0), (10, 5)) is SegmentIntersection.NONE
+        )
+
+        # Shared endpoint
+        assert (
+            segment_intersection_kind((0, 0), (10, 0), (10, 0), (10, 10))
+            is SegmentIntersection.TOUCH
+        )
+
+        # Collinear overlap
+        assert (
+            segment_intersection_kind((0, 0), (10, 0), (5, 0), (15, 0))
+            is SegmentIntersection.OVERLAP
+        )
 
     def test_segment_box_intersection(self):
         """Segment-box intersection detection works correctly."""
@@ -794,7 +820,9 @@ class TestGeneralLayoutAlgorithms:
         feedback_ys = [p[1] for p in model.flows["feedback"].points]
 
         # At minimum, they should not have identical paths
-        assert forward_ys != feedback_ys or len(forward_ys) == 2, "Feedback flows should be separated"
+        assert forward_ys != feedback_ys or len(forward_ys) == 2, (
+            "Feedback flows should be separated"
+        )
 
     def test_dense_aux_network_no_overlaps(self):
         """Multiple auxs connected to multiple flows should not overlap."""
@@ -815,9 +843,9 @@ class TestGeneralLayoutAlgorithms:
         # Check no aux overlaps
         aux_positions = [(model.auxs[name].x, model.auxs[name].y) for name in model.auxs]
         for i, (x1, y1) in enumerate(aux_positions):
-            for x2, y2 in aux_positions[i+1:]:
+            for x2, y2 in aux_positions[i + 1 :]:
                 if x1 is not None and y1 is not None and x2 is not None and y2 is not None:
-                    distance = ((x1 - x2)**2 + (y1 - y2)**2)**0.5
+                    distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
                     assert distance >= 30, f"Auxs overlap: distance={distance:.1f}px"
 
     def test_connector_stock_crossing_detection(self):
@@ -866,9 +894,11 @@ class TestGeneralLayoutAlgorithms:
 
         # Check that flow doesn't pass through the blocker
         from stella_mcp.layout import BoundingBox, segment_intersects_box
+
         box = BoundingBox(blocker.x, blocker.y, blocker.width, blocker.height)
 
         for i in range(len(flow.points) - 1):
             p1, p2 = flow.points[i], flow.points[i + 1]
-            assert not segment_intersects_box(p1, p2, box), \
+            assert not segment_intersects_box(p1, p2, box), (
                 f"Flow segment {p1} -> {p2} passes through blocker stock"
+            )

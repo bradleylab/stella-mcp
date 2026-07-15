@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-17.2 -8 824.4 184" width="824.4" height="184">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>
+<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:12px;fill:#000}</style>
+<polyline class="connector" points="368,81 368,103" marker-end="url(#arrow)"/>
+<polyline class="flow-pipe" points="178,113 558,113"/>
+<path class="flow-valve" d="M361,106 L375,120 L375,106 L361,120 z"/>
+<text class="label" x="368" y="134.2" text-anchor="middle">temperature dependent nutrient transformation flux</text>
+<rect class="stock" x="557.5" y="95.5" width="45" height="35"/>
+<text class="label" x="580" y="92.7" text-anchor="middle">downstream biologically available nutrient reservoir</text>
+<rect class="stock" x="133.5" y="95.5" width="45" height="35"/>
+<text class="label" x="156" y="92.7" text-anchor="middle">upstream dissolved nutrient reservoir</text>
+<circle class="aux" cx="368" cy="63" r="18"/>
+<text class="label" x="368" y="42.2" text-anchor="middle">temperature adjusted transformation coefficient</text>
+</svg>

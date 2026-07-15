@@ -4,10 +4,15 @@ import math
 import re
 import uuid
 
-from stella_mcp import model_layout, xmile_export
+from stella_mcp import layout_pipeline, model_layout, xmile_export
 from stella_mcp.equation_parser import extract_variable_references
 from stella_mcp.layout import BoundingBox
 from stella_mcp.model_types import (
+    DEFAULT_VIEW_FONT_POINTS,
+    DEFAULT_VIEW_PAGE_COLUMNS,
+    DEFAULT_VIEW_PAGE_HEIGHT,
+    DEFAULT_VIEW_PAGE_ROWS,
+    DEFAULT_VIEW_PAGE_WIDTH,
     Aux,
     Connector,
     Flow,
@@ -33,11 +38,21 @@ class StellaModel:
         self._connector_uid = 0
         self.compatibility_warnings: list[str] = []
         self.last_export_warnings: list[str] = []
+        self.last_layout_result = None
+        self.last_layout_metrics = None
+        self.layout_warnings = []
         self.header_extra_children_xml: list[str] = []
         self.model_extra_children_xml: list[str] = []
         self.views_extra_children_xml: list[str] = []
         self.view_extra_children_xml: list[str] = []
         self.view_extra_attrs: dict[str, str] = {}
+        self.view_page_width = DEFAULT_VIEW_PAGE_WIDTH
+        self.view_page_height = DEFAULT_VIEW_PAGE_HEIGHT
+        self.view_page_columns = DEFAULT_VIEW_PAGE_COLUMNS
+        self.view_page_rows = DEFAULT_VIEW_PAGE_ROWS
+        self.view_stock_font_points = DEFAULT_VIEW_FONT_POINTS
+        self.view_flow_font_points = DEFAULT_VIEW_FONT_POINTS
+        self.view_aux_font_points = DEFAULT_VIEW_FONT_POINTS
         self.prefs_xml: str | None = None
         self.views_style_xml: str | None = None
         self.inner_view_style_xml: str | None = None
@@ -161,6 +176,10 @@ class StellaModel:
         """Arrange subsystems: largest stays in place, smaller ones offset to the right."""
         return model_layout._arrange_subsystems(self, subsystems, bounds, gap)
 
+    def _snap_auto_geometry(self):
+        """Snap generated positions and unlocked routes to whole pixels."""
+        return model_layout._snap_auto_geometry(self)
+
     def add_stock(
         self,
         name: str,
@@ -183,6 +202,7 @@ class StellaModel:
             non_negative=non_negative,
             x=x,
             y=y,
+            position_source="user" if x is not None or y is not None else "auto",
         )
         self.stocks[self._normalize_name(name)] = stock
         return stock
@@ -217,6 +237,7 @@ class StellaModel:
             non_negative=non_negative,
             x=x,
             y=y,
+            position_source="user" if x is not None or y is not None else "auto",
             graphical_function=graphical_function,
         )
         flow_key = self._normalize_name(name)
@@ -248,6 +269,7 @@ class StellaModel:
             units=units,
             x=x,
             y=y,
+            position_source="user" if x is not None or y is not None else "auto",
             graphical_function=graphical_function,
         )
         self.auxs[self._normalize_name(name)] = aux
@@ -627,6 +649,8 @@ class StellaModel:
             stock.x = float(x)
         if y is not None:
             stock.y = float(y)
+        if x is not None or y is not None:
+            stock.position_source = "user"
         return stock
 
     def update_flow(
@@ -654,6 +678,8 @@ class StellaModel:
             flow.x = float(x)
         if y is not None:
             flow.y = float(y)
+        if x is not None or y is not None:
+            flow.position_source = "user"
         if graphical_function is not None:
             flow.graphical_function = graphical_function
         return flow
@@ -680,6 +706,8 @@ class StellaModel:
             aux.x = float(x)
         if y is not None:
             aux.y = float(y)
+        if x is not None or y is not None:
+            aux.position_source = "user"
         if graphical_function is not None:
             aux.graphical_function = graphical_function
         return aux
@@ -839,18 +867,8 @@ class StellaModel:
         return model_layout._calculate_stock_sizes(self)
 
     def _auto_layout(self):
-        """Auto-arrange visual positions using force-directed layout.
-
-        Uses connector relationships to position elements:
-        1. Calculates stock sizes based on connectivity
-        2. Builds dependency graph from connectors
-        3. Detects subsystems (connected components)
-        4. Positions elements via Fruchterman-Reingold force-directed layout
-        5. Separates independent subsystems visually
-
-        Always recalculates flow.points to ensure flows connect to stocks correctly.
-        """
-        return model_layout._auto_layout(self)
+        """Run deterministic directed placement, routing, and validation."""
+        return layout_pipeline.run_layout_pipeline(self)
 
     def _position_orphan_flows(self):
         """Place flows with no source or destination stock at a fallback spot.
@@ -895,14 +913,14 @@ class StellaModel:
             stock_x, stock_y, half_w, half_h, target_x, target_y
         )
 
-    def _recalculate_flow_points(self):
+    def _recalculate_flow_points(self, *, only_missing: bool = False):
         """Recalculate flow.points to connect stocks at their actual positions.
 
         Direction-aware: exits/enters from the stock edge closest to the
         destination, supporting stocks at arbitrary angles (not just horizontal).
         Uses orthogonal routing for multiple flows from the same stock.
         """
-        return model_layout._recalculate_flow_points(self)
+        return model_layout._recalculate_flow_points(self, only_missing=only_missing)
 
     def _calculate_connector_angles(self, force: bool = False):
         """Calculate connector angles based on source and target positions.

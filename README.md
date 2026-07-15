@@ -173,6 +173,9 @@ Notes:
 - `add_stock`/`add_flow`/`add_aux` reject duplicate variable names across variable types; `add_connector` requires both variables to exist.
 - `set_connector_routing` can target a connector by `connector_uid` or by `from_var` + `to_var`.
 - `save_model` and `get_model_xml` accept `auto_layout` (default `true`) and `resolve_layout_violations` (default `false`).
+- `save_model`, `get_model_xml`, and `render_diagram` return the latest layout
+  viewport, metrics, and warnings in structured content. Their text result names
+  any non-clean layout warning codes.
 - `read_model`, `save_model`, and `get_model_xml` accept `compat_mode`:
   - `permissive` (default): continue with warnings
   - `strict`: fail on compatibility issues
@@ -448,7 +451,7 @@ Claude: [Uses create_model, add_stock (x4), add_aux (x8), add_flow (x6), save_mo
 
 The `render_diagram` tool renders the model as an SVG stock-and-flow diagram
 — stocks as rectangles, auxiliaries as circles, flows as valved pipes
-(clouds mark sources/sinks), and dependency connectors as arcs. The SVG is
+(clouds mark sources/sinks), and dependency connectors as routed polylines. The SVG is
 returned inline so an agent can inspect the layout, and optionally written
 to a file you can open in any browser. It runs auto-layout first by default,
 so a freshly built model renders without manual positioning.
@@ -634,7 +637,23 @@ The `validate_model` tool checks for:
 
 - Output files use the [XMILE standard](https://docs.oasis-open.org/xmile/xmile/v1.0/xmile-v1.0.html)
 - Compatible with **Stella Professional 1.9+** and **Stella Architect**
-- Auto-layout positions elements reasonably; adjust manually in Stella if needed
+- Auto-layout uses a deterministic directed stock-flow backbone, distinct stock
+  ports, obstacle-aware flow and connector routes, label collision checks, and
+  page-grid sizing from complete visual bounds.
+- Authored coordinates, including coordinates supplied through update tools,
+  and locked route points remain fixed. Auto-generated coordinates are
+  recomputed on later exports so incrementally extended models can be ranked
+  again instead of freezing after their first save.
+- Locked paths are reserved before unlocked routes, labels are selected in
+  normalized-name order, and imported view-font sizes control label geometry in
+  both analysis and SVG previews.
+- Information connectors use direct boundary-to-boundary segments whenever the
+  complete diagram leaves them unobstructed and unshared. Stock-flow pipes stay
+  orthogonal because Stella rewrites diagonal flow segments on save.
+- Clean planar benchmark layouts have no glyph, label, or route crossings. A
+  graph that cannot be drawn cleanly is still exported and reports a stable
+  `layout.*` warning; zero crossings are not promised for arbitrary non-planar
+  graphs.
 - Variable names with spaces are converted to underscores internally
 - Parser normalizes imported stock inflow/outflow and connector endpoint references
 - Time-step export avoids lossy reciprocal rounding (non-exact reciprocals are exported as plain `dt`)
@@ -686,7 +705,11 @@ stella-mcp/
     ├── render_svg.py     # Stock-and-flow SVG rendering
     ├── model_types.py     # Model records and XMILE constants
     ├── model.py           # StellaModel lifecycle and compatibility delegates
-    ├── model_layout.py    # Layout and collision resolution
+    ├── model_layout.py    # Layout compatibility delegates and stock sizing
+    ├── layout_graph.py    # Directed graph ranking and component packing
+    ├── layout_router.py   # Boundary ports and obstacle-aware routing
+    ├── layout_quality.py  # Geometry analysis, metrics, and warnings
+    ├── layout_pipeline.py # Staged deterministic layout orchestration
     ├── xmile.py           # Public model compatibility facade
     ├── xmile_io.py        # XMILE I/O compatibility facade
     ├── xmile_parse.py     # XMILE parser and compatibility warnings

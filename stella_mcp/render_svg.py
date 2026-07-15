@@ -2,7 +2,7 @@
 
 Pure stdlib — no rasterization dependency. The output mirrors Stella's
 visual vocabulary (stocks as rectangles, auxiliaries as circles, flows as
-valved pipes, connectors as arcs) closely enough to read at a glance and
+valved pipes, connectors as routed polylines) closely enough to read at a glance and
 to spot layout problems without opening Stella.
 
 Coordinate system: Stella stores element ``.x/.y`` as centers and uses a
@@ -16,11 +16,17 @@ from __future__ import annotations
 
 from xml.sax.saxutils import escape, quoteattr
 
+from .layout_quality import (
+    CSS_PIXELS_PER_POINT,
+    DEFAULT_FONT_POINTS,
+    estimate_label_box,
+    label_font_points,
+)
+from .layout_router import element_box
 from .xmile import AUX_RADIUS, StellaModel
 
 _VALVE_HALF = 7.0  # Half-size of the flow valve bowtie glyph
 _CLOUD_R = 11.0  # Radius of source/sink cloud glyph
-_LABEL_DY = 13.0  # Vertical offset of a label below its element
 _CONNECTOR_BOW = 0.18  # Perpendicular bow as a fraction of connector length
 
 
@@ -29,11 +35,51 @@ def _fmt(value: float) -> str:
     return f"{value:.2f}".rstrip("0").rstrip(".") if value % 1 else str(int(value))
 
 
-def _label(cx: float, baseline_y: float, text: str) -> str:
+def _label(
+    cx: float,
+    baseline_y: float,
+    text: str,
+    font_pixels: float = DEFAULT_FONT_POINTS * CSS_PIXELS_PER_POINT,
+) -> str:
+    default_pixels = DEFAULT_FONT_POINTS * CSS_PIXELS_PER_POINT
+    font_size = (
+        ""
+        if font_pixels == default_pixels
+        else f' style="font-size:{_fmt(font_pixels)}px"'
+    )
     return (
         f'<text class="label" x="{_fmt(cx)}" y="{_fmt(baseline_y)}" '
-        f'text-anchor="middle">{escape(text)}</text>'
+        f'text-anchor="middle"{font_size}>{escape(text)}</text>'
     )
+
+
+def _element_label_svg(
+    model: StellaModel, key: str
+) -> tuple[str, list[tuple[float, float]]]:
+    element = next(
+        registry[key]
+        for registry in (model.stocks, model.flows, model.auxs)
+        if key in registry
+    )
+    glyph = element_box(model, key)
+    assert glyph is not None
+    font_points = label_font_points(model, key)
+    label = estimate_label_box(
+        glyph,
+        model._display_name(element.name),
+        element.label_side or "bottom",
+        font_points,
+    )
+    baseline_y = label.y + label.height * 0.35
+    return _label(
+        label.x,
+        baseline_y,
+        model._display_name(element.name),
+        font_points * CSS_PIXELS_PER_POINT,
+    ), [
+        (label.left, label.top),
+        (label.right, label.bottom),
+    ]
 
 
 def _unpositioned(model: StellaModel) -> list[str]:
@@ -58,8 +104,10 @@ def _stock_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, float]]
             f'<rect class="stock" x="{_fmt(left)}" y="{_fmt(top)}" '
             f'width="{_fmt(stock.width)}" height="{_fmt(stock.height)}"/>'
         )
-        parts.append(_label(stock.x, stock.y + half_h + _LABEL_DY, model._display_name(stock.name)))
+        label, label_extents = _element_label_svg(model, key)
+        parts.append(label)
         extents += [(left, top), (stock.x + half_w, stock.y + half_h)]
+        extents += label_extents
     return parts, extents
 
 
@@ -71,8 +119,10 @@ def _aux_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, float]]]:
         parts.append(
             f'<circle class="aux" cx="{_fmt(aux.x)}" cy="{_fmt(aux.y)}" r="{_fmt(AUX_RADIUS)}"/>'
         )
-        parts.append(_label(aux.x, aux.y + AUX_RADIUS + _LABEL_DY, model._display_name(aux.name)))
+        label, label_extents = _element_label_svg(model, key)
+        parts.append(label)
         extents += [(aux.x - AUX_RADIUS, aux.y - AUX_RADIUS), (aux.x + AUX_RADIUS, aux.y + AUX_RADIUS)]
+        extents += label_extents
     return parts, extents
 
 
@@ -108,9 +158,11 @@ def _flow_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, float]]]
             parts.append(_cloud_svg(*points[0]))
         if flow.to_stock is None and points:
             parts.append(_cloud_svg(*points[-1]))
-        parts.append(_label(flow.x, flow.y + _VALVE_HALF + _LABEL_DY, model._display_name(flow.name)))
+        label, label_extents = _element_label_svg(model, key)
+        parts.append(label)
         extents += [(vx - h, vy - h), (vx + h, vy + h)]
         extents += [(px, py) for px, py in points]
+        extents += label_extents
     return parts, extents
 
 
@@ -127,7 +179,7 @@ def _connector_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, flo
     extents: list[tuple[float, float]] = []
     # Sort by uid for deterministic output.
     for connector in sorted(model.connectors, key=lambda c: c.uid):
-        if connector.points_locked and connector.points:
+        if connector.points:
             pts = " ".join(f"{_fmt(px)},{_fmt(py)}" for px, py in connector.points)
             parts.append(f'<polyline class="connector" points="{pts}" marker-end="url(#arrow)"/>')
             extents += [(px, py) for px, py in connector.points]
@@ -137,9 +189,7 @@ def _connector_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, flo
         if src is None or dst is None:
             continue
         (sx, sy), (dx, dy) = src, dst
-        # Perpendicular bow gives the characteristic connector curve. Angle-
-        # aware routing is deferred until Stella's angle convention is
-        # verified against real exports rather than guessed.
+        # Imported connectors without point data retain the legacy arc preview.
         mx, my = (sx + dx) / 2, (sy + dy) / 2
         vx, vy = dx - sx, dy - sy
         cx, cy = mx - vy * _CONNECTOR_BOW, my + vx * _CONNECTOR_BOW
@@ -219,7 +269,7 @@ def render_model_svg(model: StellaModel, *, margin: float = 40.0) -> str:
         '.cloud{fill:#fff;stroke:#000;stroke-width:1}'
         '.connector{fill:none;stroke:#FF007F;stroke-width:1}'
         '.module{fill:none;stroke:#666;stroke-width:1}'
-        '.label{font-family:Arial,sans-serif;font-size:11px;fill:#000}'
+        '.label{font-family:Arial,sans-serif;font-size:12px;fill:#000}'
         '</style>',
         *body,
         '</svg>',

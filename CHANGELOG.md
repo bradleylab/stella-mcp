@@ -7,10 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.12.0] - 2026-07-14
+## [0.12.0] - 2026-07-15
 
 ### Added
 
+- A deterministic directed layout pipeline with strongly connected component
+  placement, distinct stock ports, obstacle-aware flow and connector routing,
+  target-aware auxiliary placement, label-side selection, and dynamic page grids.
+- Typed imported view-font sizes shared by label layout and SVG rendering, with
+  locked routes reserved before deterministic unlocked-route and label passes.
+- Structured layout metrics and stable `layout.*` warnings on `save_model`,
+  `get_model_xml`, and `render_diagram`, plus a reproducible benchmark corpus
+  covering built-in templates, branching, feedback, disconnected, pinned,
+  self-loop, long-label, planar, non-planar, and incremental cases.
 - Deterministic native-stdio evaluation scenarios covering model construction,
   strict round-trips, structured error recovery, simulation, scenario analysis,
   sensitivity analysis, and calibration, with machine-readable evidence.
@@ -28,6 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Auto-generated coordinates are recomputed deterministically on each layout
+  run; user-authored coordinates and locked flow or connector points remain
+  fixed. Coordinates supplied through update operations are now marked as
+  user-authored. This allows an incrementally extended model to be ranked again
+  after an earlier export without moving explicit edits.
+- SVG previews now use the same routed connector points and label sides as the
+  XMILE view instead of drawing unlocked connectors as approximate arcs.
+- XMILE stock coordinates now round-trip Stella's dimension-dependent
+  upper-left/center convention, flow routes remain intact during fixed-layout
+  export, and generated connector routes receive Stella-compatible Bezier
+  anchors.
 - The supported MCP SDK range is now `>=1.19.0,<2`. Native stdio testing found
   that 1.18.0 and older cannot transport the server's direct structured
   `CallToolResult` responses; 1.19.0 is the first tested working floor.
@@ -38,6 +58,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Eliminated avoidable glyph overlaps, label overlaps, route-through-glyph
+  errors, shared route segments, and line crossings across every planar layout
+  benchmark and built-in template. The known non-planar benchmark retains one
+  deterministic crossing and reports `layout.unavoidable_crossing`.
+- Prefer direct information-connector segments whenever the completed diagram
+  leaves them unobstructed and unshared; the release analyzer gates avoidable
+  detours explicitly.
 - Reworked the built-in SIR layout into a compact, one-page left-to-right model
   so its connectors remain on the visible canvas in Stella Professional 4.1.1.
 

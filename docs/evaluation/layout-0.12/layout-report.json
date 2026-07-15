@@ -1,0 +1,4550 @@
+{
+  "acceptance": {
+    "route_bend_cap": 4,
+    "route_length_manhattan_multiplier": 4.5
+  },
+  "cases": {
+    "chain": {
+      "auxiliaries": 9,
+      "connectors": 9,
+      "elements": 28,
+      "flows": 9,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.8,
+            32.0,
+            1433.2,
+            123.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 22.0,
+          "maximum_flow_length": 106.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 0,
+          "total_connector_length": 198.0,
+          "total_flow_length": 954.0
+        },
+        "viewport": {
+          "columns": 2,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 106.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 0,
+        "total_connector_length": 198.0,
+        "total_flow_length": 954.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.8,
+          32.0,
+          1433.2,
+          123.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 106.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 0,
+        "total_connector_length": 198.0,
+        "total_flow_length": 954.0
+      },
+      "position_sources": {
+        "flow_0": "auto",
+        "flow_1": "auto",
+        "flow_2": "auto",
+        "flow_3": "auto",
+        "flow_4": "auto",
+        "flow_5": "auto",
+        "flow_6": "auto",
+        "flow_7": "auto",
+        "flow_8": "auto",
+        "rate_0": "auto",
+        "rate_1": "auto",
+        "rate_2": "auto",
+        "rate_3": "auto",
+        "rate_4": "auto",
+        "rate_5": "auto",
+        "rate_6": "auto",
+        "rate_7": "auto",
+        "rate_8": "auto",
+        "stock_0": "auto",
+        "stock_1": "auto",
+        "stock_2": "auto",
+        "stock_3": "auto",
+        "stock_4": "auto",
+        "stock_5": "auto",
+        "stock_6": "auto",
+        "stock_7": "auto",
+        "stock_8": "auto",
+        "stock_9": "auto"
+      },
+      "positions": {
+        "flow_0": [
+          133.0,
+          100.0
+        ],
+        "flow_1": [
+          283.0,
+          100.0
+        ],
+        "flow_2": [
+          433.0,
+          100.0
+        ],
+        "flow_3": [
+          583.0,
+          100.0
+        ],
+        "flow_4": [
+          733.0,
+          100.0
+        ],
+        "flow_5": [
+          883.0,
+          100.0
+        ],
+        "flow_6": [
+          1033.0,
+          100.0
+        ],
+        "flow_7": [
+          1183.0,
+          100.0
+        ],
+        "flow_8": [
+          1333.0,
+          100.0
+        ],
+        "rate_0": [
+          133.0,
+          50.0
+        ],
+        "rate_1": [
+          283.0,
+          50.0
+        ],
+        "rate_2": [
+          433.0,
+          50.0
+        ],
+        "rate_3": [
+          583.0,
+          50.0
+        ],
+        "rate_4": [
+          733.0,
+          50.0
+        ],
+        "rate_5": [
+          883.0,
+          50.0
+        ],
+        "rate_6": [
+          1033.0,
+          50.0
+        ],
+        "rate_7": [
+          1183.0,
+          50.0
+        ],
+        "rate_8": [
+          1333.0,
+          50.0
+        ],
+        "stock_0": [
+          58.0,
+          100.0
+        ],
+        "stock_1": [
+          208.0,
+          100.0
+        ],
+        "stock_2": [
+          358.0,
+          100.0
+        ],
+        "stock_3": [
+          508.0,
+          100.0
+        ],
+        "stock_4": [
+          658.0,
+          100.0
+        ],
+        "stock_5": [
+          808.0,
+          100.0
+        ],
+        "stock_6": [
+          958.0,
+          100.0
+        ],
+        "stock_7": [
+          1108.0,
+          100.0
+        ],
+        "stock_8": [
+          1258.0,
+          100.0
+        ],
+        "stock_9": [
+          1408.0,
+          100.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            133.0,
+            68.0
+          ],
+          [
+            133.0,
+            90.0
+          ]
+        ],
+        "connector:2": [
+          [
+            283.0,
+            68.0
+          ],
+          [
+            283.0,
+            90.0
+          ]
+        ],
+        "connector:3": [
+          [
+            433.0,
+            68.0
+          ],
+          [
+            433.0,
+            90.0
+          ]
+        ],
+        "connector:4": [
+          [
+            583.0,
+            68.0
+          ],
+          [
+            583.0,
+            90.0
+          ]
+        ],
+        "connector:5": [
+          [
+            733.0,
+            68.0
+          ],
+          [
+            733.0,
+            90.0
+          ]
+        ],
+        "connector:6": [
+          [
+            883.0,
+            68.0
+          ],
+          [
+            883.0,
+            90.0
+          ]
+        ],
+        "connector:7": [
+          [
+            1033.0,
+            68.0
+          ],
+          [
+            1033.0,
+            90.0
+          ]
+        ],
+        "connector:8": [
+          [
+            1183.0,
+            68.0
+          ],
+          [
+            1183.0,
+            90.0
+          ]
+        ],
+        "connector:9": [
+          [
+            1333.0,
+            68.0
+          ],
+          [
+            1333.0,
+            90.0
+          ]
+        ],
+        "flow:flow_0": [
+          [
+            80.0,
+            100.0
+          ],
+          [
+            186.0,
+            100.0
+          ]
+        ],
+        "flow:flow_1": [
+          [
+            230.0,
+            100.0
+          ],
+          [
+            336.0,
+            100.0
+          ]
+        ],
+        "flow:flow_2": [
+          [
+            380.0,
+            100.0
+          ],
+          [
+            486.0,
+            100.0
+          ]
+        ],
+        "flow:flow_3": [
+          [
+            530.0,
+            100.0
+          ],
+          [
+            636.0,
+            100.0
+          ]
+        ],
+        "flow:flow_4": [
+          [
+            680.0,
+            100.0
+          ],
+          [
+            786.0,
+            100.0
+          ]
+        ],
+        "flow:flow_5": [
+          [
+            830.0,
+            100.0
+          ],
+          [
+            936.0,
+            100.0
+          ]
+        ],
+        "flow:flow_6": [
+          [
+            980.0,
+            100.0
+          ],
+          [
+            1086.0,
+            100.0
+          ]
+        ],
+        "flow:flow_7": [
+          [
+            1130.0,
+            100.0
+          ],
+          [
+            1236.0,
+            100.0
+          ]
+        ],
+        "flow:flow_8": [
+          [
+            1280.0,
+            100.0
+          ],
+          [
+            1386.0,
+            100.0
+          ]
+        ]
+      },
+      "stocks": 10
+    },
+    "dense_planar": {
+      "auxiliaries": 9,
+      "connectors": 9,
+      "elements": 12,
+      "flows": 1,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.400000000000006,
+            32.0,
+            604.6,
+            286.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 320.66493416025395,
+          "maximum_flow_length": 106.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 0,
+          "total_connector_length": 925.6016734282956,
+          "total_flow_length": 106.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 320.66493416025395,
+        "maximum_flow_length": 106.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 0,
+        "total_connector_length": 925.6016734282956,
+        "total_flow_length": 106.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.400000000000006,
+          32.0,
+          604.6,
+          286.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 320.66493416025395,
+        "maximum_flow_length": 106.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 0,
+        "total_connector_length": 925.6016734282956,
+        "total_flow_length": 106.0
+      },
+      "position_sources": {
+        "base_factor": "auto",
+        "derived_factor_0": "auto",
+        "derived_factor_1": "auto",
+        "derived_factor_2": "auto",
+        "derived_factor_3": "auto",
+        "derived_factor_4": "auto",
+        "derived_factor_5": "auto",
+        "derived_factor_6": "auto",
+        "derived_factor_7": "auto",
+        "destination": "auto",
+        "source": "auto",
+        "transfer": "auto"
+      },
+      "positions": {
+        "base_factor": [
+          547.0,
+          121.0
+        ],
+        "derived_factor_0": [
+          547.0,
+          63.0
+        ],
+        "derived_factor_1": [
+          489.0,
+          63.0
+        ],
+        "derived_factor_2": [
+          431.0,
+          63.0
+        ],
+        "derived_factor_3": [
+          90.0,
+          162.0
+        ],
+        "derived_factor_4": [
+          390.0,
+          162.0
+        ],
+        "derived_factor_5": [
+          355.0,
+          255.0
+        ],
+        "derived_factor_6": [
+          489.0,
+          121.0
+        ],
+        "derived_factor_7": [
+          489.0,
+          179.0
+        ],
+        "destination": [
+          564.0,
+          229.0
+        ],
+        "source": [
+          414.0,
+          229.0
+        ],
+        "transfer": [
+          489.0,
+          229.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            489.0,
+            197.0
+          ],
+          [
+            489.0,
+            219.0
+          ]
+        ],
+        "connector:2": [
+          [
+            547.0,
+            103.0
+          ],
+          [
+            547.0,
+            81.0
+          ]
+        ],
+        "connector:3": [
+          [
+            529.0,
+            63.0
+          ],
+          [
+            507.0,
+            63.0
+          ]
+        ],
+        "connector:4": [
+          [
+            471.0,
+            63.0
+          ],
+          [
+            449.0,
+            63.0
+          ]
+        ],
+        "connector:5": [
+          [
+            413.0,
+            63.0
+          ],
+          [
+            108.0,
+            162.0
+          ]
+        ],
+        "connector:6": [
+          [
+            108.0,
+            162.0
+          ],
+          [
+            372.0,
+            162.0
+          ]
+        ],
+        "connector:7": [
+          [
+            390.0,
+            180.0
+          ],
+          [
+            355.0,
+            237.0
+          ]
+        ],
+        "connector:8": [
+          [
+            355.0,
+            237.0
+          ],
+          [
+            471.0,
+            121.0
+          ]
+        ],
+        "connector:9": [
+          [
+            489.0,
+            139.0
+          ],
+          [
+            489.0,
+            161.0
+          ]
+        ],
+        "flow:transfer": [
+          [
+            436.0,
+            229.0
+          ],
+          [
+            542.0,
+            229.0
+          ]
+        ]
+      },
+      "stocks": 2
+    },
+    "disconnected": {
+      "auxiliaries": 3,
+      "connectors": 2,
+      "elements": 7,
+      "flows": 2,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.2,
+            32.0,
+            258.6,
+            344.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 22.0,
+          "maximum_flow_length": 106.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 0,
+          "total_connector_length": 44.0,
+          "total_flow_length": 166.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 106.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 0,
+        "total_connector_length": 44.0,
+        "total_flow_length": 166.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.2,
+          32.0,
+          258.6,
+          344.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 106.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 0,
+        "total_connector_length": 44.0,
+        "total_flow_length": 166.0
+      },
+      "position_sources": {
+        "destination": "auto",
+        "external_exchange": "auto",
+        "observation": "auto",
+        "scaled_observation": "auto",
+        "source": "auto",
+        "transfer": "auto",
+        "transfer_rate": "auto"
+      },
+      "positions": {
+        "destination": [
+          219.0,
+          113.0
+        ],
+        "external_exchange": [
+          145.0,
+          233.0
+        ],
+        "observation": [
+          155.0,
+          313.0
+        ],
+        "scaled_observation": [
+          97.0,
+          313.0
+        ],
+        "source": [
+          69.0,
+          113.0
+        ],
+        "transfer": [
+          144.0,
+          113.0
+        ],
+        "transfer_rate": [
+          144.0,
+          63.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            144.0,
+            81.0
+          ],
+          [
+            144.0,
+            103.0
+          ]
+        ],
+        "connector:2": [
+          [
+            137.0,
+            313.0
+          ],
+          [
+            115.0,
+            313.0
+          ]
+        ],
+        "flow:external_exchange": [
+          [
+            115.0,
+            233.0
+          ],
+          [
+            175.0,
+            233.0
+          ]
+        ],
+        "flow:transfer": [
+          [
+            91.0,
+            113.0
+          ],
+          [
+            197.0,
+            113.0
+          ]
+        ]
+      },
+      "stocks": 2
+    },
+    "fanout": {
+      "auxiliaries": 8,
+      "connectors": 16,
+      "elements": 25,
+      "flows": 8,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.0,
+            32.5,
+            565.6,
+            562.5
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 270.0,
+          "maximum_flow_length": 323.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 25,
+          "total_connector_length": 1757.2543018382214,
+          "total_flow_length": 2096.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 270.0,
+        "maximum_flow_length": 323.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 25,
+        "total_connector_length": 1757.2543018382214,
+        "total_flow_length": 2096.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.0,
+          32.5,
+          565.6,
+          562.5
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 270.0,
+        "maximum_flow_length": 323.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 25,
+        "total_connector_length": 1757.2543018382214,
+        "total_flow_length": 2096.0
+      },
+      "position_sources": {
+        "destination_0": "auto",
+        "destination_1": "auto",
+        "destination_2": "auto",
+        "destination_3": "auto",
+        "destination_4": "auto",
+        "destination_5": "auto",
+        "destination_6": "auto",
+        "destination_7": "auto",
+        "flow_0": "auto",
+        "flow_1": "auto",
+        "flow_2": "auto",
+        "flow_3": "auto",
+        "flow_4": "auto",
+        "flow_5": "auto",
+        "flow_6": "auto",
+        "flow_7": "auto",
+        "hub": "auto",
+        "rate_0": "auto",
+        "rate_1": "auto",
+        "rate_2": "auto",
+        "rate_3": "auto",
+        "rate_4": "auto",
+        "rate_5": "auto",
+        "rate_6": "auto",
+        "rate_7": "auto"
+      },
+      "positions": {
+        "destination_0": [
+          354.0,
+          63.0
+        ],
+        "destination_1": [
+          354.0,
+          131.0
+        ],
+        "destination_2": [
+          354.0,
+          201.0
+        ],
+        "destination_3": [
+          354.0,
+          269.0
+        ],
+        "destination_4": [
+          354.0,
+          339.0
+        ],
+        "destination_5": [
+          354.0,
+          407.0
+        ],
+        "destination_6": [
+          354.0,
+          477.0
+        ],
+        "destination_7": [
+          354.0,
+          545.0
+        ],
+        "flow_0": [
+          188.0,
+          81.0
+        ],
+        "flow_1": [
+          224.0,
+          165.0
+        ],
+        "flow_2": [
+          260.0,
+          249.0
+        ],
+        "flow_3": [
+          252.0,
+          290.0
+        ],
+        "flow_4": [
+          252.0,
+          318.0
+        ],
+        "flow_5": [
+          260.0,
+          359.0
+        ],
+        "flow_6": [
+          224.0,
+          443.0
+        ],
+        "flow_7": [
+          188.0,
+          527.0
+        ],
+        "hub": [
+          92.0,
+          304.0
+        ],
+        "rate_0": [
+          138.0,
+          81.0
+        ],
+        "rate_1": [
+          274.0,
+          165.0
+        ],
+        "rate_2": [
+          420.0,
+          249.0
+        ],
+        "rate_3": [
+          478.0,
+          290.0
+        ],
+        "rate_4": [
+          544.0,
+          318.0
+        ],
+        "rate_5": [
+          420.0,
+          359.0
+        ],
+        "rate_6": [
+          274.0,
+          443.0
+        ],
+        "rate_7": [
+          138.0,
+          527.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            152.0,
+            206.0
+          ],
+          [
+            188.0,
+            91.0
+          ]
+        ],
+        "connector:10": [
+          [
+            526.0,
+            318.0
+          ],
+          [
+            504.0,
+            318.0
+          ],
+          [
+            504.0,
+            321.0
+          ],
+          [
+            284.0,
+            321.0
+          ],
+          [
+            284.0,
+            318.0
+          ],
+          [
+            262.0,
+            318.0
+          ]
+        ],
+        "connector:11": [
+          [
+            152.0,
+            346.0
+          ],
+          [
+            260.0,
+            349.0
+          ]
+        ],
+        "connector:12": [
+          [
+            402.0,
+            359.0
+          ],
+          [
+            270.0,
+            359.0
+          ]
+        ],
+        "connector:13": [
+          [
+            152.0,
+            374.0
+          ],
+          [
+            224.0,
+            374.0
+          ],
+          [
+            224.0,
+            433.0
+          ]
+        ],
+        "connector:14": [
+          [
+            256.0,
+            443.0
+          ],
+          [
+            234.0,
+            443.0
+          ]
+        ],
+        "connector:15": [
+          [
+            152.0,
+            402.0
+          ],
+          [
+            188.0,
+            517.0
+          ]
+        ],
+        "connector:16": [
+          [
+            156.0,
+            527.0
+          ],
+          [
+            178.0,
+            527.0
+          ]
+        ],
+        "connector:2": [
+          [
+            156.0,
+            81.0
+          ],
+          [
+            178.0,
+            81.0
+          ]
+        ],
+        "connector:3": [
+          [
+            152.0,
+            234.0
+          ],
+          [
+            224.0,
+            234.0
+          ],
+          [
+            224.0,
+            175.0
+          ]
+        ],
+        "connector:4": [
+          [
+            256.0,
+            165.0
+          ],
+          [
+            234.0,
+            165.0
+          ]
+        ],
+        "connector:5": [
+          [
+            152.0,
+            262.0
+          ],
+          [
+            260.0,
+            259.0
+          ]
+        ],
+        "connector:6": [
+          [
+            420.0,
+            231.0
+          ],
+          [
+            420.0,
+            238.0
+          ],
+          [
+            292.0,
+            238.0
+          ],
+          [
+            292.0,
+            249.0
+          ],
+          [
+            270.0,
+            249.0
+          ]
+        ],
+        "connector:7": [
+          [
+            152.0,
+            304.0
+          ],
+          [
+            242.0,
+            290.0
+          ]
+        ],
+        "connector:8": [
+          [
+            460.0,
+            290.0
+          ],
+          [
+            262.0,
+            290.0
+          ]
+        ],
+        "connector:9": [
+          [
+            152.0,
+            304.0
+          ],
+          [
+            242.0,
+            318.0
+          ]
+        ],
+        "flow:flow_0": [
+          [
+            152.0,
+            206.0
+          ],
+          [
+            188.0,
+            206.0
+          ],
+          [
+            188.0,
+            63.0
+          ],
+          [
+            332.0,
+            63.0
+          ]
+        ],
+        "flow:flow_1": [
+          [
+            152.0,
+            234.0
+          ],
+          [
+            224.0,
+            234.0
+          ],
+          [
+            224.0,
+            131.0
+          ],
+          [
+            332.0,
+            131.0
+          ]
+        ],
+        "flow:flow_2": [
+          [
+            152.0,
+            262.0
+          ],
+          [
+            260.0,
+            262.0
+          ],
+          [
+            260.0,
+            201.0
+          ],
+          [
+            332.0,
+            201.0
+          ]
+        ],
+        "flow:flow_3": [
+          [
+            152.0,
+            290.0
+          ],
+          [
+            296.0,
+            290.0
+          ],
+          [
+            296.0,
+            269.0
+          ],
+          [
+            332.0,
+            269.0
+          ]
+        ],
+        "flow:flow_4": [
+          [
+            152.0,
+            318.0
+          ],
+          [
+            296.0,
+            318.0
+          ],
+          [
+            296.0,
+            339.0
+          ],
+          [
+            332.0,
+            339.0
+          ]
+        ],
+        "flow:flow_5": [
+          [
+            152.0,
+            346.0
+          ],
+          [
+            260.0,
+            346.0
+          ],
+          [
+            260.0,
+            407.0
+          ],
+          [
+            332.0,
+            407.0
+          ]
+        ],
+        "flow:flow_6": [
+          [
+            152.0,
+            374.0
+          ],
+          [
+            224.0,
+            374.0
+          ],
+          [
+            224.0,
+            477.0
+          ],
+          [
+            332.0,
+            477.0
+          ]
+        ],
+        "flow:flow_7": [
+          [
+            152.0,
+            402.0
+          ],
+          [
+            188.0,
+            402.0
+          ],
+          [
+            188.0,
+            545.0
+          ],
+          [
+            332.0,
+            545.0
+          ]
+        ]
+      },
+      "stocks": 9
+    },
+    "feedback": {
+      "auxiliaries": 12,
+      "connectors": 18,
+      "elements": 24,
+      "flows": 6,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.099999999999994,
+            32.0,
+            572.8,
+            583.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 486.0,
+          "maximum_flow_length": 215.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 10,
+          "total_connector_length": 2442.4111626521767,
+          "total_flow_length": 1172.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 486.0,
+        "maximum_flow_length": 215.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 10,
+        "total_connector_length": 2442.4111626521767,
+        "total_flow_length": 1172.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.099999999999994,
+          32.0,
+          572.8,
+          583.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 486.0,
+        "maximum_flow_length": 215.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 10,
+        "total_connector_length": 2442.4111626521767,
+        "total_flow_length": 1172.0
+      },
+      "position_sources": {
+        "control_0": "auto",
+        "control_1": "auto",
+        "control_2": "auto",
+        "control_3": "auto",
+        "control_4": "auto",
+        "control_5": "auto",
+        "factor_0": "auto",
+        "factor_1": "auto",
+        "factor_2": "auto",
+        "factor_3": "auto",
+        "factor_4": "auto",
+        "factor_5": "auto",
+        "flow_0": "auto",
+        "flow_1": "auto",
+        "flow_2": "auto",
+        "flow_3": "auto",
+        "flow_4": "auto",
+        "flow_5": "auto",
+        "stock_0": "auto",
+        "stock_1": "auto",
+        "stock_2": "auto",
+        "stock_3": "auto",
+        "stock_4": "auto",
+        "stock_5": "auto"
+      },
+      "positions": {
+        "control_0": [
+          356.0,
+          217.0
+        ],
+        "control_1": [
+          486.0,
+          312.0
+        ],
+        "control_2": [
+          306.0,
+          357.0
+        ],
+        "control_3": [
+          140.0,
+          552.0
+        ],
+        "control_4": [
+          156.0,
+          312.0
+        ],
+        "control_5": [
+          140.0,
+          72.0
+        ],
+        "factor_0": [
+          248.0,
+          267.0
+        ],
+        "factor_1": [
+          544.0,
+          312.0
+        ],
+        "factor_2": [
+          248.0,
+          357.0
+        ],
+        "factor_3": [
+          198.0,
+          552.0
+        ],
+        "factor_4": [
+          368.0,
+          312.0
+        ],
+        "factor_5": [
+          198.0,
+          72.0
+        ],
+        "flow_0": [
+          402.0,
+          122.0
+        ],
+        "flow_1": [
+          436.0,
+          312.0
+        ],
+        "flow_2": [
+          306.0,
+          407.0
+        ],
+        "flow_3": [
+          140.0,
+          502.0
+        ],
+        "flow_4": [
+          106.0,
+          312.0
+        ],
+        "flow_5": [
+          140.0,
+          122.0
+        ],
+        "stock_0": [
+          271.0,
+          122.0
+        ],
+        "stock_1": [
+          436.0,
+          217.0
+        ],
+        "stock_2": [
+          436.0,
+          407.0
+        ],
+        "stock_3": [
+          271.0,
+          502.0
+        ],
+        "stock_4": [
+          106.0,
+          407.0
+        ],
+        "stock_5": [
+          106.0,
+          217.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            356.0,
+            199.0
+          ],
+          [
+            402.0,
+            132.0
+          ]
+        ],
+        "connector:10": [
+          [
+            271.0,
+            520.0
+          ],
+          [
+            271.0,
+            542.0
+          ],
+          [
+            486.0,
+            542.0
+          ],
+          [
+            486.0,
+            330.0
+          ]
+        ],
+        "connector:11": [
+          [
+            266.0,
+            357.0
+          ],
+          [
+            288.0,
+            357.0
+          ]
+        ],
+        "connector:12": [
+          [
+            128.0,
+            407.0
+          ],
+          [
+            306.0,
+            375.0
+          ]
+        ],
+        "connector:13": [
+          [
+            180.0,
+            552.0
+          ],
+          [
+            158.0,
+            552.0
+          ]
+        ],
+        "connector:14": [
+          [
+            84.0,
+            217.0
+          ],
+          [
+            62.0,
+            217.0
+          ],
+          [
+            62.0,
+            552.0
+          ],
+          [
+            122.0,
+            552.0
+          ]
+        ],
+        "connector:15": [
+          [
+            350.0,
+            312.0
+          ],
+          [
+            174.0,
+            312.0
+          ]
+        ],
+        "connector:16": [
+          [
+            271.0,
+            140.0
+          ],
+          [
+            156.0,
+            294.0
+          ]
+        ],
+        "connector:17": [
+          [
+            180.0,
+            72.0
+          ],
+          [
+            158.0,
+            72.0
+          ]
+        ],
+        "connector:18": [
+          [
+            436.0,
+            200.0
+          ],
+          [
+            436.0,
+            32.0
+          ],
+          [
+            140.0,
+            32.0
+          ],
+          [
+            140.0,
+            54.0
+          ]
+        ],
+        "connector:2": [
+          [
+            468.0,
+            312.0
+          ],
+          [
+            446.0,
+            312.0
+          ]
+        ],
+        "connector:3": [
+          [
+            306.0,
+            375.0
+          ],
+          [
+            306.0,
+            397.0
+          ]
+        ],
+        "connector:4": [
+          [
+            140.0,
+            534.0
+          ],
+          [
+            140.0,
+            512.0
+          ]
+        ],
+        "connector:5": [
+          [
+            138.0,
+            312.0
+          ],
+          [
+            116.0,
+            312.0
+          ]
+        ],
+        "connector:6": [
+          [
+            140.0,
+            90.0
+          ],
+          [
+            140.0,
+            112.0
+          ]
+        ],
+        "connector:7": [
+          [
+            266.0,
+            267.0
+          ],
+          [
+            338.0,
+            217.0
+          ]
+        ],
+        "connector:8": [
+          [
+            436.0,
+            390.0
+          ],
+          [
+            356.0,
+            235.0
+          ]
+        ],
+        "connector:9": [
+          [
+            526.0,
+            312.0
+          ],
+          [
+            504.0,
+            312.0
+          ]
+        ],
+        "flow:flow_0": [
+          [
+            294.0,
+            122.0
+          ],
+          [
+            414.0,
+            122.0
+          ],
+          [
+            414.0,
+            217.0
+          ]
+        ],
+        "flow:flow_1": [
+          [
+            436.0,
+            234.0
+          ],
+          [
+            436.0,
+            390.0
+          ]
+        ],
+        "flow:flow_2": [
+          [
+            414.0,
+            407.0
+          ],
+          [
+            294.0,
+            407.0
+          ],
+          [
+            294.0,
+            502.0
+          ]
+        ],
+        "flow:flow_3": [
+          [
+            248.0,
+            502.0
+          ],
+          [
+            128.0,
+            502.0
+          ],
+          [
+            128.0,
+            407.0
+          ]
+        ],
+        "flow:flow_4": [
+          [
+            106.0,
+            390.0
+          ],
+          [
+            106.0,
+            234.0
+          ]
+        ],
+        "flow:flow_5": [
+          [
+            128.0,
+            217.0
+          ],
+          [
+            128.0,
+            122.0
+          ],
+          [
+            248.0,
+            122.0
+          ]
+        ]
+      },
+      "stocks": 6
+    },
+    "long_labels": {
+      "auxiliaries": 1,
+      "connectors": 1,
+      "elements": 4,
+      "flows": 1,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            22.80000000000001,
+            32.0,
+            767.2,
+            136.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 22.0,
+          "maximum_flow_length": 380.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 0,
+          "total_connector_length": 22.0,
+          "total_flow_length": 380.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 380.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 0,
+        "total_connector_length": 22.0,
+        "total_flow_length": 380.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          22.80000000000001,
+          32.0,
+          767.2,
+          136.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 380.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 0,
+        "total_connector_length": 22.0,
+        "total_flow_length": 380.0
+      },
+      "position_sources": {
+        "downstream_biologically_available_nutrient_reservoir": "auto",
+        "temperature_adjusted_transformation_coefficient": "auto",
+        "temperature_dependent_nutrient_transformation_flux": "auto",
+        "upstream_dissolved_nutrient_reservoir": "auto"
+      },
+      "positions": {
+        "downstream_biologically_available_nutrient_reservoir": [
+          580.0,
+          113.0
+        ],
+        "temperature_adjusted_transformation_coefficient": [
+          368.0,
+          63.0
+        ],
+        "temperature_dependent_nutrient_transformation_flux": [
+          368.0,
+          113.0
+        ],
+        "upstream_dissolved_nutrient_reservoir": [
+          156.0,
+          113.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            368.0,
+            81.0
+          ],
+          [
+            368.0,
+            103.0
+          ]
+        ],
+        "flow:temperature_dependent_nutrient_transformation_flux": [
+          [
+            178.0,
+            113.0
+          ],
+          [
+            558.0,
+            113.0
+          ]
+        ]
+      },
+      "stocks": 2
+    },
+    "mixed_pins": {
+      "auxiliaries": 0,
+      "connectors": 0,
+      "elements": 5,
+      "flows": 2,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            73.7,
+            249.5,
+            685.3,
+            303.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 0.0,
+          "maximum_flow_length": 206.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 0,
+          "total_connector_length": 0,
+          "total_flow_length": 411.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 0.0,
+        "maximum_flow_length": 206.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 0,
+        "total_connector_length": 0,
+        "total_flow_length": 411.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          73.7,
+          249.5,
+          685.3,
+          303.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 0.0,
+        "maximum_flow_length": 206.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 0,
+        "total_connector_length": 0,
+        "total_flow_length": 411.0
+      },
+      "position_sources": {
+        "first_transfer": "auto",
+        "free_middle": "auto",
+        "pinned_destination": "user",
+        "pinned_source": "user",
+        "second_transfer": "auto"
+      },
+      "positions": {
+        "first_transfer": [
+          246.0,
+          280.0
+        ],
+        "free_middle": [
+          370.0,
+          280.0
+        ],
+        "pinned_destination": [
+          620.5,
+          280.25
+        ],
+        "pinned_source": [
+          120.5,
+          280.25
+        ],
+        "second_transfer": [
+          495.0,
+          280.0
+        ]
+      },
+      "routes": {
+        "flow:first_transfer": [
+          [
+            143.0,
+            280.0
+          ],
+          [
+            348.0,
+            280.0
+          ]
+        ],
+        "flow:second_transfer": [
+          [
+            392.0,
+            280.0
+          ],
+          [
+            598.0,
+            280.0
+          ]
+        ]
+      },
+      "stocks": 3
+    },
+    "nonplanar": {
+      "auxiliaries": 6,
+      "connectors": 9,
+      "elements": 6,
+      "flows": 0,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.8,
+            32.0,
+            347.6,
+            201.0
+          ],
+          "connector_connector_crossings": [
+            [
+              "6",
+              "7"
+            ]
+          ],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 392.0,
+          "maximum_flow_length": 0.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 7,
+          "total_connector_length": 1044.465321180982,
+          "total_flow_length": 0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": [
+          {
+            "code": "layout.unavoidable_crossing",
+            "elements": [
+              "6",
+              "7"
+            ],
+            "message": "At least one line crossing remained after deterministic routing."
+          }
+        ]
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 1,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 392.0,
+        "maximum_flow_length": 0.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 7,
+        "total_connector_length": 1044.465321180982,
+        "total_flow_length": 0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.8,
+          32.0,
+          347.6,
+          201.0
+        ],
+        "connector_connector_crossings": [
+          [
+            "6",
+            "7"
+          ]
+        ],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 392.0,
+        "maximum_flow_length": 0.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 7,
+        "total_connector_length": 1044.465321180982,
+        "total_flow_length": 0
+      },
+      "position_sources": {
+        "left_0": "auto",
+        "left_1": "auto",
+        "left_2": "auto",
+        "right_0": "auto",
+        "right_1": "auto",
+        "right_2": "auto"
+      },
+      "positions": {
+        "left_0": [
+          158.0,
+          170.0
+        ],
+        "left_1": [
+          158.0,
+          54.0
+        ],
+        "left_2": [
+          326.0,
+          112.0
+        ],
+        "right_0": [
+          58.0,
+          112.0
+        ],
+        "right_1": [
+          158.0,
+          112.0
+        ],
+        "right_2": [
+          258.0,
+          112.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            140.0,
+            170.0
+          ],
+          [
+            76.0,
+            112.0
+          ]
+        ],
+        "connector:2": [
+          [
+            140.0,
+            54.0
+          ],
+          [
+            76.0,
+            112.0
+          ]
+        ],
+        "connector:3": [
+          [
+            326.0,
+            94.0
+          ],
+          [
+            326.0,
+            32.0
+          ],
+          [
+            58.0,
+            32.0
+          ],
+          [
+            58.0,
+            94.0
+          ]
+        ],
+        "connector:4": [
+          [
+            158.0,
+            152.0
+          ],
+          [
+            158.0,
+            130.0
+          ]
+        ],
+        "connector:5": [
+          [
+            158.0,
+            72.0
+          ],
+          [
+            158.0,
+            94.0
+          ]
+        ],
+        "connector:6": [
+          [
+            326.0,
+            130.0
+          ],
+          [
+            326.0,
+            152.0
+          ],
+          [
+            198.0,
+            152.0
+          ],
+          [
+            198.0,
+            112.0
+          ],
+          [
+            176.0,
+            112.0
+          ]
+        ],
+        "connector:7": [
+          [
+            176.0,
+            170.0
+          ],
+          [
+            198.0,
+            170.0
+          ],
+          [
+            218.0,
+            112.0
+          ],
+          [
+            240.0,
+            112.0
+          ]
+        ],
+        "connector:8": [
+          [
+            176.0,
+            54.0
+          ],
+          [
+            240.0,
+            112.0
+          ]
+        ],
+        "connector:9": [
+          [
+            308.0,
+            112.0
+          ],
+          [
+            276.0,
+            112.0
+          ]
+        ]
+      },
+      "stocks": 0
+    },
+    "special_flows": {
+      "auxiliaries": 0,
+      "connectors": 0,
+      "elements": 5,
+      "flows": 4,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.0,
+            32.0,
+            388.0,
+            273.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 0.0,
+          "maximum_flow_length": 158.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 2,
+          "total_connector_length": 0,
+          "total_flow_length": 498.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 0.0,
+        "maximum_flow_length": 158.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 2,
+        "total_connector_length": 0,
+        "total_flow_length": 498.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.0,
+          32.0,
+          388.0,
+          273.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 0.0,
+        "maximum_flow_length": 158.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 2,
+        "total_connector_length": 0,
+        "total_flow_length": 498.0
+      },
+      "position_sources": {
+        "external_input": "auto",
+        "external_output": "auto",
+        "orphan_exchange": "auto",
+        "reservoir": "auto",
+        "self_loop": "auto"
+      },
+      "positions": {
+        "external_input": [
+          102.0,
+          130.0
+        ],
+        "external_output": [
+          318.0,
+          130.0
+        ],
+        "orphan_exchange": [
+          108.0,
+          250.0
+        ],
+        "reservoir": [
+          210.0,
+          130.0
+        ],
+        "self_loop": [
+          210.0,
+          42.0
+        ]
+      },
+      "routes": {
+        "flow:external_input": [
+          [
+            32.0,
+            130.0
+          ],
+          [
+            172.0,
+            130.0
+          ]
+        ],
+        "flow:external_output": [
+          [
+            248.0,
+            130.0
+          ],
+          [
+            388.0,
+            130.0
+          ]
+        ],
+        "flow:orphan_exchange": [
+          [
+            78.0,
+            250.0
+          ],
+          [
+            138.0,
+            250.0
+          ]
+        ],
+        "flow:self_loop": [
+          [
+            229.0,
+            102.0
+          ],
+          [
+            229.0,
+            42.0
+          ],
+          [
+            191.0,
+            42.0
+          ],
+          [
+            191.0,
+            102.0
+          ]
+        ]
+      },
+      "stocks": 1
+    },
+    "template_carbon_cycle_2box": {
+      "auxiliaries": 2,
+      "connectors": 4,
+      "elements": 6,
+      "flows": 2,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.60000000000001,
+            32.5,
+            584.2,
+            428.5
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 264.0,
+          "maximum_flow_length": 344.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 2,
+          "total_connector_length": 575.9504628201169,
+          "total_flow_length": 644.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 264.0,
+        "maximum_flow_length": 344.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 2,
+        "total_connector_length": 575.9504628201169,
+        "total_flow_length": 644.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.60000000000001,
+          32.5,
+          584.2,
+          428.5
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 264.0,
+        "maximum_flow_length": 344.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 2,
+        "total_connector_length": 575.9504628201169,
+        "total_flow_length": 644.0
+      },
+      "position_sources": {
+        "Atmosphere_C": "auto",
+        "Land_C": "auto",
+        "photosynthesis": "auto",
+        "photosynthesis_rate": "auto",
+        "respiration": "auto",
+        "respiration_rate": "auto"
+      },
+      "positions": {
+        "Atmosphere_C": [
+          415.0,
+          63.0
+        ],
+        "Land_C": [
+          415.0,
+          398.0
+        ],
+        "photosynthesis": [
+          393.0,
+          231.0
+        ],
+        "photosynthesis_rate": [
+          101.0,
+          231.0
+        ],
+        "respiration": [
+          415.0,
+          231.0
+        ],
+        "respiration_rate": [
+          450.0,
+          196.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            119.0,
+            231.0
+          ],
+          [
+            383.0,
+            231.0
+          ]
+        ],
+        "connector:2": [
+          [
+            415.0,
+            81.0
+          ],
+          [
+            393.0,
+            221.0
+          ]
+        ],
+        "connector:3": [
+          [
+            432.0,
+            196.0
+          ],
+          [
+            415.0,
+            221.0
+          ]
+        ],
+        "connector:4": [
+          [
+            415.0,
+            381.0
+          ],
+          [
+            415.0,
+            241.0
+          ]
+        ],
+        "flow:photosynthesis": [
+          [
+            415.0,
+            81.0
+          ],
+          [
+            393.0,
+            81.0
+          ],
+          [
+            393.0,
+            381.0
+          ],
+          [
+            415.0,
+            381.0
+          ]
+        ],
+        "flow:respiration": [
+          [
+            415.0,
+            381.0
+          ],
+          [
+            415.0,
+            81.0
+          ]
+        ]
+      },
+      "stocks": 2
+    },
+    "template_exponential_growth": {
+      "auxiliaries": 1,
+      "connectors": 2,
+      "elements": 3,
+      "flows": 1,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.0,
+            32.0,
+            230.0,
+            123.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 60.0,
+          "maximum_flow_length": 140.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 0,
+          "total_connector_length": 82.0,
+          "total_flow_length": 140.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 60.0,
+        "maximum_flow_length": 140.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 0,
+        "total_connector_length": 82.0,
+        "total_flow_length": 140.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.0,
+          32.0,
+          230.0,
+          123.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 60.0,
+        "maximum_flow_length": 140.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 0,
+        "total_connector_length": 82.0,
+        "total_flow_length": 140.0
+      },
+      "position_sources": {
+        "Population": "auto",
+        "growth": "auto",
+        "growth_rate": "auto"
+      },
+      "positions": {
+        "Population": [
+          194.0,
+          100.0
+        ],
+        "growth": [
+          102.0,
+          100.0
+        ],
+        "growth_rate": [
+          102.0,
+          50.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            172.0,
+            100.0
+          ],
+          [
+            112.0,
+            100.0
+          ]
+        ],
+        "connector:2": [
+          [
+            102.0,
+            68.0
+          ],
+          [
+            102.0,
+            90.0
+          ]
+        ],
+        "flow:growth": [
+          [
+            32.0,
+            100.0
+          ],
+          [
+            172.0,
+            100.0
+          ]
+        ]
+      },
+      "stocks": 1
+    },
+    "template_lotka_volterra": {
+      "auxiliaries": 4,
+      "connectors": 11,
+      "elements": 10,
+      "flows": 4,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.0,
+            32.0,
+            508.0,
+            354.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 223.7470444819608,
+          "maximum_flow_length": 140.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 2,
+          "total_connector_length": 896.1906235373417,
+          "total_flow_length": 560.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 223.7470444819608,
+        "maximum_flow_length": 140.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 2,
+        "total_connector_length": 896.1906235373417,
+        "total_flow_length": 560.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.0,
+          32.0,
+          508.0,
+          354.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 223.7470444819608,
+        "maximum_flow_length": 140.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 2,
+        "total_connector_length": 896.1906235373417,
+        "total_flow_length": 560.0
+      },
+      "position_sources": {
+        "Predator": "auto",
+        "Prey": "auto",
+        "predation": "auto",
+        "predation_rate": "auto",
+        "predator_births": "auto",
+        "predator_death_rate": "auto",
+        "predator_deaths": "auto",
+        "predator_efficiency": "auto",
+        "prey_birth_rate": "auto",
+        "prey_births": "auto"
+      },
+      "positions": {
+        "Predator": [
+          345.0,
+          113.0
+        ],
+        "Prey": [
+          195.0,
+          331.0
+        ],
+        "predation": [
+          288.0,
+          331.0
+        ],
+        "predation_rate": [
+          270.0,
+          172.0
+        ],
+        "predator_births": [
+          252.0,
+          113.0
+        ],
+        "predator_death_rate": [
+          438.0,
+          163.0
+        ],
+        "predator_deaths": [
+          438.0,
+          113.0
+        ],
+        "predator_efficiency": [
+          252.0,
+          63.0
+        ],
+        "prey_birth_rate": [
+          102.0,
+          281.0
+        ],
+        "prey_births": [
+          102.0,
+          331.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            102.0,
+            299.0
+          ],
+          [
+            102.0,
+            321.0
+          ]
+        ],
+        "connector:10": [
+          [
+            438.0,
+            145.0
+          ],
+          [
+            438.0,
+            123.0
+          ]
+        ],
+        "connector:11": [
+          [
+            368.0,
+            113.0
+          ],
+          [
+            428.0,
+            113.0
+          ]
+        ],
+        "connector:2": [
+          [
+            172.0,
+            331.0
+          ],
+          [
+            112.0,
+            331.0
+          ]
+        ],
+        "connector:3": [
+          [
+            270.0,
+            190.0
+          ],
+          [
+            288.0,
+            321.0
+          ]
+        ],
+        "connector:4": [
+          [
+            218.0,
+            331.0
+          ],
+          [
+            278.0,
+            331.0
+          ]
+        ],
+        "connector:5": [
+          [
+            345.0,
+            131.0
+          ],
+          [
+            288.0,
+            321.0
+          ]
+        ],
+        "connector:6": [
+          [
+            252.0,
+            81.0
+          ],
+          [
+            252.0,
+            103.0
+          ]
+        ],
+        "connector:7": [
+          [
+            270.0,
+            154.0
+          ],
+          [
+            252.0,
+            123.0
+          ]
+        ],
+        "connector:8": [
+          [
+            195.0,
+            313.0
+          ],
+          [
+            195.0,
+            291.0
+          ],
+          [
+            220.0,
+            113.0
+          ],
+          [
+            242.0,
+            113.0
+          ]
+        ],
+        "connector:9": [
+          [
+            322.0,
+            113.0
+          ],
+          [
+            262.0,
+            113.0
+          ]
+        ],
+        "flow:predation": [
+          [
+            218.0,
+            331.0
+          ],
+          [
+            358.0,
+            331.0
+          ]
+        ],
+        "flow:predator_births": [
+          [
+            182.0,
+            113.0
+          ],
+          [
+            322.0,
+            113.0
+          ]
+        ],
+        "flow:predator_deaths": [
+          [
+            368.0,
+            113.0
+          ],
+          [
+            508.0,
+            113.0
+          ]
+        ],
+        "flow:prey_births": [
+          [
+            32.0,
+            331.0
+          ],
+          [
+            172.0,
+            331.0
+          ]
+        ]
+      },
+      "stocks": 2
+    },
+    "template_nutrient_box_2box": {
+      "auxiliaries": 4,
+      "connectors": 8,
+      "elements": 10,
+      "flows": 4,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.400000000000006,
+            32.0,
+            574.0,
+            426.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 264.0,
+          "maximum_flow_length": 320.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 2,
+          "total_connector_length": 716.1092976760957,
+          "total_flow_length": 876.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 264.0,
+        "maximum_flow_length": 320.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 2,
+        "total_connector_length": 716.1092976760957,
+        "total_flow_length": 876.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.400000000000006,
+          32.0,
+          574.0,
+          426.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 264.0,
+        "maximum_flow_length": 320.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 2,
+        "total_connector_length": 716.1092976760957,
+        "total_flow_length": 876.0
+      },
+      "position_sources": {
+        "Deep_N": "auto",
+        "Surface_N": "auto",
+        "downwelling": "auto",
+        "downwelling_rate": "auto",
+        "remin": "auto",
+        "remin_rate": "auto",
+        "uptake": "auto",
+        "uptake_rate": "auto",
+        "upwelling": "auto",
+        "upwelling_rate": "auto"
+      },
+      "positions": {
+        "Deep_N": [
+          404.0,
+          68.0
+        ],
+        "Surface_N": [
+          404.0,
+          390.0
+        ],
+        "downwelling": [
+          382.0,
+          229.0
+        ],
+        "downwelling_rate": [
+          90.0,
+          229.0
+        ],
+        "remin": [
+          304.0,
+          68.0
+        ],
+        "remin_rate": [
+          304.0,
+          118.0
+        ],
+        "uptake": [
+          504.0,
+          390.0
+        ],
+        "uptake_rate": [
+          504.0,
+          340.0
+        ],
+        "upwelling": [
+          404.0,
+          229.0
+        ],
+        "upwelling_rate": [
+          439.0,
+          194.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            421.0,
+            194.0
+          ],
+          [
+            404.0,
+            219.0
+          ]
+        ],
+        "connector:2": [
+          [
+            404.0,
+            91.0
+          ],
+          [
+            404.0,
+            219.0
+          ]
+        ],
+        "connector:3": [
+          [
+            108.0,
+            229.0
+          ],
+          [
+            372.0,
+            229.0
+          ]
+        ],
+        "connector:4": [
+          [
+            404.0,
+            367.0
+          ],
+          [
+            382.0,
+            239.0
+          ]
+        ],
+        "connector:5": [
+          [
+            504.0,
+            358.0
+          ],
+          [
+            504.0,
+            380.0
+          ]
+        ],
+        "connector:6": [
+          [
+            434.0,
+            390.0
+          ],
+          [
+            494.0,
+            390.0
+          ]
+        ],
+        "connector:7": [
+          [
+            304.0,
+            100.0
+          ],
+          [
+            304.0,
+            78.0
+          ]
+        ],
+        "connector:8": [
+          [
+            374.0,
+            68.0
+          ],
+          [
+            314.0,
+            68.0
+          ]
+        ],
+        "flow:downwelling": [
+          [
+            404.0,
+            367.0
+          ],
+          [
+            382.0,
+            367.0
+          ],
+          [
+            382.0,
+            91.0
+          ],
+          [
+            404.0,
+            91.0
+          ]
+        ],
+        "flow:remin": [
+          [
+            234.0,
+            68.0
+          ],
+          [
+            374.0,
+            68.0
+          ]
+        ],
+        "flow:uptake": [
+          [
+            434.0,
+            390.0
+          ],
+          [
+            574.0,
+            390.0
+          ]
+        ],
+        "flow:upwelling": [
+          [
+            404.0,
+            91.0
+          ],
+          [
+            404.0,
+            367.0
+          ]
+        ]
+      },
+      "stocks": 2
+    },
+    "template_sir": {
+      "auxiliaries": 3,
+      "connectors": 9,
+      "elements": 8,
+      "flows": 2,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            32.4,
+            32.0,
+            404.4,
+            203.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 191.637678967368,
+          "maximum_flow_length": 106.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 0,
+          "total_connector_length": 530.7032351247051,
+          "total_flow_length": 212.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 191.637678967368,
+        "maximum_flow_length": 106.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 0,
+        "total_connector_length": 530.7032351247051,
+        "total_flow_length": 212.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          32.4,
+          32.0,
+          404.4,
+          203.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 191.637678967368,
+        "maximum_flow_length": 106.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 0,
+        "total_connector_length": 530.7032351247051,
+        "total_flow_length": 212.0
+      },
+      "position_sources": {
+        "Infected": "auto",
+        "Recovered": "auto",
+        "Susceptible": "auto",
+        "beta": "auto",
+        "gamma": "auto",
+        "infection": "auto",
+        "population_total": "auto",
+        "recovery": "auto"
+      },
+      "positions": {
+        "Infected": [
+          222.0,
+          122.0
+        ],
+        "Recovered": [
+          372.0,
+          122.0
+        ],
+        "Susceptible": [
+          72.0,
+          122.0
+        ],
+        "beta": [
+          147.0,
+          72.0
+        ],
+        "gamma": [
+          297.0,
+          50.0
+        ],
+        "infection": [
+          147.0,
+          122.0
+        ],
+        "population_total": [
+          147.0,
+          172.0
+        ],
+        "recovery": [
+          297.0,
+          122.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            147.0,
+            90.0
+          ],
+          [
+            147.0,
+            112.0
+          ]
+        ],
+        "connector:2": [
+          [
+            94.0,
+            122.0
+          ],
+          [
+            137.0,
+            122.0
+          ]
+        ],
+        "connector:3": [
+          [
+            200.0,
+            122.0
+          ],
+          [
+            157.0,
+            122.0
+          ]
+        ],
+        "connector:4": [
+          [
+            147.0,
+            154.0
+          ],
+          [
+            147.0,
+            132.0
+          ]
+        ],
+        "connector:5": [
+          [
+            297.0,
+            68.0
+          ],
+          [
+            297.0,
+            112.0
+          ]
+        ],
+        "connector:6": [
+          [
+            244.0,
+            122.0
+          ],
+          [
+            287.0,
+            122.0
+          ]
+        ],
+        "connector:7": [
+          [
+            94.0,
+            122.0
+          ],
+          [
+            129.0,
+            172.0
+          ]
+        ],
+        "connector:8": [
+          [
+            200.0,
+            122.0
+          ],
+          [
+            165.0,
+            172.0
+          ]
+        ],
+        "connector:9": [
+          [
+            350.0,
+            122.0
+          ],
+          [
+            165.0,
+            172.0
+          ]
+        ],
+        "flow:infection": [
+          [
+            94.0,
+            122.0
+          ],
+          [
+            200.0,
+            122.0
+          ]
+        ],
+        "flow:recovery": [
+          [
+            244.0,
+            122.0
+          ],
+          [
+            350.0,
+            122.0
+          ]
+        ]
+      },
+      "stocks": 3
+    }
+  },
+  "incremental": {
+    "after": {
+      "auxiliaries": 2,
+      "connectors": 2,
+      "elements": 7,
+      "flows": 2,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            97.5,
+            138.0,
+            367.5,
+            342.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 22.0,
+          "maximum_flow_length": 208.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 2,
+          "total_connector_length": 44.0,
+          "total_flow_length": 416.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 208.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 2,
+        "total_connector_length": 44.0,
+        "total_flow_length": 416.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          97.5,
+          138.0,
+          367.5,
+          342.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 208.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 2,
+        "total_connector_length": 44.0,
+        "total_flow_length": 416.0
+      },
+      "position_sources": {
+        "added_rate": "auto",
+        "added_transfer": "auto",
+        "first": "user",
+        "initial_rate": "auto",
+        "initial_transfer": "auto",
+        "second": "auto",
+        "third": "auto"
+      },
+      "positions": {
+        "added_rate": [
+          218.0,
+          324.0
+        ],
+        "added_transfer": [
+          218.0,
+          274.0
+        ],
+        "first": [
+          120,
+          240
+        ],
+        "initial_rate": [
+          218.0,
+          156.0
+        ],
+        "initial_transfer": [
+          218.0,
+          206.0
+        ],
+        "second": [
+          345.0,
+          206.0
+        ],
+        "third": [
+          345.0,
+          274.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            218.0,
+            174.0
+          ],
+          [
+            218.0,
+            196.0
+          ]
+        ],
+        "connector:2": [
+          [
+            218.0,
+            306.0
+          ],
+          [
+            218.0,
+            284.0
+          ]
+        ],
+        "flow:added_transfer": [
+          [
+            142.0,
+            246.0
+          ],
+          [
+            142.0,
+            274.0
+          ],
+          [
+            322.0,
+            274.0
+          ]
+        ],
+        "flow:initial_transfer": [
+          [
+            142.0,
+            234.0
+          ],
+          [
+            142.0,
+            206.0
+          ],
+          [
+            322.0,
+            206.0
+          ]
+        ]
+      },
+      "stocks": 3
+    },
+    "before": {
+      "auxiliaries": 1,
+      "connectors": 1,
+      "elements": 4,
+      "flows": 1,
+      "layout": {
+        "metrics": {
+          "avoidable_route_detours": [],
+          "backward_flow_edges": [],
+          "bounds": [
+            97.5,
+            172.0,
+            321.5,
+            263.0
+          ],
+          "connector_connector_crossings": [],
+          "connector_flow_crossings": [],
+          "connector_glyph_crossings": [],
+          "connector_label_crossings": [],
+          "flow_flow_crossings": [],
+          "flow_glyph_crossings": [],
+          "flow_label_crossings": [],
+          "flow_shared_segments": [],
+          "glyph_overlaps": [],
+          "label_glyph_overlaps": [],
+          "label_label_overlaps": [],
+          "locked_route_movements": [],
+          "maximum_connector_length": 22.0,
+          "maximum_flow_length": 134.0,
+          "missing_positions": [],
+          "page_overflow": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pinned_position_movements": [],
+          "redundant_route_points": [],
+          "repeated_route_points": [],
+          "route_self_intersections": [],
+          "total_bend_count": 0,
+          "total_connector_length": 22.0,
+          "total_flow_length": 134.0
+        },
+        "viewport": {
+          "columns": 1,
+          "page_height": 596.0,
+          "page_width": 768.0,
+          "rows": 1
+        },
+        "warnings": []
+      },
+      "metric_counts": {
+        "avoidable_route_detours": 0,
+        "backward_flow_edges": 0,
+        "connector_connector_crossings": 0,
+        "connector_flow_crossings": 0,
+        "connector_glyph_crossings": 0,
+        "connector_label_crossings": 0,
+        "flow_flow_crossings": 0,
+        "flow_glyph_crossings": 0,
+        "flow_label_crossings": 0,
+        "flow_shared_segments": 0,
+        "glyph_overlaps": 0,
+        "label_glyph_overlaps": 0,
+        "label_label_overlaps": 0,
+        "locked_route_movements": 0,
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 134.0,
+        "missing_positions": 0,
+        "pinned_position_movements": 0,
+        "redundant_route_points": 0,
+        "repeated_route_points": 0,
+        "route_self_intersections": 0,
+        "total_bend_count": 0,
+        "total_connector_length": 22.0,
+        "total_flow_length": 134.0
+      },
+      "metrics": {
+        "avoidable_route_detours": [],
+        "backward_flow_edges": [],
+        "bounds": [
+          97.5,
+          172.0,
+          321.5,
+          263.0
+        ],
+        "connector_connector_crossings": [],
+        "connector_flow_crossings": [],
+        "connector_glyph_crossings": [],
+        "connector_label_crossings": [],
+        "flow_flow_crossings": [],
+        "flow_glyph_crossings": [],
+        "flow_label_crossings": [],
+        "flow_shared_segments": [],
+        "glyph_overlaps": [],
+        "label_glyph_overlaps": [],
+        "label_label_overlaps": [],
+        "locked_route_movements": [],
+        "maximum_connector_length": 22.0,
+        "maximum_flow_length": 134.0,
+        "missing_positions": [],
+        "page_overflow": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pinned_position_movements": [],
+        "redundant_route_points": [],
+        "repeated_route_points": [],
+        "route_self_intersections": [],
+        "total_bend_count": 0,
+        "total_connector_length": 22.0,
+        "total_flow_length": 134.0
+      },
+      "position_sources": {
+        "first": "user",
+        "initial_rate": "auto",
+        "initial_transfer": "auto",
+        "second": "auto"
+      },
+      "positions": {
+        "first": [
+          120,
+          240
+        ],
+        "initial_rate": [
+          209.0,
+          190.0
+        ],
+        "initial_transfer": [
+          209.0,
+          240.0
+        ],
+        "second": [
+          299.0,
+          240.0
+        ]
+      },
+      "routes": {
+        "connector:1": [
+          [
+            209.0,
+            208.0
+          ],
+          [
+            209.0,
+            230.0
+          ]
+        ],
+        "flow:initial_transfer": [
+          [
+            142.0,
+            240.0
+          ],
+          [
+            276.0,
+            240.0
+          ]
+        ]
+      },
+      "stocks": 2
+    },
+    "displacement": {
+      "first": 0.0,
+      "initial_rate": 35.17101079013795,
+      "initial_transfer": 35.17101079013795,
+      "second": 57.201398584300364
+    },
+    "moved_elements": 3,
+    "total_displacement": 127.54342016457626
+  },
+  "schema_version": 1
+}

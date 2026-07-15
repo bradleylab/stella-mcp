@@ -137,19 +137,25 @@ def _add_view_styles_str(self, lines: list[str]):
 
 def _add_inner_view_styles_str(self, lines: list[str]):
     """Add the inner view styles as strings."""
+    stock_font = self._format_number(self.view_stock_font_points)
+    flow_font = self._format_number(self.view_flow_font_points)
+    aux_font = self._format_number(self.view_aux_font_points)
     lines.append(
         '\t\t\t\t<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">'
     )
     lines.append(
-        '\t\t\t\t\t<stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">'
+        '\t\t\t\t\t<stock color="blue" background="white" font_color="blue" '
+        f'font_size="{stock_font}pt" label_side="top">'
     )
     lines.append('\t\t\t\t\t\t<shape type="rectangle" width="45" height="35"/>')
     lines.append("\t\t\t\t\t</stock>")
     lines.append(
-        '\t\t\t\t\t<flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom"/>'
+        '\t\t\t\t\t<flow color="blue" background="white" font_color="blue" '
+        f'font_size="{flow_font}pt" label_side="bottom"/>'
     )
     lines.append(
-        '\t\t\t\t\t<aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">'
+        '\t\t\t\t\t<aux color="blue" background="white" font_color="blue" '
+        f'font_size="{aux_font}pt" label_side="bottom">'
     )
     lines.append('\t\t\t\t\t\t<shape type="circle" radius="18"/>')
     lines.append("\t\t\t\t\t</aux>")
@@ -160,6 +166,23 @@ def _add_inner_view_styles_str(self, lines: list[str]):
         '\t\t\t\t\t<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>'
     )
     lines.append("\t\t\t\t</style>")
+
+
+def _stella_connector_points(connector) -> tuple[tuple[float, float], ...]:
+    """Add Bezier anchors that keep generated connectors near logical segments."""
+    points = tuple(connector.points)
+    if connector.points_locked or len(points) < 2:
+        return points
+    anchored = [points[0]]
+    for start, end in zip(points, points[1:], strict=False):
+        anchored.append(
+            (
+                (start[0] + end[0]) / 2,
+                (start[1] + end[1]) / 2,
+            )
+        )
+        anchored.append(end)
+    return tuple(anchored)
 
 
 def _format_point_list(self, points: list[float]) -> str:
@@ -261,7 +284,8 @@ def model_to_xml(
     else:
         # Even with fixed/manual positions, derive dependent visual metadata:
         # flow paths (when unlocked) and connector angles.
-        model._recalculate_flow_points()
+        model._recalculate_flow_points(only_missing=True)
+        model._snap_auto_geometry()
         model._calculate_connector_angles()
     if resolve_layout_violations:
         model._resolve_layout_violations()
@@ -431,8 +455,10 @@ def model_to_xml(
         },
     )
     lines.append(
-        '\t\t\t<view isee:show_pages="false" background="white" page_width="768" '
-        'page_height="596" isee:page_cols="2" isee:page_rows="2" '
+        '\t\t\t<view isee:show_pages="false" background="white" '
+        f'page_width="{model._format_number(model.view_page_width)}" '
+        f'page_height="{model._format_number(model.view_page_height)}" '
+        f'isee:page_cols="{model.view_page_columns}" isee:page_rows="{model.view_page_rows}" '
         f'isee:popup_graphs_are_comparative="true" type="stock_flow"{view_extra_attrs}>'
     )
     if model.inner_view_style_xml:
@@ -506,14 +532,17 @@ def model_to_xml(
     for name in sorted(model.stocks):
         stock = model.stocks[name]
         display = escape(model._display_name(stock.name))
-        sx = int(stock.x) if stock.x is not None else 0
-        sy = int(stock.y) if stock.y is not None else 0
+        # Explicit stock dimensions switch Stella's x/y interpretation from
+        # center coordinates to the upper-left corner.
+        sx = stock.x - stock.width / 2 if stock.x is not None else 0
+        sy = stock.y - stock.height / 2 if stock.y is not None else 0
+        label_side = f' label_side="{stock.label_side}"' if stock.label_side else ""
         stock_view_extra_attrs = model._format_extra_attrs(
             stock.view_extra_attrs,
-            reserved_names={"x", "y", "width", "height", "name"},
+            reserved_names={"x", "y", "width", "height", "name", "label_side"},
         )
         lines.append(
-            f'\t\t\t\t<stock x="{sx}" y="{sy}" width="{stock.width}" height="{stock.height}" name="{display}"{stock_view_extra_attrs}/>'
+            f'\t\t\t\t<stock x="{sx}" y="{sy}" width="{stock.width}" height="{stock.height}" name="{display}"{label_side}{stock_view_extra_attrs}/>'
         )
 
     # Flow visuals (positions guaranteed by _auto_layout)
@@ -521,14 +550,15 @@ def model_to_xml(
         flow = model.flows[name]
         display = escape(model._display_name(flow.name))
         fx = flow.x if flow.x is not None else 0
-        fy = int(flow.y) if flow.y is not None else 0
+        fy = flow.y if flow.y is not None else 0
+        label_side = f' label_side="{flow.label_side}"' if flow.label_side else ""
         flow_view_extra_attrs = model._format_extra_attrs(
             flow.view_extra_attrs,
-            reserved_names={"x", "y", "name"},
+            reserved_names={"x", "y", "name", "label_side"},
         )
         if flow.points or flow.view_extra_children_xml:
             lines.append(
-                f'\t\t\t\t<flow x="{fx}" y="{fy}" name="{display}"{flow_view_extra_attrs}>'
+                f'\t\t\t\t<flow x="{fx}" y="{fy}" name="{display}"{label_side}{flow_view_extra_attrs}>'
             )
             if flow.points:
                 lines.append("\t\t\t\t\t<pts>")
@@ -540,20 +570,23 @@ def model_to_xml(
             lines.append("\t\t\t\t</flow>")
         else:
             lines.append(
-                f'\t\t\t\t<flow x="{fx}" y="{fy}" name="{display}"{flow_view_extra_attrs}/>'
+                f'\t\t\t\t<flow x="{fx}" y="{fy}" name="{display}"{label_side}{flow_view_extra_attrs}/>'
             )
 
     # Aux visuals (positions guaranteed by _auto_layout)
     for name in sorted(model.auxs):
         aux = model.auxs[name]
         display = escape(model._display_name(aux.name))
-        ax = int(aux.x) if aux.x is not None else 0
-        ay = int(aux.y) if aux.y is not None else 0
+        ax = aux.x if aux.x is not None else 0
+        ay = aux.y if aux.y is not None else 0
+        label_side = f' label_side="{aux.label_side}"' if aux.label_side else ""
         aux_view_extra_attrs = model._format_extra_attrs(
             aux.view_extra_attrs,
-            reserved_names={"x", "y", "name"},
+            reserved_names={"x", "y", "name", "label_side"},
         )
-        lines.append(f'\t\t\t\t<aux x="{ax}" y="{ay}" name="{display}"{aux_view_extra_attrs}/>')
+        lines.append(
+            f'\t\t\t\t<aux x="{ax}" y="{ay}" name="{display}"{label_side}{aux_view_extra_attrs}/>'
+        )
 
     # Connector visuals
     for conn in sorted(model.connectors, key=lambda c: c.uid):
@@ -564,9 +597,10 @@ def model_to_xml(
         lines.append(f'\t\t\t\t<connector uid="{conn.uid}" angle="{conn.angle}"{conn_extra_attrs}>')
         lines.append(f"\t\t\t\t\t<from>{escape(conn.from_var)}</from>")
         lines.append(f"\t\t\t\t\t<to>{escape(conn.to_var)}</to>")
-        if conn.points:
+        connector_points = _stella_connector_points(conn)
+        if connector_points:
             lines.append("\t\t\t\t\t<pts>")
-            for px, py in conn.points:
+            for px, py in connector_points:
                 lines.append(f'\t\t\t\t\t\t<pt x="{px}" y="{py}"/>')
             lines.append("\t\t\t\t\t</pts>")
         for fragment in conn.extra_children_xml:

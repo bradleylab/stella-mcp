@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7.9 -8 620.7 631" width="620.7" height="631">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>
+<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:12px;fill:#000}</style>
+<polyline class="connector" points="356,199 402,132" marker-end="url(#arrow)"/>
+<polyline class="connector" points="468,312 446,312" marker-end="url(#arrow)"/>
+<polyline class="connector" points="306,375 306,397" marker-end="url(#arrow)"/>
+<polyline class="connector" points="140,534 140,512" marker-end="url(#arrow)"/>
+<polyline class="connector" points="138,312 116,312" marker-end="url(#arrow)"/>
+<polyline class="connector" points="140,90 140,112" marker-end="url(#arrow)"/>
+<polyline class="connector" points="266,267 338,217" marker-end="url(#arrow)"/>
+<polyline class="connector" points="436,390 356,235" marker-end="url(#arrow)"/>
+<polyline class="connector" points="526,312 504,312" marker-end="url(#arrow)"/>
+<polyline class="connector" points="271,520 271,542 486,542 486,330" marker-end="url(#arrow)"/>
+<polyline class="connector" points="266,357 288,357" marker-end="url(#arrow)"/>
+<polyline class="connector" points="128,407 306,375" marker-end="url(#arrow)"/>
+<polyline class="connector" points="180,552 158,552" marker-end="url(#arrow)"/>
+<polyline class="connector" points="84,217 62,217 62,552 122,552" marker-end="url(#arrow)"/>
+<polyline class="connector" points="350,312 174,312" marker-end="url(#arrow)"/>
+<polyline class="connector" points="271,140 156,294" marker-end="url(#arrow)"/>
+<polyline class="connector" points="180,72 158,72" marker-end="url(#arrow)"/>
+<polyline class="connector" points="436,200 436,32 140,32 140,54" marker-end="url(#arrow)"/>
+<polyline class="flow-pipe" points="294,122 414,122 414,217"/>
+<path class="flow-valve" d="M395,115 L409,129 L409,115 L395,129 z"/>
+<text class="label" x="402" y="143.2" text-anchor="middle">flow 0</text>
+<polyline class="flow-pipe" points="436,234 436,390"/>
+<path class="flow-valve" d="M429,305 L443,319 L443,305 L429,319 z"/>
+<text class="label" x="436" y="299.2" text-anchor="middle">flow 1</text>
+<polyline class="flow-pipe" points="414,407 294,407 294,502"/>
+<path class="flow-valve" d="M299,400 L313,414 L313,400 L299,414 z"/>
+<text class="label" x="306" y="428.2" text-anchor="middle">flow 2</text>
+<polyline class="flow-pipe" points="248,502 128,502 128,407"/>
+<path class="flow-valve" d="M133,495 L147,509 L147,495 L133,509 z"/>
+<text class="label" x="140" y="489.2" text-anchor="middle">flow 3</text>
+<polyline class="flow-pipe" points="106,390 106,234"/>
+<path class="flow-valve" d="M99,305 L113,319 L113,305 L99,319 z"/>
+<text class="label" x="106" y="299.2" text-anchor="middle">flow 4</text>
+<polyline class="flow-pipe" points="128,217 128,122 248,122"/>
+<path class="flow-valve" d="M133,115 L147,129 L147,115 L133,129 z"/>
+<text class="label" x="140" y="143.2" text-anchor="middle">flow 5</text>
+<rect class="stock" x="248.5" y="104.5" width="45" height="35"/>
+<text class="label" x="271" y="101.7" text-anchor="middle">stock 0</text>
+<rect class="stock" x="413.5" y="199.5" width="45" height="35"/>
+<text class="label" x="484.7" y="221.2" text-anchor="middle">stock 1</text>
+<rect class="stock" x="413.5" y="389.5" width="45" height="35"/>
+<text class="label" x="436" y="435.7" text-anchor="middle">stock 2</text>
+<rect class="stock" x="248.5" y="484.5" width="45" height="35"/>
+<text class="label" x="271" y="530.7" text-anchor="middle">stock 3</text>
+<rect class="stock" x="83.5" y="389.5" width="45" height="35"/>
+<text class="label" x="154.7" y="411.2" text-anchor="middle">stock 4</text>
+<rect class="stock" x="83.5" y="199.5" width="45" height="35"/>
+<text class="label" x="57.3" y="221.2" text-anchor="middle">stock 5</text>
+<circle class="aux" cx="356" cy="217" r="18"/>
+<text class="label" x="356" y="246.2" text-anchor="middle">control 0</text>
+<circle class="aux" cx="486" cy="312" r="18"/>
+<text class="label" x="486" y="341.2" text-anchor="middle">control 1</text>
+<circle class="aux" cx="306" cy="357" r="18"/>
+<text class="label" x="306" y="386.2" text-anchor="middle">control 2</text>
+<circle class="aux" cx="140" cy="552" r="18"/>
+<text class="label" x="140" y="531.2" text-anchor="middle">control 3</text>
+<circle class="aux" cx="156" cy="312" r="18"/>
+<text class="label" x="156" y="341.2" text-anchor="middle">control 4</text>
+<circle class="aux" cx="140" cy="72" r="18"/>
+<text class="label" x="140" y="101.2" text-anchor="middle">control 5</text>
+<circle class="aux" cx="248" cy="267" r="18"/>
+<text class="label" x="248" y="296.2" text-anchor="middle">factor 0</text>
+<circle class="aux" cx="544" cy="312" r="18"/>
+<text class="label" x="544" y="291.2" text-anchor="middle">factor 1</text>
+<circle class="aux" cx="248" cy="357" r="18"/>
+<text class="label" x="248" y="336.2" text-anchor="middle">factor 2</text>
+<circle class="aux" cx="198" cy="552" r="18"/>
+<text class="label" x="198" y="581.2" text-anchor="middle">factor 3</text>
+<circle class="aux" cx="368" cy="312" r="18"/>
+<text class="label" x="368" y="341.2" text-anchor="middle">factor 4</text>
+<circle class="aux" cx="198" cy="72" r="18"/>
+<text class="label" x="198" y="51.2" text-anchor="middle">factor 5</text>
+</svg>

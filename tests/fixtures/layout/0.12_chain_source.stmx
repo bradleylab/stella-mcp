@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+	<header>
+		<smile version="1.0" namespace="std, isee"/>
+		<name>Ten-stock chain</name>
+		<uuid>51da7c2e-9289-57cb-97eb-769c0a238854</uuid>
+		<vendor>isee systems, inc.</vendor>
+		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
+	</header>
+	<sim_specs isee:sim_duration="1.5" isee:simulation_delay="0.0015" isee:restore_on_start="false" method="Euler" time_units="Years" isee:instantaneous_flows="false">
+		<start>0</start>
+		<stop>100</stop>
+		<dt reciprocal="true">4</dt>
+	</sim_specs>
+	<isee:prefs show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true"/>
+	<model>
+		<variables>
+			<stock name="stock 0">
+				<eqn>100</eqn>
+				<outflow>flow_0</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 1">
+				<eqn>100</eqn>
+				<inflow>flow_0</inflow>
+				<outflow>flow_1</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 2">
+				<eqn>100</eqn>
+				<inflow>flow_1</inflow>
+				<outflow>flow_2</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 3">
+				<eqn>100</eqn>
+				<inflow>flow_2</inflow>
+				<outflow>flow_3</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 4">
+				<eqn>100</eqn>
+				<inflow>flow_3</inflow>
+				<outflow>flow_4</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 5">
+				<eqn>100</eqn>
+				<inflow>flow_4</inflow>
+				<outflow>flow_5</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 6">
+				<eqn>100</eqn>
+				<inflow>flow_5</inflow>
+				<outflow>flow_6</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 7">
+				<eqn>100</eqn>
+				<inflow>flow_6</inflow>
+				<outflow>flow_7</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 8">
+				<eqn>100</eqn>
+				<inflow>flow_7</inflow>
+				<outflow>flow_8</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="stock 9">
+				<eqn>100</eqn>
+				<inflow>flow_8</inflow>
+				<non_negative/>
+			</stock>
+			<flow name="flow 0">
+				<eqn>rate_0</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="flow 1">
+				<eqn>rate_1</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="flow 2">
+				<eqn>rate_2</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="flow 3">
+				<eqn>rate_3</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="flow 4">
+				<eqn>rate_4</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="flow 5">
+				<eqn>rate_5</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="flow 6">
+				<eqn>rate_6</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="flow 7">
+				<eqn>rate_7</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="flow 8">
+				<eqn>rate_8</eqn>
+				<non_negative/>
+			</flow>
+			<aux name="rate 0">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="rate 1">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="rate 2">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="rate 3">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="rate 4">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="rate 5">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="rate 6">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="rate 7">
+				<eqn>1</eqn>
+			</aux>
+			<aux name="rate 8">
+				<eqn>1</eqn>
+			</aux>
+		</variables>
+		<views>
+			<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+				<text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt"/>
+			</style>
+			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="2" isee:page_rows="1" isee:popup_graphs_are_comparative="true" type="stock_flow">
+				<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+					<stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
+						<shape type="rectangle" width="45" height="35"/>
+					</stock>
+					<flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom"/>
+					<aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+						<shape type="circle" radius="18"/>
+					</aux>
+					<group color="#666666" background="#F5F5F5" font_color="black" font_size="9pt" label_side="top"/>
+					<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>
+				</style>
+				<stock x="35.5" y="82.5" width="45" height="35" name="stock 0" label_side="top"/>
+				<stock x="185.5" y="82.5" width="45" height="35" name="stock 1" label_side="top"/>
+				<stock x="335.5" y="82.5" width="45" height="35" name="stock 2" label_side="top"/>
+				<stock x="485.5" y="82.5" width="45" height="35" name="stock 3" label_side="top"/>
+				<stock x="635.5" y="82.5" width="45" height="35" name="stock 4" label_side="top"/>
+				<stock x="785.5" y="82.5" width="45" height="35" name="stock 5" label_side="top"/>
+				<stock x="935.5" y="82.5" width="45" height="35" name="stock 6" label_side="top"/>
+				<stock x="1085.5" y="82.5" width="45" height="35" name="stock 7" label_side="top"/>
+				<stock x="1235.5" y="82.5" width="45" height="35" name="stock 8" label_side="top"/>
+				<stock x="1385.5" y="82.5" width="45" height="35" name="stock 9" label_side="top"/>
+				<flow x="133.0" y="100.0" name="flow 0" label_side="bottom">
+					<pts>
+						<pt x="80.0" y="100.0"/>
+						<pt x="186.0" y="100.0"/>
+					</pts>
+				</flow>
+				<flow x="283.0" y="100.0" name="flow 1" label_side="bottom">
+					<pts>
+						<pt x="230.0" y="100.0"/>
+						<pt x="336.0" y="100.0"/>
+					</pts>
+				</flow>
+				<flow x="433.0" y="100.0" name="flow 2" label_side="bottom">
+					<pts>
+						<pt x="380.0" y="100.0"/>
+						<pt x="486.0" y="100.0"/>
+					</pts>
+				</flow>
+				<flow x="583.0" y="100.0" name="flow 3" label_side="bottom">
+					<pts>
+						<pt x="530.0" y="100.0"/>
+						<pt x="636.0" y="100.0"/>
+					</pts>
+				</flow>
+				<flow x="733.0" y="100.0" name="flow 4" label_side="bottom">
+					<pts>
+						<pt x="680.0" y="100.0"/>
+						<pt x="786.0" y="100.0"/>
+					</pts>
+				</flow>
+				<flow x="883.0" y="100.0" name="flow 5" label_side="bottom">
+					<pts>
+						<pt x="830.0" y="100.0"/>
+						<pt x="936.0" y="100.0"/>
+					</pts>
+				</flow>
+				<flow x="1033.0" y="100.0" name="flow 6" label_side="bottom">
+					<pts>
+						<pt x="980.0" y="100.0"/>
+						<pt x="1086.0" y="100.0"/>
+					</pts>
+				</flow>
+				<flow x="1183.0" y="100.0" name="flow 7" label_side="bottom">
+					<pts>
+						<pt x="1130.0" y="100.0"/>
+						<pt x="1236.0" y="100.0"/>
+					</pts>
+				</flow>
+				<flow x="1333.0" y="100.0" name="flow 8" label_side="bottom">
+					<pts>
+						<pt x="1280.0" y="100.0"/>
+						<pt x="1386.0" y="100.0"/>
+					</pts>
+				</flow>
+				<aux x="133.0" y="50.0" name="rate 0" label_side="bottom"/>
+				<aux x="283.0" y="50.0" name="rate 1" label_side="bottom"/>
+				<aux x="433.0" y="50.0" name="rate 2" label_side="bottom"/>
+				<aux x="583.0" y="50.0" name="rate 3" label_side="bottom"/>
+				<aux x="733.0" y="50.0" name="rate 4" label_side="bottom"/>
+				<aux x="883.0" y="50.0" name="rate 5" label_side="bottom"/>
+				<aux x="1033.0" y="50.0" name="rate 6" label_side="bottom"/>
+				<aux x="1183.0" y="50.0" name="rate 7" label_side="bottom"/>
+				<aux x="1333.0" y="50.0" name="rate 8" label_side="bottom"/>
+				<connector uid="1" angle="-90.0">
+					<from>rate_0</from>
+					<to>flow_0</to>
+					<pts>
+						<pt x="133.0" y="68.0"/>
+						<pt x="133.0" y="79.0"/>
+						<pt x="133.0" y="90.0"/>
+					</pts>
+				</connector>
+				<connector uid="2" angle="-90.0">
+					<from>rate_1</from>
+					<to>flow_1</to>
+					<pts>
+						<pt x="283.0" y="68.0"/>
+						<pt x="283.0" y="79.0"/>
+						<pt x="283.0" y="90.0"/>
+					</pts>
+				</connector>
+				<connector uid="3" angle="-90.0">
+					<from>rate_2</from>
+					<to>flow_2</to>
+					<pts>
+						<pt x="433.0" y="68.0"/>
+						<pt x="433.0" y="79.0"/>
+						<pt x="433.0" y="90.0"/>
+					</pts>
+				</connector>
+				<connector uid="4" angle="-90.0">
+					<from>rate_3</from>
+					<to>flow_3</to>
+					<pts>
+						<pt x="583.0" y="68.0"/>
+						<pt x="583.0" y="79.0"/>
+						<pt x="583.0" y="90.0"/>
+					</pts>
+				</connector>
+				<connector uid="5" angle="-90.0">
+					<from>rate_4</from>
+					<to>flow_4</to>
+					<pts>
+						<pt x="733.0" y="68.0"/>
+						<pt x="733.0" y="79.0"/>
+						<pt x="733.0" y="90.0"/>
+					</pts>
+				</connector>
+				<connector uid="6" angle="-90.0">
+					<from>rate_5</from>
+					<to>flow_5</to>
+					<pts>
+						<pt x="883.0" y="68.0"/>
+						<pt x="883.0" y="79.0"/>
+						<pt x="883.0" y="90.0"/>
+					</pts>
+				</connector>
+				<connector uid="7" angle="-90.0">
+					<from>rate_6</from>
+					<to>flow_6</to>
+					<pts>
+						<pt x="1033.0" y="68.0"/>
+						<pt x="1033.0" y="79.0"/>
+						<pt x="1033.0" y="90.0"/>
+					</pts>
+				</connector>
+				<connector uid="8" angle="-90.0">
+					<from>rate_7</from>
+					<to>flow_7</to>
+					<pts>
+						<pt x="1183.0" y="68.0"/>
+						<pt x="1183.0" y="79.0"/>
+						<pt x="1183.0" y="90.0"/>
+					</pts>
+				</connector>
+				<connector uid="9" angle="-90.0">
+					<from>rate_8</from>
+					<to>flow_8</to>
+					<pts>
+						<pt x="1333.0" y="68.0"/>
+						<pt x="1333.0" y="79.0"/>
+						<pt x="1333.0" y="90.0"/>
+					</pts>
+				</connector>
+			</view>
+		</views>
+	</model>
+</xmile>

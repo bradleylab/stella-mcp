@@ -1,0 +1,2 @@
+# Preserve byte-for-byte Stella desktop evidence, including terminal blank lines.
+tests/fixtures/layout/*_stella_4_1_1*.stmx binary

@@ -7,6 +7,7 @@ import pytest
 from mcp.types import CallToolResult
 
 import stella_mcp.server as server_mod
+from evaluation.layout_fixtures import build_nonplanar
 from stella_mcp.xmile import StellaModel
 
 
@@ -775,6 +776,8 @@ def test_render_diagram_tool_returns_svg(monkeypatch, tmp_path):
     sc = result.structuredContent
     assert sc["svg"].startswith("<svg")
     assert sc["filepath"] == str(svg_path)
+    assert sc["layout"]["warnings"] == []
+    assert sc["layout"]["metrics"]["glyph_overlaps"] == ()
     assert svg_path.read_text().startswith("<svg")
     import xml.etree.ElementTree as ET
     ET.fromstring(sc["svg"])  # well-formed
@@ -793,3 +796,29 @@ def test_render_diagram_inline_only_without_filepath(monkeypatch):
     assert not result.isError
     assert result.structuredContent["filepath"] is None
     assert "<rect" in result.structuredContent["svg"]
+
+
+@pytest.mark.parametrize("tool_name", ["save_model", "get_model_xml", "render_diagram"])
+def test_export_tools_return_structured_layout_warnings(
+    monkeypatch,
+    tmp_path,
+    tool_name,
+):
+    server_mod._clear_session_store()
+    monkeypatch.setattr(server_mod, "_get_session_key", lambda: 2112)
+    server_mod._set_current_model(build_nonplanar(), model_id="crossing")
+    arguments = {"model_id": "crossing"}
+    if tool_name == "save_model":
+        arguments["filepath"] = str(tmp_path / "crossing.stmx")
+
+    result = asyncio.run(server_mod.call_tool(tool_name, arguments))
+
+    assert not result.isError
+    report = result.structuredContent["layout"]
+    assert len(report["metrics"]["connector_connector_crossings"]) == 1
+    assert [warning["code"] for warning in report["warnings"]] == [
+        "layout.unavoidable_crossing"
+    ]
+    assert "layout warnings: 1; layout.unavoidable_crossing" in " ".join(
+        content.text for content in result.content if content.type == "text"
+    )

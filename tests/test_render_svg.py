@@ -60,6 +60,16 @@ def test_render_includes_display_name_labels():
     assert ">transfer<" in svg
 
 
+def test_render_uses_imported_view_font_size_for_label_geometry():
+    model = StellaModel("Custom font")
+    model.add_aux("large label", "1", x=100, y=100)
+    model.view_aux_font_points = 18.0
+
+    svg = render_model_svg(model)
+
+    assert 'style="font-size:24px"' in svg
+
+
 def test_render_is_deterministic():
     model = _positioned_model()
     assert render_model_svg(model) == render_model_svg(model)
@@ -152,3 +162,41 @@ def test_render_locked_connector_uses_stored_waypoints():
     assert len(locked) == 1
     assert locked[0].tag.endswith("polyline")  # waypoints, not a computed arc
     assert "130,90" in locked[0].get("points")
+
+
+def test_render_auto_routed_connector_uses_stored_waypoints():
+    model = StellaModel("Routed")
+    model.add_aux("k", "1", x=50, y=50)
+    model.add_stock("S", "100", x=200, y=50)
+    connector = model.add_connector("k", "S")
+    connector.points = [(68, 50), (100, 50), (100, 32), (178, 32)]
+
+    root = ET.fromstring(render_model_svg(model))
+    [rendered] = [element for element in root.iter() if element.get("class") == "connector"]
+
+    assert rendered.tag.endswith("polyline")
+    assert rendered.get("points") == "68,50 100,50 100,32 178,32"
+
+
+@pytest.mark.parametrize(
+    ("side", "axis", "comparison"),
+    [
+        ("top", "y", "less"),
+        ("bottom", "y", "greater"),
+        ("left", "x", "less"),
+        ("right", "x", "greater"),
+    ],
+)
+def test_render_respects_element_label_side(side, axis, comparison):
+    model = StellaModel("Labels")
+    aux = model.add_aux("control", "1", x=100, y=100)
+    aux.label_side = side
+
+    root = ET.fromstring(render_model_svg(model))
+    [label] = [element for element in root.iter() if element.get("class") == "label"]
+    coordinate = float(label.get(axis))
+
+    if comparison == "less":
+        assert coordinate < 100
+    else:
+        assert coordinate > 100

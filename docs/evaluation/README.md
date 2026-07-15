@@ -1,5 +1,24 @@
 # Evaluation Guide
 
+The pre-implementation layout benchmark for the 0.12 quality milestone is
+documented in the
+[`2026-07-15-layout-baseline.md`](2026-07-15-layout-baseline.md) report.
+The corresponding Stella representation check is documented in the
+[`2026-07-15-layout-format-spike.md`](2026-07-15-layout-format-spike.md) report.
+The post-implementation automated results and desktop protocol are documented
+in [`2026-07-15-layout-quality.md`](2026-07-15-layout-quality.md), with generated
+JSON and SVG artifacts under [`layout-0.12/`](layout-0.12/).
+The source, Stella Professional 4.1.1-saved fixtures, screenshots, hashes, and
+desktop findings are recorded in `tests/fixtures/layout/manifest.json` and
+enforced by `tests/test_stella_layout_acceptance.py`.
+
+Regenerate the layout-quality artifact set with:
+
+```bash
+uv run python -m evaluation.layout_runner \
+  --output-dir docs/evaluation/layout-0.12
+```
+
 ## Deterministic Baseline
 
 From a source checkout with `uv` installed:

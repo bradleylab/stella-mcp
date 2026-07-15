@@ -3,6 +3,7 @@
 from stella_mcp import xmile_export, xmile_io
 from stella_mcp.model_types import GraphicalFunction
 from stella_mcp.xmile import StellaModel
+from stella_mcp.xmile_export import _stella_connector_points
 
 
 def test_xmile_io_reexports_exporter_functions():
@@ -46,3 +47,22 @@ def test_model_xml_formatting_methods_delegate_to_export_module(monkeypatch):
 
     assert model._dt_xml(0.5) == "<dt>delegate</dt>"
     assert calls == [(model, 0.5)]
+
+
+def test_generated_connector_routes_gain_stella_bezier_midpoint_anchors():
+    model = StellaModel("Connector anchors")
+    model.add_aux("source", "1", x=100, y=100)
+    model.add_aux("target", "source", x=300, y=200)
+    connector = model.add_connector("source", "target")
+    connector.points = [(118.0, 100.0), (200.0, 100.0), (282.0, 200.0)]
+
+    assert _stella_connector_points(connector) == (
+        (118.0, 100.0),
+        (159.0, 100.0),
+        (200.0, 100.0),
+        (241.0, 150.0),
+        (282.0, 200.0),
+    )
+
+    connector.points_locked = True
+    assert _stella_connector_points(connector) == tuple(connector.points)
