@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7.6 -8 652.2 334" width="652.2" height="334">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>
+<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:12px;fill:#000}</style>
+<polyline class="connector" points="489,197 489,219" marker-end="url(#arrow)"/>
+<polyline class="connector" points="547,103 547,81" marker-end="url(#arrow)"/>
+<polyline class="connector" points="529,63 507,63" marker-end="url(#arrow)"/>
+<polyline class="connector" points="471,63 449,63" marker-end="url(#arrow)"/>
+<polyline class="connector" points="413,63 108,162" marker-end="url(#arrow)"/>
+<polyline class="connector" points="108,162 372,162" marker-end="url(#arrow)"/>
+<polyline class="connector" points="390,180 355,237" marker-end="url(#arrow)"/>
+<polyline class="connector" points="355,237 471,121" marker-end="url(#arrow)"/>
+<polyline class="connector" points="489,139 489,161" marker-end="url(#arrow)"/>
+<polyline class="flow-pipe" points="436,229 542,229"/>
+<path class="flow-valve" d="M482,222 L496,236 L496,222 L482,236 z"/>
+<text class="label" x="489" y="250.2" text-anchor="middle">transfer</text>
+<rect class="stock" x="541.5" y="211.5" width="45" height="35"/>
+<text class="label" x="564" y="257.7" text-anchor="middle">destination</text>
+<rect class="stock" x="391.5" y="211.5" width="45" height="35"/>
+<text class="label" x="414" y="257.7" text-anchor="middle">source</text>
+<circle class="aux" cx="547" cy="121" r="18"/>
+<text class="label" x="547" y="150.2" text-anchor="middle">base factor</text>
+<circle class="aux" cx="547" cy="63" r="18"/>
+<text class="label" x="547" y="92.2" text-anchor="middle">derived factor 0</text>
+<circle class="aux" cx="489" cy="63" r="18"/>
+<text class="label" x="489" y="42.2" text-anchor="middle">derived factor 1</text>
+<circle class="aux" cx="431" cy="63" r="18"/>
+<text class="label" x="431" y="92.2" text-anchor="middle">derived factor 2</text>
+<circle class="aux" cx="90" cy="162" r="18"/>
+<text class="label" x="90" y="191.2" text-anchor="middle">derived factor 3</text>
+<circle class="aux" cx="390" cy="162" r="18"/>
+<text class="label" x="390" y="141.2" text-anchor="middle">derived factor 4</text>
+<circle class="aux" cx="355" cy="255" r="18"/>
+<text class="label" x="355" y="284.2" text-anchor="middle">derived factor 5</text>
+<circle class="aux" cx="489" cy="121" r="18"/>
+<text class="label" x="412.4" y="125.2" text-anchor="middle">derived factor 6</text>
+<circle class="aux" cx="489" cy="179" r="18"/>
+<text class="label" x="489" y="208.2" text-anchor="middle">derived factor 7</text>
+</svg>

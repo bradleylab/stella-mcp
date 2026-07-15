@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 223.47 1616 553.57" width="1616" height="553.57">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>
+<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:11px;fill:#000}</style>
+<path class="connector" d="M50,719.03 Q95.35,703.47 120.37,662.58" marker-end="url(#arrow)"/>
+<path class="connector" d="M246.13,718.41 Q261.47,694.43 258,666.17" marker-end="url(#arrow)"/>
+<path class="connector" d="M429.06,658.27 Q434.13,648.34 431.71,637.47" marker-end="url(#arrow)"/>
+<path class="connector" d="M618.23,609.02 Q620.62,600.36 616.93,592.16" marker-end="url(#arrow)"/>
+<path class="connector" d="M798.24,515.24 Q796.66,530.67 805.28,543.57" marker-end="url(#arrow)"/>
+<path class="connector" d="M1001.5,515.05 Q1000.99,505.29 994.36,498.09" marker-end="url(#arrow)"/>
+<path class="connector" d="M1192.9,473.04 Q1189.56,458.93 1177.99,450.18" marker-end="url(#arrow)"/>
+<path class="connector" d="M1380.69,431.75 Q1369.39,404.6 1343.37,390.88" marker-end="url(#arrow)"/>
+<path class="connector" d="M1550,331.65 Q1507.28,309.27 1460.09,319.25" marker-end="url(#arrow)"/>
+<polyline class="flow-pipe" points="87.51,650.5 153.22,674.66"/>
+<path class="flow-valve" d="M113.37,655.58 L127.37,669.58 L127.37,655.58 L113.37,669.58 z"/>
+<text class="label" x="120.37" y="682.58" text-anchor="middle">flow 0</text>
+<polyline class="flow-pipe" points="198.22,674.66 317.78,657.68"/>
+<path class="flow-valve" d="M251,659.17 L265,673.17 L265,659.17 L251,673.17 z"/>
+<text class="label" x="258" y="686.17" text-anchor="middle">flow 1</text>
+<polyline class="flow-pipe" points="362.78,657.68 500.64,617.25"/>
+<path class="flow-valve" d="M424.71,630.47 L438.71,644.47 L438.71,630.47 L424.71,644.47 z"/>
+<text class="label" x="431.71" y="657.47" text-anchor="middle">flow 2</text>
+<polyline class="flow-pipe" points="545.64,617.25 688.23,567.08"/>
+<path class="flow-valve" d="M609.93,585.16 L623.93,599.16 L623.93,585.16 L609.93,599.16 z"/>
+<text class="label" x="616.93" y="612.16" text-anchor="middle">flow 3</text>
+<polyline class="flow-pipe" points="733.23,567.08 877.32,520.05"/>
+<path class="flow-valve" d="M798.28,536.57 L812.28,550.57 L812.28,536.57 L798.28,550.57 z"/>
+<text class="label" x="805.28" y="563.57" text-anchor="middle">flow 4</text>
+<polyline class="flow-pipe" points="922.32,520.05 1066.41,476.13"/>
+<path class="flow-valve" d="M987.36,491.09 L1001.36,505.09 L1001.36,491.09 L987.36,505.09 z"/>
+<text class="label" x="994.36" y="518.09" text-anchor="middle">flow 5</text>
+<polyline class="flow-pipe" points="1111.41,476.13 1244.58,424.23"/>
+<path class="flow-valve" d="M1170.99,443.18 L1184.99,457.18 L1184.99,443.18 L1170.99,457.18 z"/>
+<text class="label" x="1177.99" y="470.18" text-anchor="middle">flow 6</text>
+<polyline class="flow-pipe" points="1289.58,424.23 1397.15,357.54"/>
+<path class="flow-valve" d="M1336.37,383.88 L1350.37,397.88 L1350.37,383.88 L1336.37,397.88 z"/>
+<text class="label" x="1343.37" y="410.88" text-anchor="middle">flow 7</text>
+<polyline class="flow-pipe" points="1419.65,340.04 1500.53,298.47"/>
+<path class="flow-valve" d="M1453.09,312.25 L1467.09,326.25 L1467.09,312.25 L1453.09,326.25 z"/>
+<text class="label" x="1460.09" y="339.25" text-anchor="middle">flow 8</text>
+<rect class="stock" x="42.51" y="633" width="45" height="35"/>
+<text class="label" x="65.01" y="681" text-anchor="middle">stock 0</text>
+<rect class="stock" x="153.22" y="657.16" width="45" height="35"/>
+<text class="label" x="175.72" y="705.16" text-anchor="middle">stock 1</text>
+<rect class="stock" x="317.78" y="640.18" width="45" height="35"/>
+<text class="label" x="340.28" y="688.18" text-anchor="middle">stock 2</text>
+<rect class="stock" x="500.64" y="599.75" width="45" height="35"/>
+<text class="label" x="523.14" y="647.75" text-anchor="middle">stock 3</text>
+<rect class="stock" x="688.23" y="549.58" width="45" height="35"/>
+<text class="label" x="710.73" y="597.58" text-anchor="middle">stock 4</text>
+<rect class="stock" x="877.32" y="502.55" width="45" height="35"/>
+<text class="label" x="899.82" y="550.55" text-anchor="middle">stock 5</text>
+<rect class="stock" x="1066.41" y="458.63" width="45" height="35"/>
+<text class="label" x="1088.91" y="506.63" text-anchor="middle">stock 6</text>
+<rect class="stock" x="1244.58" y="406.73" width="45" height="35"/>
+<text class="label" x="1267.08" y="454.73" text-anchor="middle">stock 7</text>
+<rect class="stock" x="1397.15" y="340.04" width="45" height="35"/>
+<text class="label" x="1419.65" y="388.04" text-anchor="middle">stock 8</text>
+<rect class="stock" x="1478.03" y="263.47" width="45" height="35"/>
+<text class="label" x="1500.53" y="311.47" text-anchor="middle">stock 9</text>
+<circle class="aux" cx="50" cy="719.03" r="18"/>
+<text class="label" x="50" y="750.03" text-anchor="middle">rate 0</text>
+<circle class="aux" cx="246.13" cy="718.41" r="18"/>
+<text class="label" x="246.13" y="749.41" text-anchor="middle">rate 1</text>
+<circle class="aux" cx="429.06" cy="658.27" r="18"/>
+<text class="label" x="429.06" y="689.27" text-anchor="middle">rate 2</text>
+<circle class="aux" cx="618.23" cy="609.02" r="18"/>
+<text class="label" x="618.23" y="640.02" text-anchor="middle">rate 3</text>
+<circle class="aux" cx="798.24" cy="515.24" r="18"/>
+<text class="label" x="798.24" y="546.24" text-anchor="middle">rate 4</text>
+<circle class="aux" cx="1001.5" cy="515.05" r="18"/>
+<text class="label" x="1001.5" y="546.05" text-anchor="middle">rate 5</text>
+<circle class="aux" cx="1192.9" cy="473.04" r="18"/>
+<text class="label" x="1192.9" y="504.04" text-anchor="middle">rate 6</text>
+<circle class="aux" cx="1380.69" cy="431.75" r="18"/>
+<text class="label" x="1380.69" y="462.75" text-anchor="middle">rate 7</text>
+<circle class="aux" cx="1550" cy="331.65" r="18"/>
+<text class="label" x="1550" y="362.65" text-anchor="middle">rate 8</text>
+</svg>
