@@ -12,6 +12,7 @@ from typing import Any
 
 from mcp.types import TextContent, Tool
 
+from ..layout_quality import layout_report_to_dict, layout_warning_suffix
 from ..model_snapshot import (
     connector_to_dict,
     model_to_summary,
@@ -352,18 +353,28 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
 
     @register("get_model_xml")
     def _handle_get_model_xml(arguments: dict[str, Any]) -> ToolResponse:
-        _, model = get_model(arguments.get("model_id"))
+        model_id, model = get_model(arguments.get("model_id"))
         preview = copy.deepcopy(model)
         xml = preview.to_xml(
             auto_layout=arguments.get("auto_layout", True),
             resolve_layout_violations=arguments.get("resolve_layout_violations", False),
             compat_mode=arguments.get("compat_mode", "permissive"),
         )
-        if len(xml) > 10000:
+        truncated = len(xml) > 10000
+        if truncated:
             xml = xml[:10000] + "\n... (truncated)"
-        output = [TextContent(type="text", text=xml)]
+        result = success_result(
+            xml,
+            {
+                "model_id": model_id,
+                "xml": xml,
+                "truncated": truncated,
+                "compatibility_warnings": list(preview.last_export_warnings),
+                "layout": layout_report_to_dict(preview.last_layout_result),
+            },
+        )
         if preview.last_export_warnings:
-            output.append(
+            result.content.append(
                 TextContent(
                     type="text",
                     text=(
@@ -372,4 +383,9 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
                     ),
                 )
             )
-        return output
+        layout_suffix = layout_warning_suffix(preview.last_layout_result)
+        if layout_suffix:
+            result.content.append(
+                TextContent(type="text", text=f"Layout report{layout_suffix}")
+            )
+        return result

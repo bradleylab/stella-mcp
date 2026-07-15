@@ -112,6 +112,25 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
             compat_issue(f"Invalid numeric value '{value}' for {context}")
             return None
 
+    def parse_font_points(value: str | None, context: str) -> float | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        try:
+            if normalized.endswith("pt"):
+                points = float(normalized[:-2])
+            elif normalized.endswith("px"):
+                points = float(normalized[:-2]) * 72.0 / 96.0
+            else:
+                points = float(normalized)
+        except ValueError:
+            compat_issue(f"Invalid font size '{value}' for {context}")
+            return None
+        if points <= 0:
+            compat_issue(f"Font size for {context} must be > 0, got {value}")
+            return None
+        return points
+
     def parse_gf(elem: ET.Element | None, context: str) -> GraphicalFunction | None:
         if elem is None:
             return None
@@ -420,9 +439,54 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
     view = find_child(views, "view") if views is not None else None
 
     if view is not None:
+        page_width = parse_optional_float(view.get("page_width"), "view.page_width")
+        page_height = parse_optional_float(view.get("page_height"), "view.page_height")
+        page_columns = parse_optional_float(
+            view.get(f"{isee}page_cols") or view.get("page_cols"),
+            "view.page_cols",
+        )
+        page_rows = parse_optional_float(
+            view.get(f"{isee}page_rows") or view.get("page_rows"),
+            "view.page_rows",
+        )
+        if page_width is not None and page_width > 0:
+            model.view_page_width = page_width
+        elif page_width is not None:
+            compat_issue(f"view.page_width must be > 0, got {page_width}")
+        if page_height is not None and page_height > 0:
+            model.view_page_height = page_height
+        elif page_height is not None:
+            compat_issue(f"view.page_height must be > 0, got {page_height}")
+        if page_columns is not None and page_columns >= 1 and page_columns.is_integer():
+            model.view_page_columns = int(page_columns)
+        elif page_columns is not None:
+            compat_issue(f"view.page_cols must be a positive integer, got {page_columns}")
+        if page_rows is not None and page_rows >= 1 and page_rows.is_integer():
+            model.view_page_rows = int(page_rows)
+        elif page_rows is not None:
+            compat_issue(f"view.page_rows must be a positive integer, got {page_rows}")
+
         inner_styles = findall_children(view, "style")
         if inner_styles:
-            model.inner_view_style_xml = ET.tostring(inner_styles[0], encoding="unicode")
+            inner_style = inner_styles[0]
+            model.inner_view_style_xml = ET.tostring(inner_style, encoding="unicode")
+            for element_kind, attribute_name in (
+                ("stock", "view_stock_font_points"),
+                ("flow", "view_flow_font_points"),
+                ("aux", "view_aux_font_points"),
+            ):
+                element_style = find_child(inner_style, element_kind)
+                raw_font_size = (
+                    element_style.get("font_size")
+                    if element_style is not None and element_style.get("font_size") is not None
+                    else inner_style.get("font_size")
+                )
+                font_points = parse_font_points(
+                    raw_font_size,
+                    f"view.style.{element_kind}.font_size",
+                )
+                if font_points is not None:
+                    setattr(model, attribute_name, font_points)
         model.view_extra_attrs = collect_extra_attrs(
             view,
             known_attr_names={
@@ -460,10 +524,24 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                 stock_elem.get("height"), f"view.stock[{norm_name}].height"
             )
             if norm_name in model.stocks:
+                # Stella stores stock x/y at the upper-left corner when that
+                # dimension is explicit, but at the center when it is omitted.
+                center_x = (
+                    x_attr + width_attr / 2
+                    if x_attr is not None and width_attr is not None
+                    else x_attr
+                )
+                center_y = (
+                    y_attr + height_attr / 2
+                    if y_attr is not None and height_attr is not None
+                    else y_attr
+                )
                 if x_attr is not None:
-                    model.stocks[norm_name].x = x_attr
+                    model.stocks[norm_name].x = center_x
                 if y_attr is not None:
-                    model.stocks[norm_name].y = y_attr
+                    model.stocks[norm_name].y = center_y
+                if x_attr is not None or y_attr is not None:
+                    model.stocks[norm_name].position_source = "user"
                 if width_attr is not None:
                     model.stocks[norm_name].width = int(width_attr)
                     model.stocks[norm_name].size_locked = True
@@ -472,8 +550,13 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                     model.stocks[norm_name].size_locked = True
                 model.stocks[norm_name].view_extra_attrs = collect_extra_attrs(
                     stock_elem,
-                    {"x", "y", "width", "height", "name"},
+                    {"x", "y", "width", "height", "name", "label_side"},
                 )
+                label_side = stock_elem.get("label_side")
+                if label_side in {"top", "bottom", "left", "right"}:
+                    model.stocks[norm_name].label_side = label_side
+                elif label_side is not None:
+                    compat_issue(f"Invalid label_side '{label_side}' for view.stock[{norm_name}]")
 
         # Extract flow positions from view
         for flow_elem in findall_children(view, "flow"):
@@ -488,6 +571,8 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                     model.flows[norm_name].x = x_attr
                 if y_attr is not None:
                     model.flows[norm_name].y = y_attr
+                if x_attr is not None or y_attr is not None:
+                    model.flows[norm_name].position_source = "user"
                 pts = find_child(flow_elem, "pts")
                 if pts is not None:
                     points: list[tuple[float, float]] = []
@@ -502,8 +587,13 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                         model.flows[norm_name].points_locked = True
                 model.flows[norm_name].view_extra_attrs = collect_extra_attrs(
                     flow_elem,
-                    {"x", "y", "name"},
+                    {"x", "y", "name", "label_side"},
                 )
+                label_side = flow_elem.get("label_side")
+                if label_side in {"top", "bottom", "left", "right"}:
+                    model.flows[norm_name].label_side = label_side
+                elif label_side is not None:
+                    compat_issue(f"Invalid label_side '{label_side}' for view.flow[{norm_name}]")
                 model.flows[norm_name].view_extra_children_xml = collect_extra_children(
                     flow_elem,
                     {"pts"},
@@ -522,10 +612,17 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                     model.auxs[norm_name].x = x_attr
                 if y_attr is not None:
                     model.auxs[norm_name].y = y_attr
+                if x_attr is not None or y_attr is not None:
+                    model.auxs[norm_name].position_source = "user"
                 model.auxs[norm_name].view_extra_attrs = collect_extra_attrs(
                     aux_elem,
-                    {"x", "y", "name"},
+                    {"x", "y", "name", "label_side"},
                 )
+                label_side = aux_elem.get("label_side")
+                if label_side in {"top", "bottom", "left", "right"}:
+                    model.auxs[norm_name].label_side = label_side
+                elif label_side is not None:
+                    compat_issue(f"Invalid label_side '{label_side}' for view.aux[{norm_name}]")
 
         # Extract module/group view geometry
         for group_elem in findall_children(view, "group"):

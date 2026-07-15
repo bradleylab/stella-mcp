@@ -8,6 +8,7 @@ from stella_mcp.layout import (
     segment_intersects_box,
     segments_intersect,
 )
+from stella_mcp.layout_quality import FLOW_VALVE_SIZE
 from stella_mcp.model_types import AUX_RADIUS
 
 
@@ -120,11 +121,11 @@ def _position_subsystem(
     for name in nodes:
         if name in self.stocks:
             s = self.stocks[name]
-            if s.x is not None and s.y is not None:
+            if s.position_source == "user" and s.x is not None and s.y is not None:
                 fixed_positions[name] = (s.x, s.y)
         elif name in self.auxs:
             a = self.auxs[name]
-            if a.x is not None and a.y is not None:
+            if a.position_source == "user" and a.x is not None and a.y is not None:
                 fixed_positions[name] = (a.x, a.y)
 
     # Build edges with weights
@@ -174,18 +175,20 @@ def _position_subsystem(
         if name in fixed_positions:
             continue
         if name in self.stocks:
-            self.stocks[name].x = x
-            self.stocks[name].y = y
+            self.stocks[name].x = float(round(x))
+            self.stocks[name].y = float(round(y))
+            self.stocks[name].position_source = "auto"
         elif name in self.auxs:
-            self.auxs[name].x = x
-            self.auxs[name].y = y
+            self.auxs[name].x = float(round(x))
+            self.auxs[name].y = float(round(y))
+            self.auxs[name].position_source = "auto"
 
     # Position flows at midpoint between their stocks
     for flow_name in subsystem:
         if flow_name not in self.flows:
             continue
         flow = self.flows[flow_name]
-        if flow.x is not None and flow.y is not None:
+        if flow.position_source == "user" and flow.x is not None and flow.y is not None:
             continue
 
         from_stock = self.stocks.get(flow.from_stock) if flow.from_stock else None
@@ -196,14 +199,16 @@ def _position_subsystem(
             fy = from_stock.y if from_stock.y is not None else 0
             tx = to_stock.x if to_stock.x is not None else 0
             ty = to_stock.y if to_stock.y is not None else 0
-            flow.x = (fx + tx) / 2
-            flow.y = (fy + ty) / 2
+            flow.x = float(round((fx + tx) / 2))
+            flow.y = float(round((fy + ty) / 2))
         elif from_stock:
-            flow.x = (from_stock.x or 0) + 90
-            flow.y = from_stock.y or 0
+            flow.x = float(round((from_stock.x or 0) + 90))
+            flow.y = float(round(from_stock.y or 0))
         elif to_stock:
-            flow.x = (to_stock.x or 0) - 90
-            flow.y = to_stock.y or 0
+            flow.x = float(round((to_stock.x or 0) - 90))
+            flow.y = float(round(to_stock.y or 0))
+        if flow.x is not None and flow.y is not None:
+            flow.position_source = "auto"
 
     # Calculate bounding box
     all_x: list[float] = []
@@ -244,11 +249,14 @@ def _arrange_subsystems(
         # Shift all elements in this subsystem
         for name in subsystem:
             if name in self.stocks and self.stocks[name].x is not None:
-                self.stocks[name].x += offset_x
+                if self.stocks[name].position_source == "auto":
+                    self.stocks[name].x = float(round(self.stocks[name].x + offset_x))
             if name in self.flows and self.flows[name].x is not None:
-                self.flows[name].x += offset_x
+                if self.flows[name].position_source == "auto":
+                    self.flows[name].x = float(round(self.flows[name].x + offset_x))
             if name in self.auxs and self.auxs[name].x is not None:
-                self.auxs[name].x += offset_x
+                if self.auxs[name].position_source == "auto":
+                    self.auxs[name].x = float(round(self.auxs[name].x + offset_x))
 
         current_x = current_x + (max_x - min_x) + gap
 
@@ -337,9 +345,12 @@ def _calculate_stock_sizes(self):
     MIN_WIDTH = 45
     MAX_WIDTH = 120
     MIN_HEIGHT = 35
-    MAX_HEIGHT = 90
+    MAX_COMPACT_HEIGHT = 90
     FLOW_WIDTH_CONTRIBUTION = 15  # Extra width per flow beyond 2
     ASPECT_RATIO = 1.3  # width:height ratio
+    # The Stella 4.1.1 fan-out calibration needs 28 px between high-degree
+    # ports: a 20 px valve plus 8 px of visual separation after smoothing.
+    HIGH_DEGREE_PORT_PITCH = FLOW_VALVE_SIZE + 8
 
     for stock in self.stocks.values():
         if stock.size_locked:
@@ -351,56 +362,43 @@ def _calculate_stock_sizes(self):
         width = min(width, MAX_WIDTH)
 
         # Scale height to maintain aspect ratio
-        height = int(width / ASPECT_RATIO)
-        height = max(MIN_HEIGHT, min(height, MAX_HEIGHT))
+        height = max(MIN_HEIGHT, min(int(width / ASPECT_RATIO), MAX_COMPACT_HEIGHT))
+        maximum_side_degree = max(len(stock.inflows), len(stock.outflows))
+        if maximum_side_degree >= 6:
+            # Keep enough boundary for distinct valves without turning a hub
+            # into a page-height obstacle.
+            height = max(
+                height,
+                int((maximum_side_degree + 1) * HIGH_DEGREE_PORT_PITCH),
+            )
 
         stock.width = width
         stock.height = height
 
 
 def _auto_layout(self):
-    """Auto-arrange visual positions using force-directed layout.
+    """Run the staged deterministic placement, routing, and validation pipeline."""
+    from stella_mcp.layout_pipeline import run_layout_pipeline
 
-    Uses connector relationships to position elements:
-    1. Calculates stock sizes based on connectivity
-    2. Builds dependency graph from connectors
-    3. Detects subsystems (connected components)
-    4. Positions elements via Fruchterman-Reingold force-directed layout
-    5. Separates independent subsystems visually
+    return run_layout_pipeline(self)
 
-    Always recalculates flow.points to ensure flows connect to stocks correctly.
-    """
-    # Calculate stock sizes first (affects flow attachment)
-    self._calculate_stock_sizes()
 
-    SUBSYSTEM_GAP = 250
+def _snap_auto_geometry(self):
+    """Snap generated positions and unlocked routes to whole pixels."""
+    for element in (*self.stocks.values(), *self.flows.values(), *self.auxs.values()):
+        if element.position_source != "auto":
+            continue
+        if element.x is not None:
+            element.x = float(round(element.x))
+        if element.y is not None:
+            element.y = float(round(element.y))
 
-    # Build dependency graph from connectors
-    outgoing, incoming = self._build_dependency_graph()
-
-    # Find subsystems (connected components)
-    subsystems = self._find_subsystems(outgoing, incoming)
-
-    # Position each subsystem
-    subsystem_bounds: list[tuple[float, float, float, float]] = []
-
-    for subsystem in subsystems:
-        bounds = self._position_subsystem(subsystem, outgoing, incoming)
-        subsystem_bounds.append(bounds)
-
-    # Arrange subsystems relative to each other (largest centered, others offset)
-    if len(subsystems) > 1 and len(subsystem_bounds) > 1:
-        self._arrange_subsystems(subsystems, subsystem_bounds, SUBSYSTEM_GAP)
-
-    # Always recalculate flow points to connect stocks at their actual positions
-    self._recalculate_flow_points()
-
-    # Give unconnected ("orphan") flows a fallback position so they still
-    # render and export instead of being left unpositioned.
-    self._position_orphan_flows()
-
-    # Calculate connector angles based on final positions
-    self._calculate_connector_angles(force=True)
+    for flow in self.flows.values():
+        if not flow.points_locked:
+            flow.points = [(float(round(x)), float(round(y))) for x, y in flow.points]
+    for connector in self.connectors:
+        if not connector.points_locked:
+            connector.points = [(float(round(x)), float(round(y))) for x, y in connector.points]
 
 
 def _position_orphan_flows(self):
@@ -423,10 +421,17 @@ def _position_orphan_flows(self):
     base_y = (max(ys) + 90.0) if ys else 100.0
 
     for i, flow in enumerate(sorted(orphans, key=lambda f: f.name)):
-        cx = base_x + i * 120.0
+        if flow.position_source == "user" and flow.x is not None and flow.y is not None:
+            continue
+        cx = float(round(base_x + i * 120.0))
         flow.x = cx
-        flow.y = base_y
-        flow.points = [(cx - 30.0, base_y), (cx + 30.0, base_y)]
+        flow.y = float(round(base_y))
+        flow.position_source = "auto"
+        if not flow.points_locked:
+            flow.points = [
+                (float(round(cx - 30.0)), float(round(base_y))),
+                (float(round(cx + 30.0)), float(round(base_y))),
+            ]
 
 
 def _calculate_flow_offset(self, index: int, total: int) -> float:
@@ -482,12 +487,13 @@ def _stock_attachment_point(
             return (stock_x, stock_y - half_h)  # top edge
 
 
-def _recalculate_flow_points(self):
+def _recalculate_flow_points(self, *, only_missing: bool = False):
     """Recalculate flow.points to connect stocks at their actual positions.
 
     Direction-aware: exits/enters from the stock edge closest to the
     destination, supporting stocks at arbitrary angles (not just horizontal).
-    Uses orthogonal routing for multiple flows from the same stock.
+    Uses orthogonal routing for multiple flows from the same stock. When
+    ``only_missing`` is true, existing routed geometry is left untouched.
     """
     ROUTE_OFFSET = 40
 
@@ -513,6 +519,8 @@ def _recalculate_flow_points(self):
 
     for name, flow in self.flows.items():
         if flow.points_locked and flow.points:
+            continue
+        if only_missing and flow.points:
             continue
         from_stock = self.stocks.get(flow.from_stock) if flow.from_stock else None
         to_stock = self.stocks.get(flow.to_stock) if flow.to_stock else None
@@ -647,7 +655,20 @@ def _calculate_connector_angles(self, force: bool = False):
         from_pos = positions.get(conn.from_var)
         to_pos = positions.get(conn.to_var)
 
-        if from_pos and to_pos:
+        route_segment = next(
+            (
+                (start, end)
+                for start, end in zip(conn.points, conn.points[1:], strict=False)
+                if start != end
+            ),
+            None,
+        )
+        if route_segment is not None and not conn.points_locked:
+            start, end = route_segment
+            dx = end[0] - start[0]
+            dy = end[1] - start[1]
+            conn.angle = math.degrees(math.atan2(-dy, dx))
+        elif from_pos and to_pos:
             dx = to_pos[0] - from_pos[0]
             dy = to_pos[1] - from_pos[1]
 
@@ -796,6 +817,19 @@ def _detect_flow_stock_crossings(self) -> list[tuple[str, str]]:
             if not box:
                 continue
 
+            # Authored stocks can overlap a flow endpoint stock. Routing around
+            # each coincident box cannot improve the path and only adds loops;
+            # the overlap remains available to the analyzer as a warning.
+            endpoint_boxes = [
+                self._get_element_box(endpoint)
+                for endpoint in (flow.from_stock, flow.to_stock)
+                if endpoint is not None
+            ]
+            if any(
+                endpoint_box and box.intersects(endpoint_box) for endpoint_box in endpoint_boxes
+            ):
+                continue
+
             for p1, p2 in segments:
                 if segment_intersects_box(p1, p2, box):
                     crossings.append((flow_name, stock_name))
@@ -841,6 +875,8 @@ def _separate_auxs(self, name1: str, name2: str):
     aux2 = self.auxs.get(name2)
 
     if not aux1 or not aux2:
+        return
+    if aux1.position_source == "user" or aux2.position_source == "user":
         return
     if aux1.x is None or aux1.y is None or aux2.x is None or aux2.y is None:
         return
@@ -890,6 +926,8 @@ def _reposition_aux_to_avoid_crossing(
 
     aux = self.auxs.get(conn.from_var)
     if not aux or aux.x is None or aux.y is None:
+        return
+    if aux.position_source == "user":
         return
 
     # Get target position and size for proportional offsets
@@ -972,6 +1010,8 @@ def _reroute_flow_around_stock(self, flow_name: str, stock_name: str):
 
     if not flow or not stock or not flow.points or len(flow.points) < 2:
         return
+    if flow.points_locked:
+        return
     if stock.x is None or stock.y is None:
         return
 
@@ -1029,54 +1069,6 @@ def _reroute_flow_around_stock(self, flow_name: str, stock_name: str):
 
 
 def _resolve_layout_violations(self, max_iterations: int = 10):
-    """Iteratively resolve collisions and crossings in the layout."""
-    # Track what we've already tried to fix to avoid infinite loops
-    processed_flow_stock: set[tuple[str, str]] = set()
-    processed_connector_flow: set[tuple[int, str]] = set()
-    processed_connector_stock: set[tuple[int, str]] = set()
-
-    for _iteration in range(max_iterations):
-        # Detect all violations
-        aux_collisions = self._detect_aux_collisions()
-        connector_flow_crossings = self._detect_connector_flow_crossings()
-        connector_stock_crossings = self._detect_connector_stock_crossings()
-        flow_stock_crossings = self._detect_flow_stock_crossings()
-
-        # Filter out already-processed items
-        new_connector_flow = [
-            c for c in connector_flow_crossings if c not in processed_connector_flow
-        ]
-        new_connector_stock = [
-            c for c in connector_stock_crossings if c not in processed_connector_stock
-        ]
-        new_flow_stock = [c for c in flow_stock_crossings if c not in processed_flow_stock]
-
-        if (
-            not aux_collisions
-            and not new_connector_flow
-            and not new_connector_stock
-            and not new_flow_stock
-        ):
-            return  # Layout is valid (or as good as we can make it)
-
-        # Resolve aux collisions first (simplest)
-        for name1, name2 in aux_collisions:
-            self._separate_auxs(name1, name2)
-
-        # Resolve connector-flow crossings by repositioning auxs
-        for conn_uid, flow_name in new_connector_flow:
-            self._reposition_aux_to_avoid_crossing(conn_uid, flow_name, "flow")
-            processed_connector_flow.add((conn_uid, flow_name))
-
-        # Resolve connector-stock crossings by repositioning auxs
-        for conn_uid, stock_name in new_connector_stock:
-            self._reposition_aux_to_avoid_crossing(conn_uid, stock_name, "stock")
-            processed_connector_stock.add((conn_uid, stock_name))
-
-        # Resolve flow-stock crossings by rerouting flows
-        for flow_name, stock_name in new_flow_stock:
-            self._reroute_flow_around_stock(flow_name, stock_name)
-            processed_flow_stock.add((flow_name, stock_name))
-
-        # Recalculate connector angles after moving auxs
-        self._calculate_connector_angles(force=True)
+    """Run the validated pipeline while retaining the legacy option name."""
+    del max_iterations
+    return self._auto_layout()

@@ -1,15 +1,14 @@
-"""Geometry primitives and force-directed layout for Stella model diagrams.
+"""Shared geometry primitives and legacy force-directed layout helpers.
 
-Phase 2 TODO (visual tuning after Stella Professional testing):
-- Re-enable _resolve_layout_violations checks if connector/flow lines cross unrelated stocks
-- Add L-R post-processing if linear chains need left-to-right ordering
-- Further tune edge weights (FLOW_WEIGHT, CONNECTOR_WEIGHT) based on real models
-- Profile to_xml() for larger (30+ element) models
+The directed pipeline is split across ``layout_graph``, ``layout_router``,
+``layout_pipeline``, and ``layout_quality``. The force solver remains available
+for compatibility and bounded local fallback work.
 """
 
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from enum import Enum
 
 # =============================================================================
 # Geometry Primitives
@@ -29,9 +28,73 @@ class BoundingBox:
                 abs(self.y - other.y) < (self.height + other.height) / 2 + margin)
 
 
-def _ccw(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]) -> bool:
-    """Check if three points are in counter-clockwise order."""
-    return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
+class SegmentIntersection(str, Enum):
+    """How two closed line segments intersect."""
+
+    NONE = "none"
+    TOUCH = "touch"
+    CROSS = "cross"
+    OVERLAP = "overlap"
+
+
+def _orientation(
+    a: tuple[float, float],
+    b: tuple[float, float],
+    c: tuple[float, float],
+) -> int:
+    """Return the orientation sign of the ordered points ``a``, ``b``, ``c``."""
+    cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    if cross > 0:
+        return 1
+    if cross < 0:
+        return -1
+    return 0
+
+
+def _point_on_segment(
+    point: tuple[float, float],
+    start: tuple[float, float],
+    end: tuple[float, float],
+) -> bool:
+    """Return whether a collinear point lies on the closed segment."""
+    return (
+        min(start[0], end[0]) <= point[0] <= max(start[0], end[0])
+        and min(start[1], end[1]) <= point[1] <= max(start[1], end[1])
+    )
+
+
+def segment_intersection_kind(
+    p1: tuple[float, float],
+    p2: tuple[float, float],
+    p3: tuple[float, float],
+    p4: tuple[float, float],
+) -> SegmentIntersection:
+    """Classify the intersection between two closed line segments."""
+    o1 = _orientation(p1, p2, p3)
+    o2 = _orientation(p1, p2, p4)
+    o3 = _orientation(p3, p4, p1)
+    o4 = _orientation(p3, p4, p2)
+
+    if o1 != o2 and o3 != o4 and 0 not in (o1, o2, o3, o4):
+        return SegmentIntersection.CROSS
+
+    touches = (
+        (o1 == 0 and _point_on_segment(p3, p1, p2))
+        or (o2 == 0 and _point_on_segment(p4, p1, p2))
+        or (o3 == 0 and _point_on_segment(p1, p3, p4))
+        or (o4 == 0 and _point_on_segment(p2, p3, p4))
+    )
+    if not touches:
+        return SegmentIntersection.NONE
+
+    if o1 == o2 == o3 == o4 == 0:
+        use_x = abs(p2[0] - p1[0]) >= abs(p2[1] - p1[1])
+        first = sorted((p1[0], p2[0])) if use_x else sorted((p1[1], p2[1]))
+        second = sorted((p3[0], p4[0])) if use_x else sorted((p3[1], p4[1]))
+        overlap = min(first[1], second[1]) - max(first[0], second[0])
+        return SegmentIntersection.OVERLAP if overlap > 0 else SegmentIntersection.TOUCH
+
+    return SegmentIntersection.TOUCH
 
 
 def segments_intersect(
@@ -39,8 +102,7 @@ def segments_intersect(
     p3: tuple[float, float], p4: tuple[float, float]
 ) -> bool:
     """Check if line segment p1-p2 intersects segment p3-p4."""
-    return (_ccw(p1, p3, p4) != _ccw(p2, p3, p4) and
-            _ccw(p1, p2, p3) != _ccw(p1, p2, p4))
+    return segment_intersection_kind(p1, p2, p3, p4) is not SegmentIntersection.NONE
 
 
 def segment_intersects_box(

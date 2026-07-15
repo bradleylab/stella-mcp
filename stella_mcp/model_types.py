@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 XMILE_NS = "http://docs.oasis-open.org/xmile/ns/XMILE/v1.0"
 ISEE_NS = "http://iseesystems.com/XMILE"
 AUX_RADIUS = 18
+DEFAULT_VIEW_PAGE_WIDTH = 768.0
+DEFAULT_VIEW_PAGE_HEIGHT = 596.0
+DEFAULT_VIEW_PAGE_COLUMNS = 1
+DEFAULT_VIEW_PAGE_ROWS = 1
+DEFAULT_VIEW_FONT_POINTS = 9.0
+
+LabelSide = Literal["top", "bottom", "left", "right"]
+PositionSource = Literal["user", "auto"]
 
 
 @dataclass
@@ -21,6 +30,8 @@ class Stock:
     non_negative: bool = True
     x: float | None = None
     y: float | None = None
+    position_source: PositionSource = "auto"
+    label_side: LabelSide | None = None
     width: int = 45
     height: int = 35
     size_locked: bool = False
@@ -52,6 +63,8 @@ class Flow:
     non_negative: bool = True
     x: float | None = None
     y: float | None = None
+    position_source: PositionSource = "auto"
+    label_side: LabelSide | None = None
     points: list[tuple[float, float]] = field(default_factory=list)
     points_locked: bool = False
     graphical_function: GraphicalFunction | None = None
@@ -70,6 +83,8 @@ class Aux:
     units: str = ""
     x: float | None = None
     y: float | None = None
+    position_source: PositionSource = "auto"
+    label_side: LabelSide | None = None
     graphical_function: GraphicalFunction | None = None
     extra_attrs: dict[str, str] = field(default_factory=dict)
     extra_children_xml: list[str] = field(default_factory=list)

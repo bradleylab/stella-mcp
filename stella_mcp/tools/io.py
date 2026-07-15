@@ -12,6 +12,7 @@ from typing import Any
 
 from mcp.types import TextContent, Tool
 
+from ..layout_quality import layout_report_to_dict, layout_warning_suffix
 from ..model_snapshot import model_to_summary, template_info_to_dict
 from ..render_svg import render_model_svg
 from ..templates import get_template_info, load_template_model, save_user_template
@@ -219,10 +220,16 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
         )
         filepath.write_text(xml_content, encoding="utf-8")
         warning_suffix = compat_warning_suffix(model.last_export_warnings)
-        return [TextContent(
-            type="text",
-            text=f"Saved model_id={model_id} to {filepath}{warning_suffix}"
-        )]
+        layout_suffix = layout_warning_suffix(model.last_layout_result)
+        return success_result(
+            f"Saved model_id={model_id} to {filepath}{warning_suffix}{layout_suffix}",
+            {
+                "model_id": model_id,
+                "filepath": str(filepath),
+                "compatibility_warnings": list(model.last_export_warnings),
+                "layout": layout_report_to_dict(model.last_layout_result),
+            },
+        )
 
     @register("render_diagram")
     def _handle_render_diagram(arguments: dict[str, Any]) -> ToolResponse:
@@ -246,8 +253,14 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             result["filepath"] = str(path)
         suffix = f" -> {result['filepath']}" if result["filepath"] else ""
         return success_result(
-            f"Rendered model_id={model_id} to SVG ({len(svg)} bytes){suffix}",
-            result,
+            (
+                f"Rendered model_id={model_id} to SVG ({len(svg)} bytes){suffix}"
+                f"{layout_warning_suffix(model.last_layout_result)}"
+            ),
+            {
+                **result,
+                "layout": layout_report_to_dict(model.last_layout_result),
+            },
         )
 
     @register("read_model")
