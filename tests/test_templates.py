@@ -3,8 +3,10 @@
 import asyncio
 import math
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import stella_mcp.server as server_mod
+from stella_mcp.render_svg import render_model_svg
 from stella_mcp.templates import (
     get_template_info,
     list_templates,
@@ -73,6 +75,20 @@ def test_sir_template_layout_fits_one_page_with_compact_connectors():
         source = positions[connector.from_var]
         target = positions[connector.to_var]
         assert math.dist(source, target) <= max_connector_length
+
+
+def test_readme_sir_diagram_matches_current_builtin_template():
+    """The README diagram should not lag behind template identifier migrations."""
+    _, model = load_template_model("sir")
+    model._auto_layout()
+
+    diagram = (Path(__file__).parents[1] / "docs/images/sir.svg").read_text(
+        encoding="utf-8"
+    )
+
+    assert diagram == render_model_svg(model)
+    assert "transmission rate" in diagram
+    assert "recovery rate" in diagram
 
 
 def test_save_and_load_user_template(monkeypatch, tmp_path):

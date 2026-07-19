@@ -1,5 +1,45 @@
 # Evaluation Guide
 
+## 0.13 Trust Evidence
+
+Version 0.13 combines several distinct evidence sources. The generated
+[`0.13.0-capability-matrix.md`](0.13.0-capability-matrix.md) keeps permissive
+parsing, strict acceptance, supported-semantic preservation, unsupported-XML
+preservation, PySD simulation, Stella numeric exports, and desktop open/run/save
+evidence separate. It applies only to the retained fixtures.
+
+The completed local automated, distribution, and manual release checks are
+recorded in [`0.13.0-release-gates.md`](0.13.0-release-gates.md). GitHub Actions
+remains a separate gate after the release branch is pushed.
+
+The pinned external corpus manifest is
+`tests/fixtures/external_corpus/manifest.json`. Tests run from vendored files and
+do not download upstream content. Verify the synchronized summary records with:
+
+```bash
+uv run --extra sim python -m evaluation.numeric_fidelity_report --check
+uv run --extra sim python -m evaluation.capability_matrix --check
+```
+
+The numeric summary is
+[`0.13.0-numeric-fidelity.md`](0.13.0-numeric-fidelity.md). It records raw
+per-variable discrepancies and applies no pass threshold or interpolation. The
+Lotka-Volterra `predation` discrepancy is retained as a PySD/Stella
+non-negative-flow semantic difference rather than accepted by a tolerance.
+
+The six package-generated cases were opened, run, exported, saved, and visually
+reviewed in Stella Professional 4.1.1. Their manifest and operator notes are in
+[`0.13.0-desktop-acceptance.md`](0.13.0-desktop-acceptance.md), with source,
+Stella CSV, Stella-saved model, and hash records under `results/evaluation/`.
+
+Because built-in templates changed, the automated layout evaluation was rerun
+under [`layout-0.13/`](layout-0.13/). Regenerate it with:
+
+```bash
+uv run python -m evaluation.layout_runner \
+  --output-dir docs/evaluation/layout-0.13
+```
+
 The pre-implementation layout benchmark for the 0.12 quality milestone is
 documented in the
 [`2026-07-15-layout-baseline.md`](2026-07-15-layout-baseline.md) report.
@@ -103,9 +143,9 @@ uv run --group agent-eval --extra sim \
   --model MODEL_ID \
   --sampling-mode SAMPLING_MODE \
   --reasoning-effort REASONING_EFFORT \
-  --artifact-dir results/evaluation/0.12.0-agent-artifacts \
-  --output-json results/evaluation/0.12.0-agent-evaluation.json \
-  --output-markdown results/evaluation/0.12.0-agent-evaluation.md
+  --artifact-dir results/evaluation/0.13.0-agent-artifacts \
+  --output-json results/evaluation/0.13.0-agent-evaluation.json \
+  --output-markdown results/evaluation/0.13.0-agent-evaluation.md
 ```
 
 `PROVIDER` is `openai` or `washu`. `SAMPLING_MODE` declares which of the
@@ -115,6 +155,15 @@ replace existing expected artifacts or result files. `REASONING_EFFORT` is an
 optional endpoint/model run parameter; GPT-5.6 Chat Completions with function
 tools requires `none`.
 
-The recorded 0.12.0 run, endpoint preflight, manual review, and evidence limits
-are documented in
-[`2026-07-13-free-form-agent-evaluation.md`](2026-07-13-free-form-agent-evaluation.md).
+Protocol v2 executes each scenario in three fresh MCP sessions and scores
+workflow, semantic state, artifacts, completion, and tool health separately.
+The aggregate is a raw repeated-run count, not an estimated general success
+rate. CI validates the protocol, runner, scoring, redaction, and deterministic
+MCP workflows without calling an external model API; paid endpoint runs remain
+retained manual release evidence.
+
+The retained 0.13 personal OpenAI run is
+[`0.13.0-agent-evaluation.md`](../../results/evaluation/0.13.0-agent-evaluation.md).
+All 9 runs passed every required dimension across 51 MCP calls with no failed,
+recovered, or errored tool outcomes. This is descriptive evidence for the
+recorded model, endpoint, prompts, and tool catalog only.

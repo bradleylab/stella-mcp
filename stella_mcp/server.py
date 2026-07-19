@@ -165,8 +165,14 @@ def _error_result(
 
 def _classify_error(exc: Exception) -> tuple[str, str]:
     """Map Python exceptions to stable tool error codes/categories."""
+    from .equation_parser import StellaReservedIdentifierError
     from .simulate import SimulationDependencyError
+    from .xmile_features import UnsupportedModelFeatureError
 
+    if isinstance(exc, UnsupportedModelFeatureError):
+        return ("unsupported_model_feature", "compatibility")
+    if isinstance(exc, StellaReservedIdentifierError):
+        return ("reserved_identifier", "compatibility")
     message = str(exc)
     if isinstance(exc, SimulationDependencyError):
         return ("sim_dependency_missing", "environment")

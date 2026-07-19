@@ -1,6 +1,7 @@
 """Shared equation parsing helpers for Stella-style expressions."""
 
 import re
+from typing import Any
 
 # Reserved tokens that must not be treated as variable references.
 #
@@ -59,12 +60,40 @@ _LEGACY_COMPAT_TOKENS = {
     "TRUE", "FALSE", "E",
 }
 
-STELLA_RESERVED_TOKENS = (
-    _XMILE_SPEC_TOKENS | _STELLA_EXTENSION_TOKENS | _LEGACY_COMPAT_TOKENS
-)
+STELLA_IDENTIFIER_RESERVED_TOKENS = _XMILE_SPEC_TOKENS | _STELLA_EXTENSION_TOKENS
+STELLA_RESERVED_TOKENS = STELLA_IDENTIFIER_RESERVED_TOKENS | _LEGACY_COMPAT_TOKENS
 
 _TOKEN_PATTERN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b")
 _QUOTED_SPAN_PATTERN = re.compile(r'"([^"]*)"')
+
+
+class StellaReservedIdentifierError(ValueError):
+    """Raised when strict compatibility encounters reserved variable names."""
+
+    def __init__(self, identifiers: tuple[str, ...]):
+        self.identifiers = identifiers
+        super().__init__(
+            "Stella-reserved variable identifiers: " + ", ".join(identifiers)
+        )
+
+    @property
+    def details(self) -> dict[str, Any]:
+        return {"identifiers": list(self.identifiers)}
+
+
+def is_stella_reserved_identifier(name: str) -> bool:
+    """Return whether Stella documents ``name`` as a reserved token."""
+    return name.strip().upper() in STELLA_IDENTIFIER_RESERVED_TOKENS
+
+
+def find_stella_reserved_identifiers(names: list[str]) -> tuple[str, ...]:
+    """Return unique reserved names in deterministic case-insensitive order."""
+    return tuple(
+        sorted(
+            {name for name in names if is_stella_reserved_identifier(name)},
+            key=lambda value: (value.casefold(), value),
+        )
+    )
 
 
 def _is_reserved_or_numeric(token: str) -> bool:

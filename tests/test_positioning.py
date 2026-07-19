@@ -16,8 +16,7 @@ class TestUserSpecifiedPositions:
         model.add_stock("Population", "100", x=400, y=500)
         xml = model.to_xml()
 
-        assert 'x="377.5"' in xml
-        assert 'y="482.5"' in xml
+        assert '<stock x="400" y="500" name="Population"' in xml
         assert (model.stocks["Population"].x, model.stocks["Population"].y) == (400, 500)
 
     def test_user_specified_flow_position_preserved(self):

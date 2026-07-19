@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "sdxorg_test_models": {
+      "repository": "https://github.com/SDXorg/test-models",
+      "commit": "21aab02739dc5187bc9564e4d3de14e575905d2f",
+      "license": "MIT",
+      "license_path": "sdxorg/LICENSE",
+      "license_sha256": "ac2cacd8360f8d24555d5feb327f46474f0c6e4635498c6ed498dae06fc1a913",
+      "attribution_path": "ATTRIBUTION.md"
+    }
+  },
+  "fixtures": [
+    {
+      "id": "sdx_sir",
+      "source": "sdxorg_test_models",
+      "model": {
+        "path": "sdxorg/samples/SIR/SIR.stmx",
+        "upstream_path": "samples/SIR/SIR.stmx",
+        "sha256": "c31133692ff40b86a09a03b488ebbd1f90703f34505009d2c8b9cc1b7a2f880b"
+      },
+      "constructs": ["scalar", "nonlinear"],
+      "desktop_acceptance_evidence": "none",
+      "expect": {
+        "strict_import": "supported",
+        "permissive_import": "supported",
+        "permissive_roundtrip": "supported_semantics",
+        "simulation": "supported",
+        "findings": []
+      },
+      "numeric": {
+        "stella_output": {
+          "path": "sdxorg/samples/SIR/output_stella1006.csv",
+          "upstream_path": "samples/SIR/output_stella1006.csv",
+          "sha256": "96ba88050ed700d20735686c8815bad63ad54e49d4fa4af1ced3b398df88b297"
+        },
+        "application": "Stella",
+        "application_version": "10.0.6 for Windows",
+        "reference_time": "time",
+        "candidate_time": "Time",
+        "time_alignment": {
+          "policy": "rounded_reference_labels",
+          "candidate_decimal_places": 3
+        },
+        "columns": [
+          {"reference": "infectious", "candidate": "infectious"},
+          {"reference": "recovered", "candidate": "recovered"},
+          {"reference": "susceptible", "candidate": "susceptible"}
+        ]
+      }
+    },
+    {
+      "id": "sdx_teacup",
+      "source": "sdxorg_test_models",
+      "model": {
+        "path": "sdxorg/samples/teacup/teacup.stmx",
+        "upstream_path": "samples/teacup/teacup.stmx",
+        "sha256": "821be7a73ef5b7b53b232ea8eb2ec63a0b2fd7ea47a50248af9443d7e9a33e18"
+      },
+      "constructs": ["scalar", "linear_cooling"],
+      "desktop_acceptance_evidence": "none",
+      "expect": {
+        "strict_import": "supported",
+        "permissive_import": "supported",
+        "permissive_roundtrip": "supported_semantics",
+        "simulation": "supported",
+        "findings": []
+      },
+      "numeric": {
+        "stella_output": {
+          "path": "sdxorg/samples/teacup/output_stella1006.csv",
+          "upstream_path": "samples/teacup/output_stella1006.csv",
+          "sha256": "bba3e55ba01aa2216af45a8b9596b50639e00ff079067b89cab7e2b439be2157"
+        },
+        "application": "Stella",
+        "application_version": "10.0.6 for Windows",
+        "reference_time": "time",
+        "candidate_time": "Time",
+        "time_alignment": {"policy": "exact"},
+        "columns": [
+          {"reference": "teacup temperature", "candidate": "teacup temperature"}
+        ]
+      }
+    },
+    {
+      "id": "sdx_array_a2a",
+      "source": "sdxorg_test_models",
+      "model": {
+        "path": "sdxorg/samples/arrays/a2a/a2a.stmx",
+        "upstream_path": "samples/arrays/a2a/a2a.stmx",
+        "sha256": "3343fa08881cf227f6707e4b41a0e097b3c0b665a4b82a4eb456020f32f3ba62"
+      },
+      "constructs": ["arrays"],
+      "desktop_acceptance_evidence": "none",
+      "expect": {
+        "strict_import": "unsupported",
+        "permissive_import": "preserved_only",
+        "permissive_roundtrip": "preserved_only",
+        "simulation": "unsupported",
+        "findings": ["xmile.arrays"]
+      }
+    },
+    {
+      "id": "sdx_array_gf",
+      "source": "sdxorg_test_models",
+      "model": {
+        "path": "sdxorg/samples/arrays/non-a2a/non-a2a-gf.stmx",
+        "upstream_path": "samples/arrays/non-a2a/non-a2a-gf.stmx",
+        "sha256": "7405150ddc1788d6f65e136cb830e85a20123ac12c98c7dc5cb4ccc306b7b0a3"
+      },
+      "constructs": ["arrays", "graphical_function"],
+      "desktop_acceptance_evidence": "none",
+      "expect": {
+        "strict_import": "unsupported",
+        "permissive_import": "preserved_only",
+        "permissive_roundtrip": "preserved_only",
+        "simulation": "unsupported",
+        "findings": ["xmile.arrays"]
+      }
+    },
+    {
+      "id": "sdx_nested_modules",
+      "source": "sdxorg_test_models",
+      "model": {
+        "path": "sdxorg/samples/bpowers-hares_and_lynxes_modules/model.stmx",
+        "upstream_path": "samples/bpowers-hares_and_lynxes_modules/model.stmx",
+        "sha256": "2d1a6265097ac4b6b9bd51d766c0c6421137668624f52507f31f5e638e9b7cfd"
+      },
+      "constructs": ["module_instance", "nested_model"],
+      "desktop_acceptance_evidence": "none",
+      "expect": {
+        "strict_import": "unsupported",
+        "permissive_import": "preserved_only",
+        "permissive_roundtrip": "preserved_only",
+        "simulation": "unsupported",
+        "findings": ["xmile.module_instances", "xmile.nested_models"]
+      }
+    }
+  ]
+}

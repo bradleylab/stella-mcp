@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -7.5 613.6 610" width="613.6" height="610">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>
+<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:12px;fill:#000}</style>
+<polyline class="connector" points="152,206 188,91" marker-end="url(#arrow)"/>
+<polyline class="connector" points="156,81 178,81" marker-end="url(#arrow)"/>
+<polyline class="connector" points="152,234 224,234 224,175" marker-end="url(#arrow)"/>
+<polyline class="connector" points="256,165 234,165" marker-end="url(#arrow)"/>
+<polyline class="connector" points="152,262 260,259" marker-end="url(#arrow)"/>
+<polyline class="connector" points="420,231 420,238 292,238 292,249 270,249" marker-end="url(#arrow)"/>
+<polyline class="connector" points="152,304 242,290" marker-end="url(#arrow)"/>
+<polyline class="connector" points="460,290 262,290" marker-end="url(#arrow)"/>
+<polyline class="connector" points="152,304 242,318" marker-end="url(#arrow)"/>
+<polyline class="connector" points="526,318 504,318 504,321 284,321 284,318 262,318" marker-end="url(#arrow)"/>
+<polyline class="connector" points="152,346 260,349" marker-end="url(#arrow)"/>
+<polyline class="connector" points="402,359 270,359" marker-end="url(#arrow)"/>
+<polyline class="connector" points="152,374 224,374 224,433" marker-end="url(#arrow)"/>
+<polyline class="connector" points="256,443 234,443" marker-end="url(#arrow)"/>
+<polyline class="connector" points="152,402 188,517" marker-end="url(#arrow)"/>
+<polyline class="connector" points="156,527 178,527" marker-end="url(#arrow)"/>
+<polyline class="flow-pipe" points="152,206 188,206 188,63 332,63"/>
+<path class="flow-valve" d="M181,74 L195,88 L195,74 L181,88 z"/>
+<text class="label" x="188" y="102.2" text-anchor="middle">flow 0</text>
+<polyline class="flow-pipe" points="152,234 224,234 224,131 332,131"/>
+<path class="flow-valve" d="M217,158 L231,172 L231,158 L217,172 z"/>
+<text class="label" x="224" y="186.2" text-anchor="middle">flow 1</text>
+<polyline class="flow-pipe" points="152,262 260,262 260,201 332,201"/>
+<path class="flow-valve" d="M253,242 L267,256 L267,242 L253,256 z"/>
+<text class="label" x="260" y="270.2" text-anchor="middle">flow 2</text>
+<polyline class="flow-pipe" points="152,290 296,290 296,269 332,269"/>
+<path class="flow-valve" d="M245,283 L259,297 L259,283 L245,297 z"/>
+<text class="label" x="219.4" y="294.2" text-anchor="middle">flow 3</text>
+<polyline class="flow-pipe" points="152,318 296,318 296,339 332,339"/>
+<path class="flow-valve" d="M245,311 L259,325 L259,311 L245,325 z"/>
+<text class="label" x="252" y="339.2" text-anchor="middle">flow 4</text>
+<polyline class="flow-pipe" points="152,346 260,346 260,407 332,407"/>
+<path class="flow-valve" d="M253,352 L267,366 L267,352 L253,366 z"/>
+<text class="label" x="260" y="380.2" text-anchor="middle">flow 5</text>
+<polyline class="flow-pipe" points="152,374 224,374 224,477 332,477"/>
+<path class="flow-valve" d="M217,436 L231,450 L231,436 L217,450 z"/>
+<text class="label" x="224" y="464.2" text-anchor="middle">flow 6</text>
+<polyline class="flow-pipe" points="152,402 188,402 188,545 332,545"/>
+<path class="flow-valve" d="M181,520 L195,534 L195,520 L181,534 z"/>
+<text class="label" x="188" y="548.2" text-anchor="middle">flow 7</text>
+<rect class="stock" x="331.5" y="45.5" width="45" height="35"/>
+<text class="label" x="354" y="42.7" text-anchor="middle">destination 0</text>
+<rect class="stock" x="331.5" y="113.5" width="45" height="35"/>
+<text class="label" x="354" y="110.7" text-anchor="middle">destination 1</text>
+<rect class="stock" x="331.5" y="183.5" width="45" height="35"/>
+<text class="label" x="354" y="180.7" text-anchor="middle">destination 2</text>
+<rect class="stock" x="331.5" y="251.5" width="45" height="35"/>
+<text class="label" x="354" y="248.7" text-anchor="middle">destination 3</text>
+<rect class="stock" x="331.5" y="321.5" width="45" height="35"/>
+<text class="label" x="354" y="318.7" text-anchor="middle">destination 4</text>
+<rect class="stock" x="331.5" y="389.5" width="45" height="35"/>
+<text class="label" x="354" y="386.7" text-anchor="middle">destination 5</text>
+<rect class="stock" x="331.5" y="459.5" width="45" height="35"/>
+<text class="label" x="354" y="456.7" text-anchor="middle">destination 6</text>
+<rect class="stock" x="331.5" y="527.5" width="45" height="35"/>
+<text class="label" x="354" y="524.7" text-anchor="middle">destination 7</text>
+<rect class="stock" x="32" y="178" width="120" height="252"/>
+<text class="label" x="92" y="175.2" text-anchor="middle">hub</text>
+<circle class="aux" cx="138" cy="81" r="18"/>
+<text class="label" x="138" y="110.2" text-anchor="middle">rate 0</text>
+<circle class="aux" cx="274" cy="165" r="18"/>
+<text class="label" x="274" y="194.2" text-anchor="middle">rate 1</text>
+<circle class="aux" cx="420" cy="249" r="18"/>
+<text class="label" x="420" y="278.2" text-anchor="middle">rate 2</text>
+<circle class="aux" cx="478" cy="290" r="18"/>
+<text class="label" x="478" y="269.2" text-anchor="middle">rate 3</text>
+<circle class="aux" cx="544" cy="318" r="18"/>
+<text class="label" x="544" y="297.2" text-anchor="middle">rate 4</text>
+<circle class="aux" cx="420" cy="359" r="18"/>
+<text class="label" x="420" y="338.2" text-anchor="middle">rate 5</text>
+<circle class="aux" cx="274" cy="443" r="18"/>
+<text class="label" x="274" y="422.2" text-anchor="middle">rate 6</text>
+<circle class="aux" cx="138" cy="527" r="18"/>
+<text class="label" x="138" y="506.2" text-anchor="middle">rate 7</text>
+</svg>

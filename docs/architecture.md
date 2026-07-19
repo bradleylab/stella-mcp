@@ -15,7 +15,7 @@ MCP v2 migration is tested.
 
 | Layer | Modules | Dependency rule |
 | --- | --- | --- |
-| Model core | `model_types`, `model`, `model_layout`, `layout_graph`, `layout_router`, `layout_quality`, `layout_pipeline`, `xmile_parse`, `xmile_export`, `validator`, `render_svg` | Uses the Python standard library and project modules. It must not require simulation dependencies. |
+| Model core | `model_types`, `model`, `model_layout`, `layout_graph`, `layout_router`, `layout_quality`, `layout_pipeline`, `xmile_features`, `xmile_parse`, `xmile_export`, `validator`, `render_svg` | Uses the Python standard library and project modules. It must not require simulation dependencies. |
 | MCP | `server`, `mcp_resources`, `tool_schemas`, `tool_handlers`, `tools/*`, `session_store` | Depends on `mcp` and the model core. Importing the server must work with only core dependencies installed. |
 | Simulation | `simulate`, `analysis`, `calibrate` | Uses the optional `sim` extra: PySD, NumPy, pandas, and SciPy. Optional packages are imported only on simulation call paths. |
 
@@ -62,6 +62,7 @@ two facades without changing existing tool order.
 | `layout_router.py` | Boundary-port allocation, route normalization, candidate routing, and visibility-graph fallback. |
 | `layout_quality.py` | Shared glyph and label geometry, intersection analysis, metrics, warning types, and structured reports. |
 | `layout_pipeline.py` | Staged stock, flow, auxiliary, connector, label, and page-grid orchestration. |
+| `xmile_features.py` | Pre-conversion feature classification and typed errors for supported and preserved-only XMILE constructs. |
 | `xmile_parse.py` | File parsing, namespace handling, numeric parsing, compatibility warnings, and retention of unknown supported content. |
 | `xmile_export.py` | XML serialization, namespace declarations, preserved fragments, view styles, point lists, and graphical functions. |
 | `xmile.py` | Public facade for `StellaModel`, model records, constants, and `parse_stmx`. |
@@ -72,8 +73,13 @@ layout pipeline and `xmile_export`. Callers should continue importing public
 model types from `stella_mcp.xmile`; implementation code may import from the
 owner modules directly when that clarifies the dependency.
 
-Parser changes must preserve strict and permissive warning behavior. Exporter
-changes must preserve unknown attributes and elements in supported sections.
+Parser changes must preserve strict and permissive warning behavior. In 0.13,
+strict mode rejects arrays, compositional module instances, additional top-level
+models, and confirmed reserved identifiers. Permissive mode records deterministic
+findings and retains the selected unsupported fragments at their structural level;
+those constructs remain preserved-only and are blocked at the shared PySD compile
+boundary. Exporter changes must preserve unknown attributes and elements in
+supported sections.
 Internal stock geometry is center-based. XMILE parsing and export convert the
 Stella convention in which stock `x`/`y` is upper-left when the corresponding
 dimension is explicit and center-based when it is omitted. Generated connector
@@ -102,18 +108,21 @@ own multiple models.
 
 ## Compatibility Contracts
 
-Version 0.12 retains these public surfaces from 0.11 except for the documented
-layout-result additions and auto-position recomputation behavior:
+Version 0.13 retains these public surfaces from 0.12 except for the documented
+compatibility failures, SIR identifier migration, and additive evidence/backend
+metadata:
 
 - tool names, order, input schemas, annotations, text results, and structured
   results;
 - imports from `stella_mcp.xmile`, `stella_mcp.xmile_io`,
   `stella_mcp.tool_schemas`, and `stella_mcp.tool_handlers`;
-- strict and permissive XMILE parsing behavior;
+- strict and permissive XMILE modes, with new early rejection for documented
+  preserved-only constructs and reserved identifiers;
 - generated XMILE and model snapshots; authored layout geometry remains fixed,
   while automatic layout and SVG routing use the new deterministic pipeline;
 - simulation, analysis, and calibration behavior when the `sim` extra is
-  installed;
+  installed, plus additive PySD version, actual/declared method, feature-preflight,
+  and warning metadata;
 - stable structured error codes and categories.
 
 Tests should be added at the owning module first. Facade-level contract tests

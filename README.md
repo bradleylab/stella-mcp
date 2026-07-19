@@ -483,10 +483,17 @@ pip install 'stella-mcp[sim]'
 Notes and caveats:
 
 - PySD integrates with **Euler only** — models whose `method` is RK4 simulate
-  with Euler and the response carries a warning. Results can differ from
-  Stella for stiff systems.
-- PySD supports a subset of XMILE; unsupported constructs fail with a
-  structured error rather than wrong numbers.
+  with Euler and the response carries a warning. Every PySD-backed response
+  identifies the installed PySD version, actual method, declared method,
+  unsupported-feature preflight, and warnings.
+- Arrays, compositional module instances, and additional top-level models are
+  preserved-only in 0.13. They fail before PySD with a structured
+  `unsupported_model_feature` error rather than being silently scalarized or
+  flattened.
+- PySD and Stella do not have identical output semantics in every supported
+  scalar case. In the retained Lotka-Volterra fixture, Stella caps an outflow
+  to enforce a non-negative stock while PySD reports the uncapped flow equation.
+  The stock trajectories still reach zero together at the next model time.
 - `overrides` accepts variable names in display (`"growth rate"`) or
   underscore (`growth_rate`) form and replaces the variable with a constant.
 - `save_results_csv` writes the full-resolution results table with a `time`
@@ -637,6 +644,16 @@ The `validate_model` tool checks for:
 
 - Output files use the [XMILE standard](https://docs.oasis-open.org/xmile/xmile/v1.0/xmile-v1.0.html)
 - Compatible with **Stella Professional 1.9+** and **Stella Architect**
+- `permissive` import/export preserves supported content and the selected
+  unsupported XML fragments where practical, while returning explicit warnings.
+  Editing supported variables does not guarantee references inside preserved-only
+  fragments are updated.
+- `strict` import/export rejects arrays, compositional module instances,
+  additional top-level models, and confirmed Stella/XMILE reserved identifiers.
+  Arrays and nested models are not implemented features in 0.13.
+- Reserved names such as `beta` and `gamma` are preserved with warnings in
+  permissive mode and rejected in strict mode. The built-in SIR template uses
+  `transmission_rate` and `recovery_rate` so Stella does not rename them on save.
 - Auto-layout uses a deterministic directed stock-flow backbone, distinct stock
   ports, obstacle-aware flow and connector routes, label collision checks, and
   page-grid sizing from complete visual bounds.
@@ -658,7 +675,9 @@ The `validate_model` tool checks for:
 - Parser normalizes imported stock inflow/outflow and connector endpoint references
 - Time-step export avoids lossy reciprocal rounding (non-exact reciprocals are exported as plain `dt`)
 - Import/export preserves unknown attrs/elements on supported sections (header, sim_specs, variables, views/model extras) to reduce round-trip data loss
-- Compatibility corpus regression tests live in `tests/fixtures/compat_corpus/` and run in CI
+- Compatibility corpus regression tests live in `tests/fixtures/compat_corpus/`.
+  A pinned, attributed subset of SDXorg test-models lives in
+  `tests/fixtures/external_corpus/`; both run offline in CI.
 - Maintainer helper: `python scripts/sync_compat_corpus_manifest.py --check` validates corpus manifest sync
 
 ## Evaluation
@@ -674,10 +693,14 @@ uv run --extra sim python -m evaluation.runner --require sim
 ```
 
 The runner writes JSON and Markdown reports under `results/evaluation/` by
-default. Stella-saved desktop fixtures and their review provenance live in
-`tests/fixtures/compat_corpus/`. See
-[`docs/evaluation/README.md`](docs/evaluation/README.md) for the evidence scope,
-desktop workflow, and the no-interpolation CSV comparison command.
+default. The 0.13 evidence includes a generated
+[capability matrix](docs/evaluation/0.13.0-capability-matrix.md), an explicit
+[numeric discrepancy review](docs/evaluation/0.13.0-numeric-fidelity.md), and
+[Stella Professional desktop acceptance](docs/evaluation/0.13.0-desktop-acceptance.md).
+These retained cases are evidence for their tested constructs, not a claim of
+compatibility with every Stella or XMILE model. See
+[`docs/evaluation/README.md`](docs/evaluation/README.md) for reproduction commands
+and evidence limits.
 
 ## Project Structure
 
@@ -712,6 +735,7 @@ stella-mcp/
     ├── layout_pipeline.py # Staged deterministic layout orchestration
     ├── xmile.py           # Public model compatibility facade
     ├── xmile_io.py        # XMILE I/O compatibility facade
+    ├── xmile_features.py  # XMILE feature classification and typed errors
     ├── xmile_parse.py     # XMILE parser and compatibility warnings
     ├── xmile_export.py    # XMILE serialization and fragment retention
     └── validator.py      # Model validation logic
@@ -731,11 +755,11 @@ Publishing. To release a new version:
    dates identical.
 2. Run `uv lock --check`, the core and simulation test suites, the MCP-floor
    suite, and the package job. Prepare a release-notes file such as
-   `docs/releases/0.12.0.md`.
+   `docs/releases/0.13.0.md`.
 3. Merge the release changes to `main` and wait for every main-branch CI job to
    pass.
 4. Create and publish a GitHub release from `main` with the matching tag and
-   notes file, for example `v0.12.0`. The publish workflow validates that tag
+   notes file, for example `v0.13.0`. The publish workflow validates that tag
    against the package metadata before uploading.
 
 The GitHub release event builds the source distribution and wheel, then publishes

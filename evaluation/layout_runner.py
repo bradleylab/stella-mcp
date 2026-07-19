@@ -28,6 +28,18 @@ from stella_mcp.xmile import StellaModel
 
 SCHEMA_VERSION = 1
 EVALUATION_UUID_NAMESPACE = "https://github.com/bradleylab/stella-mcp/layout-evaluation/"
+REPORT_FLOAT_DECIMAL_PLACES = 9
+
+
+def _canonicalize_report_value(value: Any) -> Any:
+    """Normalize report containers and insignificant float representation."""
+    if isinstance(value, float):
+        return round(value, REPORT_FLOAT_DECIMAL_PLACES)
+    if isinstance(value, dict):
+        return {key: _canonicalize_report_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_canonicalize_report_value(item) for item in value]
+    return value
 
 
 def _positions(model: StellaModel) -> dict[str, list[float]]:
@@ -144,7 +156,7 @@ def run_layout_evaluation(output_dir: Path) -> dict[str, Any]:
         "cases": cases,
         "incremental": _incremental_record(output_dir),
     }
-    record = json.loads(json.dumps(raw_record, sort_keys=True))
+    record = _canonicalize_report_value(raw_record)
     (output_dir / "layout-report.json").write_text(
         json.dumps(record, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

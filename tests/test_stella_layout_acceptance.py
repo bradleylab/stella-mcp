@@ -93,9 +93,13 @@ def test_stella_4_1_1_release_fixture_semantics_and_layout(case):
         "screenshot_sha256"
     ]
 
-    source = parse_stmx(str(FIXTURES / case["source_file"]), compat_mode="strict")
-    saved = parse_stmx(str(FIXTURES / case["saved_file"]), compat_mode="strict")
     names = case["identifier_renames"]
+    # The historical SIR pair records the beta/gamma renames that now cause
+    # intentional 0.13 strict-mode rejection. Preserve that 0.12 evidence in
+    # permissive mode; all cases without known renames remain strict fixtures.
+    compat_mode = "permissive" if names else "strict"
+    source = parse_stmx(str(FIXTURES / case["source_file"]), compat_mode=compat_mode)
+    saved = parse_stmx(str(FIXTURES / case["saved_file"]), compat_mode=compat_mode)
 
     assert _semantic_signature(source, names) == _semantic_signature(saved, {})
     assert _layout_elements(source, names) == _layout_elements(saved, {})

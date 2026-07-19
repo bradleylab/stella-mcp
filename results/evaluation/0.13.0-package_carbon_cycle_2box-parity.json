@@ -1,0 +1,140 @@
+{
+  "schema_version": 2,
+  "engines": {
+    "pysd": {
+      "version": "3.14.3"
+    },
+    "stella": {
+      "application": "Stella Professional",
+      "version": "4.1.1"
+    }
+  },
+  "artifacts": {
+    "model": {
+      "path": "results/evaluation/0.13.0-desktop-candidates/package_carbon_cycle_2box.stmx",
+      "sha256": "2d0c471272bb1d770462da68b3533ef57bbbea2f9efa84dfc88c8e21e1f8a1d5"
+    },
+    "pysd_csv": {
+      "path": "results/evaluation/0.13.0-package_carbon_cycle_2box-pysd.csv",
+      "sha256": "f31a86ff89e3b884db54add8461f01591d047b5fd2aee8cc520bb574c353fd82"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_carbon_cycle_2box-stella.csv",
+      "sha256": "3f5ae9f72ba132ee2b07ad1074ecc6ad08cf7ac963c2c441434170bfd12f66e3"
+    }
+  },
+  "simulation": {
+    "backend": {
+      "name": "PySD",
+      "version": "3.14.3",
+      "actual_integration_method": "Euler",
+      "model_integration_method": "Euler",
+      "unsupported_feature_preflight": {
+        "status": "passed",
+        "feature_codes": []
+      },
+      "warnings": []
+    },
+    "sim_specs": {
+      "start": 0.0,
+      "stop": 100.0,
+      "dt": 0.25,
+      "method": "Euler",
+      "time_units": "Years"
+    },
+    "warnings": []
+  },
+  "comparison": {
+    "schema_version": 2,
+    "reference": "results/evaluation/0.13.0-package_carbon_cycle_2box-pysd.csv",
+    "candidate": "results/evaluation/0.13.0-desktop-evidence/package_carbon_cycle_2box-stella.csv",
+    "time_columns": {
+      "reference": "time",
+      "candidate": "Years"
+    },
+    "points": 401,
+    "comparison_policy": {
+      "time_alignment": "exact",
+      "candidate_decimal_places": null,
+      "interpolation": "none",
+      "max_time_label_difference": 0.0,
+      "relative_error_denominator": "max(abs(reference), abs(candidate))",
+      "pass_threshold": null
+    },
+    "columns": [
+      {
+        "reference_column": "Atmosphere C",
+        "candidate_column": "Atmosphere C",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "Land C",
+        "candidate_column": "Land C",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "photosynthesis",
+        "candidate_column": "photosynthesis",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "respiration",
+        "candidate_column": "respiration",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "photosynthesis rate",
+        "candidate_column": "photosynthesis rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "respiration rate",
+        "candidate_column": "respiration rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      }
+    ]
+  },
+  "desktop_evidence": {
+    "id": "package_carbon_cycle_2box",
+    "opened_without_repair": true,
+    "run_completed": true,
+    "run_final_time": 100,
+    "visual_review": "pass",
+    "notes": "The corrected two-stock vertical exchange layout fit on one page; labels, flows, and information links were readable without stock overlap or route crossing.",
+    "source_model": {
+      "path": "results/evaluation/0.13.0-desktop-candidates/package_carbon_cycle_2box.stmx",
+      "sha256": "2d0c471272bb1d770462da68b3533ef57bbbea2f9efa84dfc88c8e21e1f8a1d5"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_carbon_cycle_2box-stella.csv",
+      "sha256": "3f5ae9f72ba132ee2b07ad1074ecc6ad08cf7ac963c2c441434170bfd12f66e3"
+    },
+    "stella_saved_model": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_carbon_cycle_2box-stella-saved.stmx",
+      "sha256": "d0f1307cc2c07c88763df37337033fac4e4da2d7da2fe940c4339c338dff4796"
+    },
+    "saved_reimport_strict": true,
+    "identifier_renames": [],
+    "serialization_changes": [],
+    "computational_changes": [],
+    "parity_report": "results/evaluation/0.13.0-package_carbon_cycle_2box-parity.json"
+  }
+}

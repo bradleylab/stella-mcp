@@ -6,11 +6,14 @@ import argparse
 import csv
 import json
 import math
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
 
-def _read_columns(path: Path, columns: list[str]) -> dict[str, list[float]]:
+def _read_columns(
+    path: Path, columns: list[str]
+) -> tuple[dict[str, list[float]], dict[str, list[str]]]:
     with path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
         fieldnames = reader.fieldnames
@@ -23,6 +26,7 @@ def _read_columns(path: Path, columns: list[str]) -> dict[str, list[float]]:
             raise ValueError(f"Missing columns in {path}: {', '.join(missing)}")
 
         values = {column: [] for column in columns}
+        raw_values = {column: [] for column in columns}
         for row_number, row in enumerate(reader, start=2):
             for column in columns:
                 raw = row[column]
@@ -37,10 +41,91 @@ def _read_columns(path: Path, columns: list[str]) -> dict[str, list[float]]:
                         f"Non-finite value in {path}, row {row_number}, column {column}: {raw!r}"
                     )
                 values[column].append(value)
+                raw_values[column].append(raw)
 
     if not values[columns[0]]:
         raise ValueError(f"CSV has no data rows: {path}")
-    return values
+    return values, raw_values
+
+
+def _check_strictly_increasing(values: list[float], label: str) -> None:
+    for index, (previous, current) in enumerate(zip(values, values[1:], strict=False), start=2):
+        if current <= previous:
+            raise ValueError(
+                f"{label} time grid is not strictly increasing at data row {index}: "
+                f"{previous} then {current}"
+            )
+
+
+def _align_time_grids(
+    reference_values: list[float],
+    candidate_values: list[float],
+    reference_raw: list[str],
+    candidate_raw: list[str],
+    *,
+    policy: str,
+    candidate_decimal_places: int | None,
+) -> float:
+    if len(reference_values) != len(candidate_values):
+        raise ValueError(
+            "Time grids have different lengths: "
+            f"{len(reference_values)} reference rows, {len(candidate_values)} candidate rows"
+        )
+    _check_strictly_increasing(reference_values, "Reference")
+    _check_strictly_increasing(candidate_values, "Candidate")
+
+    if policy == "exact":
+        for index, (reference_value, candidate_value) in enumerate(
+            zip(reference_values, candidate_values, strict=True)
+        ):
+            if reference_value != candidate_value:
+                raise ValueError(
+                    "Time grids differ at data row "
+                    f"{index + 1}: {reference_value} != {candidate_value}"
+                )
+        return max(
+            abs(reference_value - candidate_value)
+            for reference_value, candidate_value in zip(
+                reference_values, candidate_values, strict=True
+            )
+        )
+
+    if policy != "rounded_reference_labels":
+        raise ValueError(f"Unknown time alignment policy: {policy}")
+    if (
+        not isinstance(candidate_decimal_places, int)
+        or isinstance(candidate_decimal_places, bool)
+        or candidate_decimal_places < 0
+    ):
+        raise ValueError(
+            "rounded_reference_labels requires candidate_decimal_places >= 0"
+        )
+
+    quantum = Decimal(1).scaleb(-candidate_decimal_places)
+    max_difference = Decimal(0)
+    for index, (reference_text, candidate_text) in enumerate(
+        zip(reference_raw, candidate_raw, strict=True), start=1
+    ):
+        try:
+            reference_decimal = Decimal(reference_text)
+            candidate_decimal = Decimal(candidate_text)
+        except InvalidOperation as exc:
+            raise ValueError(f"Invalid decimal time label at data row {index}") from exc
+        if not reference_decimal.is_finite() or not candidate_decimal.is_finite():
+            raise ValueError(f"Non-finite decimal time label at data row {index}")
+        if candidate_decimal.as_tuple().exponent != -candidate_decimal_places:
+            raise ValueError(
+                f"Candidate time label at data row {index} does not have "
+                f"{candidate_decimal_places} decimal places: {candidate_text!r}"
+            )
+        expected = reference_decimal.quantize(quantum, rounding=ROUND_HALF_UP)
+        if candidate_decimal != expected:
+            raise ValueError(
+                "Rounded time grids differ at data row "
+                f"{index}: expected {expected}, got {candidate_decimal}"
+            )
+        max_difference = max(max_difference, abs(reference_decimal - candidate_decimal))
+    return float(max_difference)
 
 
 def compare_csv_runs(
@@ -50,6 +135,8 @@ def compare_csv_runs(
     *,
     reference_time: str = "time",
     candidate_time: str = "time",
+    time_alignment: str = "exact",
+    candidate_decimal_places: int | None = None,
 ) -> dict[str, Any]:
     """Return raw discrepancy metrics for runs on an identical time grid.
 
@@ -62,24 +149,18 @@ def compare_csv_runs(
 
     reference_columns = [reference_time, *(pair[0] for pair in column_pairs)]
     candidate_columns = [candidate_time, *(pair[1] for pair in column_pairs)]
-    reference = _read_columns(reference_path, reference_columns)
-    candidate = _read_columns(candidate_path, candidate_columns)
+    reference, reference_raw = _read_columns(reference_path, reference_columns)
+    candidate, candidate_raw = _read_columns(candidate_path, candidate_columns)
     reference_times = reference[reference_time]
     candidate_times = candidate[candidate_time]
-
-    if len(reference_times) != len(candidate_times):
-        raise ValueError(
-            "Time grids have different lengths: "
-            f"{len(reference_times)} reference rows, {len(candidate_times)} candidate rows"
-        )
-    for index, (reference_value, candidate_value) in enumerate(
-        zip(reference_times, candidate_times, strict=True)
-    ):
-        if reference_value != candidate_value:
-            raise ValueError(
-                "Time grids differ at data row "
-                f"{index + 1}: {reference_value} != {candidate_value}"
-            )
+    max_time_label_difference = _align_time_grids(
+        reference_times,
+        candidate_times,
+        reference_raw[reference_time],
+        candidate_raw[candidate_time],
+        policy=time_alignment,
+        candidate_decimal_places=candidate_decimal_places,
+    )
 
     comparisons = []
     for reference_name, candidate_name in column_pairs:
@@ -117,13 +198,16 @@ def compare_csv_runs(
         )
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "reference": str(reference_path),
         "candidate": str(candidate_path),
         "time_columns": {"reference": reference_time, "candidate": candidate_time},
         "points": len(reference_times),
         "comparison_policy": {
-            "time_alignment": "exact; no interpolation",
+            "time_alignment": time_alignment,
+            "candidate_decimal_places": candidate_decimal_places,
+            "interpolation": "none",
+            "max_time_label_difference": max_time_label_difference,
             "relative_error_denominator": "max(abs(reference), abs(candidate))",
             "pass_threshold": None,
         },
@@ -145,6 +229,12 @@ def main() -> int:
     parser.add_argument("--column", action="append", type=_parse_pair, required=True)
     parser.add_argument("--reference-time", default="time")
     parser.add_argument("--candidate-time", default="time")
+    parser.add_argument(
+        "--time-alignment",
+        choices=["exact", "rounded_reference_labels"],
+        default="exact",
+    )
+    parser.add_argument("--candidate-decimal-places", type=int)
     parser.add_argument("--output-json", type=Path)
     args = parser.parse_args()
 
@@ -154,6 +244,8 @@ def main() -> int:
         args.column,
         reference_time=args.reference_time,
         candidate_time=args.candidate_time,
+        time_alignment=args.time_alignment,
+        candidate_decimal_places=args.candidate_decimal_places,
     )
     output = json.dumps(result, indent=2) + "\n"
     if args.output_json:

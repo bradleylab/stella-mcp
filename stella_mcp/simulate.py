@@ -13,10 +13,12 @@ import math
 import tempfile
 import warnings
 from contextlib import contextmanager
+from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import Any
 
 from .xmile import StellaModel
+from .xmile_features import ensure_supported_for_simulation
 
 DEFAULT_MAX_POINTS = 101
 
@@ -163,6 +165,21 @@ def method_warnings(model: StellaModel) -> list[str]:
     return []
 
 
+def simulation_backend_metadata(model: StellaModel) -> dict[str, Any]:
+    """Return additive provenance for a successful PySD-backed operation."""
+    return {
+        "name": "PySD",
+        "version": package_version("pysd"),
+        "actual_integration_method": "Euler",
+        "model_integration_method": model.sim_specs.method,
+        "unsupported_feature_preflight": {
+            "status": "passed",
+            "feature_codes": [],
+        },
+        "warnings": method_warnings(model),
+    }
+
+
 @contextmanager
 def _compile_runner(model: StellaModel):
     """Compile ``model`` into a PySD runner once, yielding the runner.
@@ -176,6 +193,7 @@ def _compile_runner(model: StellaModel):
     byte-for-byte), so callers may loop ``runner.run(params=...)`` with
     different params and reuse a single compiled model across a sweep.
     """
+    ensure_supported_for_simulation(model.xmile_feature_report)
     pysd = _import_pysd()
     sim_model = copy.deepcopy(model)
     handle = tempfile.NamedTemporaryFile(
@@ -275,6 +293,7 @@ def run_simulation(
     sim_warnings.extend(series_warnings)
 
     return {
+        "backend": simulation_backend_metadata(model),
         "sim_specs": {
             "start": model.sim_specs.start,
             "stop": model.sim_specs.stop,

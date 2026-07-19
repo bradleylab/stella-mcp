@@ -1,0 +1,100 @@
+{
+  "schema_version": 2,
+  "engines": {
+    "pysd": {
+      "version": "3.14.3"
+    },
+    "stella": {
+      "application": "Stella",
+      "version": "10.0.6 for Windows"
+    }
+  },
+  "artifacts": {
+    "model": {
+      "path": "tests/fixtures/external_corpus/sdxorg/samples/SIR/SIR.stmx",
+      "sha256": "c31133692ff40b86a09a03b488ebbd1f90703f34505009d2c8b9cc1b7a2f880b"
+    },
+    "pysd_csv": {
+      "path": "results/evaluation/0.13.0-sdx_sir-pysd.csv",
+      "sha256": "b332b7270e891c5032bac4775dded489bd523eec51ccb909415ff3390bed1822"
+    },
+    "stella_csv": {
+      "path": "tests/fixtures/external_corpus/sdxorg/samples/SIR/output_stella1006.csv",
+      "sha256": "96ba88050ed700d20735686c8815bad63ad54e49d4fa4af1ced3b398df88b297"
+    }
+  },
+  "simulation": {
+    "backend": {
+      "name": "PySD",
+      "version": "3.14.3",
+      "actual_integration_method": "Euler",
+      "model_integration_method": "Euler",
+      "unsupported_feature_preflight": {
+        "status": "passed",
+        "feature_codes": []
+      },
+      "warnings": []
+    },
+    "sim_specs": {
+      "start": 0.0,
+      "stop": 100.0,
+      "dt": 0.03125,
+      "method": "Euler",
+      "time_units": "Time"
+    },
+    "warnings": []
+  },
+  "comparison": {
+    "schema_version": 2,
+    "reference": "results/evaluation/0.13.0-sdx_sir-pysd.csv",
+    "candidate": "tests/fixtures/external_corpus/sdxorg/samples/SIR/output_stella1006.csv",
+    "time_columns": {
+      "reference": "time",
+      "candidate": "Time"
+    },
+    "points": 3201,
+    "comparison_policy": {
+      "time_alignment": "rounded_reference_labels",
+      "candidate_decimal_places": 3,
+      "interpolation": "none",
+      "max_time_label_difference": 0.0005,
+      "relative_error_denominator": "max(abs(reference), abs(candidate))",
+      "pass_threshold": null
+    },
+    "columns": [
+      {
+        "reference_column": "infectious",
+        "candidate_column": "infectious",
+        "max_absolute_error": 4.9970694249168446e-11,
+        "max_absolute_error_time": 78.78125,
+        "max_relative_error": 4.921308984814702e-12,
+        "max_relative_error_time": 78.78125
+      },
+      {
+        "reference_column": "recovered",
+        "candidate_column": "recovered",
+        "max_absolute_error": 4.997957603336545e-10,
+        "max_absolute_error_time": 26.8125,
+        "max_relative_error": 4.8236173754049074e-12,
+        "max_relative_error_time": 25.84375
+      },
+      {
+        "reference_column": "susceptible",
+        "candidate_column": "susceptible",
+        "max_absolute_error": 4.999378688808065e-10,
+        "max_absolute_error_time": 95.375,
+        "max_relative_error": 1.2087988260495427e-12,
+        "max_relative_error_time": 95.375
+      }
+    ]
+  },
+  "fixture": {
+    "id": "sdx_sir",
+    "source": "sdxorg_test_models",
+    "constructs": [
+      "scalar",
+      "nonlinear"
+    ],
+    "manifest": "tests/fixtures/external_corpus/manifest.json"
+  }
+}

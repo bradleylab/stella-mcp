@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "system_prompt": "Complete the user's Stella modeling task through the available MCP tools. Use the exact model IDs and output paths requested. Treat tool errors as recoverable evidence: inspect the error, correct the request, and continue. Do not claim an operation succeeded unless its tool result confirms success. Finish with a concise account of the model and analysis completed.",
+  "model_request": {
+    "temperature": 0,
+    "seed": 20260713,
+    "max_completion_tokens": 4096
+  },
+  "max_tool_rounds": 12,
+  "scenarios": [
+    {
+      "id": "construct_growth",
+      "description": "Plan and complete a build, validation, simulation, rendering, and strict save workflow from a user-level specification.",
+      "requires": ["sim"],
+      "prompt": "Create a Stella model named Agent Evaluation Growth with model ID agent_growth. Simulate from year 0 through year 5 with a time step of 1 using Euler integration. The Population stock starts at 100 people. The growth inflow is Population * growth_rate in people/Year, and growth_rate is 0.1 1/Year. Validate the model, run it, render its diagram, and save it in strict mode to ${ARTIFACT_DIR}/agent_growth.stmx.",
+      "required_tool_order": [
+        "build_model",
+        "validate_model",
+        "simulate",
+        "render_diagram",
+        "save_model"
+      ],
+      "checks": [
+        {
+          "tool": "inspect_model",
+          "arguments": {"model_id": "agent_growth", "include_validation": true},
+          "expect": {
+            "is_error": false,
+            "fields": {
+              "model.name": "Agent Evaluation Growth",
+              "model.sim_specs.start": 0,
+              "model.sim_specs.stop": 5,
+              "model.sim_specs.dt": 1,
+              "model.sim_specs.method": "Euler",
+              "model.sim_specs.time_units": "Years",
+              "model.counts.stocks": 1,
+              "model.counts.flows": 1,
+              "model.counts.auxiliaries": 1,
+              "model.variables.stocks.0.name": "Population",
+              "model.variables.stocks.0.initial_value": "100",
+              "model.variables.flows.0.name": "growth",
+              "model.variables.flows.0.equation": "Population * growth_rate",
+              "model.variables.flows.0.to_stock": "Population",
+              "model.variables.auxiliaries.0.name": "growth_rate",
+              "model.variables.auxiliaries.0.equation": "0.1",
+              "validation.passed": true
+            }
+          }
+        }
+      ],
+      "artifacts": ["agent_growth.stmx"]
+    },
+    {
+      "id": "modify_sir_template",
+      "description": "Plan and complete a template load, parameter edit, validation, simulation, rendering, and strict save workflow.",
+      "requires": ["sim"],
+      "prompt": "Load the built-in SIR template as model ID agent_sir. Change beta to 0.2 while leaving gamma and the initial stocks unchanged. Validate and simulate the edited model, render the diagram, and save it in strict mode to ${ARTIFACT_DIR}/agent_sir.stmx.",
+      "required_tool_order": [
+        "load_template",
+        "update_aux",
+        "validate_model",
+        "simulate",
+        "render_diagram",
+        "save_model"
+      ],
+      "checks": [
+        {
+          "tool": "inspect_model",
+          "arguments": {"model_id": "agent_sir", "include_validation": true},
+          "expect": {
+            "is_error": false,
+            "fields": {
+              "model.counts.stocks": 3,
+              "model.counts.flows": 2,
+              "model.counts.auxiliaries": 3,
+              "model.variables.auxiliaries.0.name": "beta",
+              "model.variables.auxiliaries.0.equation": "0.2",
+              "model.variables.auxiliaries.1.name": "gamma",
+              "model.variables.auxiliaries.1.equation": "0.1",
+              "validation.passed": true
+            }
+          }
+        }
+      ],
+      "artifacts": ["agent_sir.stmx"]
+    },
+    {
+      "id": "analyze_accumulator",
+      "description": "Plan and complete an imported-model inspection, baseline run, scenario comparison, sensitivity analysis, and strict save workflow.",
+      "requires": ["sim"],
+      "prompt": "Read ${REPO_ROOT}/tests/fixtures/compat_corpus/stella_4_1_1_accumulator.stmx as model ID agent_analysis and inspect it. Run the baseline simulation. Compare it with a scenario named double rate that sets rate to 2 and save the comparison CSV to ${ARTIFACT_DIR}/agent_accumulator_scenarios.csv. Then run a one-at-a-time sensitivity analysis for rate from 1 through 3 at 3 evenly spaced values, using the final Accumulator value as the output, and save the sweep to ${ARTIFACT_DIR}/agent_accumulator_sensitivity.csv. Save the model in strict mode to ${ARTIFACT_DIR}/agent_accumulator.stmx and summarize the numerical findings.",
+      "required_tool_order": [
+        "read_model",
+        "inspect_model",
+        "simulate",
+        "compare_scenarios",
+        "sensitivity_analysis",
+        "save_model"
+      ],
+      "checks": [
+        {
+          "tool": "inspect_model",
+          "arguments": {"model_id": "agent_analysis", "include_validation": true},
+          "expect": {
+            "is_error": false,
+            "fields": {
+              "model.sim_specs.start": 0,
+              "model.sim_specs.stop": 4,
+              "model.sim_specs.dt": 1,
+              "model.sim_specs.method": "Euler",
+              "model.counts.stocks": 1,
+              "model.counts.flows": 1,
+              "model.counts.auxiliaries": 1,
+              "model.variables.stocks.0.name": "Accumulator",
+              "model.variables.flows.0.name": "input",
+              "model.variables.auxiliaries.0.name": "rate",
+              "validation.passed": true
+            }
+          }
+        }
+      ],
+      "artifacts": [
+        "agent_accumulator_scenarios.csv",
+        "agent_accumulator_sensitivity.csv",
+        "agent_accumulator.stmx"
+      ]
+    }
+  ]
+}

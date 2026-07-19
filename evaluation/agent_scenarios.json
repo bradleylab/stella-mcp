@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "system_prompt": "Complete the user's Stella modeling task through the available MCP tools. Use the exact model IDs and output paths requested. Treat tool errors as recoverable evidence: inspect the error, correct the request, and continue. Do not claim an operation succeeded unless its tool result confirms success. Finish with a concise account of the model and analysis completed.",
   "model_request": {
     "temperature": 0,
@@ -7,6 +7,7 @@
     "max_completion_tokens": 4096
   },
   "max_tool_rounds": 12,
+  "runs_per_scenario": 3,
   "scenarios": [
     {
       "id": "construct_growth",
@@ -24,28 +25,26 @@
         {
           "tool": "inspect_model",
           "arguments": {"model_id": "agent_growth", "include_validation": true},
-          "expect": {
-            "is_error": false,
-            "fields": {
-              "model.name": "Agent Evaluation Growth",
-              "model.sim_specs.start": 0,
-              "model.sim_specs.stop": 5,
-              "model.sim_specs.dt": 1,
-              "model.sim_specs.method": "Euler",
-              "model.sim_specs.time_units": "Years",
-              "model.counts.stocks": 1,
-              "model.counts.flows": 1,
-              "model.counts.auxiliaries": 1,
-              "model.variables.stocks.0.name": "Population",
-              "model.variables.stocks.0.initial_value": "100",
-              "model.variables.flows.0.name": "growth",
-              "model.variables.flows.0.equation": "Population * growth_rate",
-              "model.variables.flows.0.to_stock": "Population",
-              "model.variables.auxiliaries.0.name": "growth_rate",
-              "model.variables.auxiliaries.0.equation": "0.1",
-              "validation.passed": true
-            }
-          }
+          "expect_error": false,
+          "expectations": [
+            {"path": "model.name", "operator": "exact", "value": "Agent Evaluation Growth"},
+            {"path": "model.sim_specs.start", "operator": "exact", "value": 0},
+            {"path": "model.sim_specs.stop", "operator": "exact", "value": 5},
+            {"path": "model.sim_specs.dt", "operator": "finite"},
+            {"path": "model.sim_specs.method", "operator": "one_of", "values": ["Euler", "euler"]},
+            {"path": "model.sim_specs.time_units", "operator": "normalized_time_unit", "value": "Years"},
+            {"path": "model.counts.stocks", "operator": "exact", "value": 1},
+            {"path": "model.counts.flows", "operator": "exact", "value": 1},
+            {"path": "model.counts.auxiliaries", "operator": "exact", "value": 1},
+            {"path": "model.variables.stocks.0.name", "operator": "exact", "value": "Population"},
+            {"path": "model.variables.stocks.0.initial_value", "operator": "exact", "value": "100"},
+            {"path": "model.variables.flows.0.name", "operator": "exact", "value": "growth"},
+            {"path": "model.variables.flows.0.equation", "operator": "exact", "value": "Population * growth_rate"},
+            {"path": "model.variables.flows.0.to_stock", "operator": "exact", "value": "Population"},
+            {"path": "model.variables.auxiliaries.0.name", "operator": "exact", "value": "growth_rate"},
+            {"path": "model.variables.auxiliaries.0.equation", "operator": "exact", "value": "0.1"},
+            {"path": "validation.passed", "operator": "exact", "value": true}
+          ]
         }
       ],
       "artifacts": ["agent_growth.stmx"]
@@ -54,7 +53,7 @@
       "id": "modify_sir_template",
       "description": "Plan and complete a template load, parameter edit, validation, simulation, rendering, and strict save workflow.",
       "requires": ["sim"],
-      "prompt": "Load the built-in SIR template as model ID agent_sir. Change beta to 0.2 while leaving gamma and the initial stocks unchanged. Validate and simulate the edited model, render the diagram, and save it in strict mode to ${ARTIFACT_DIR}/agent_sir.stmx.",
+      "prompt": "Load the built-in SIR template as model ID agent_sir. Change transmission_rate to 0.2 while leaving recovery_rate and the initial stocks unchanged. Validate and simulate the edited model, render the diagram, and save it in strict mode to ${ARTIFACT_DIR}/agent_sir.stmx.",
       "required_tool_order": [
         "load_template",
         "update_aux",
@@ -67,19 +66,19 @@
         {
           "tool": "inspect_model",
           "arguments": {"model_id": "agent_sir", "include_validation": true},
-          "expect": {
-            "is_error": false,
-            "fields": {
-              "model.counts.stocks": 3,
-              "model.counts.flows": 2,
-              "model.counts.auxiliaries": 3,
-              "model.variables.auxiliaries.0.name": "beta",
-              "model.variables.auxiliaries.0.equation": "0.2",
-              "model.variables.auxiliaries.1.name": "gamma",
-              "model.variables.auxiliaries.1.equation": "0.1",
-              "validation.passed": true
-            }
-          }
+          "expect_error": false,
+          "expectations": [
+            {"path": "model.counts.stocks", "operator": "exact", "value": 3},
+            {"path": "model.counts.flows", "operator": "exact", "value": 2},
+            {"path": "model.counts.auxiliaries", "operator": "exact", "value": 3},
+            {"path": "model.variables.auxiliaries.0.name", "operator": "exact", "value": "population total"},
+            {"path": "model.variables.auxiliaries.0.equation", "operator": "exact", "value": "Susceptible + Infected + Recovered"},
+            {"path": "model.variables.auxiliaries.1.name", "operator": "exact", "value": "recovery rate"},
+            {"path": "model.variables.auxiliaries.1.equation", "operator": "exact", "value": "0.1"},
+            {"path": "model.variables.auxiliaries.2.name", "operator": "exact", "value": "transmission rate"},
+            {"path": "model.variables.auxiliaries.2.equation", "operator": "exact", "value": "0.2"},
+            {"path": "validation.passed", "operator": "exact", "value": true}
+          ]
         }
       ],
       "artifacts": ["agent_sir.stmx"]
@@ -101,22 +100,20 @@
         {
           "tool": "inspect_model",
           "arguments": {"model_id": "agent_analysis", "include_validation": true},
-          "expect": {
-            "is_error": false,
-            "fields": {
-              "model.sim_specs.start": 0,
-              "model.sim_specs.stop": 4,
-              "model.sim_specs.dt": 1,
-              "model.sim_specs.method": "Euler",
-              "model.counts.stocks": 1,
-              "model.counts.flows": 1,
-              "model.counts.auxiliaries": 1,
-              "model.variables.stocks.0.name": "Accumulator",
-              "model.variables.flows.0.name": "input",
-              "model.variables.auxiliaries.0.name": "rate",
-              "validation.passed": true
-            }
-          }
+          "expect_error": false,
+          "expectations": [
+            {"path": "model.sim_specs.start", "operator": "exact", "value": 0},
+            {"path": "model.sim_specs.stop", "operator": "exact", "value": 4},
+            {"path": "model.sim_specs.dt", "operator": "finite"},
+            {"path": "model.sim_specs.method", "operator": "one_of", "values": ["Euler", "euler"]},
+            {"path": "model.counts.stocks", "operator": "exact", "value": 1},
+            {"path": "model.counts.flows", "operator": "exact", "value": 1},
+            {"path": "model.counts.auxiliaries", "operator": "exact", "value": 1},
+            {"path": "model.variables.stocks.0.name", "operator": "non_empty"},
+            {"path": "model.variables.flows.0.name", "operator": "exact", "value": "input"},
+            {"path": "model.variables.auxiliaries.0.name", "operator": "exact", "value": "rate"},
+            {"path": "validation.passed", "operator": "exact", "value": true}
+          ]
         }
       ],
       "artifacts": [

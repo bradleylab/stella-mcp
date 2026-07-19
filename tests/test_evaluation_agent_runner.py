@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -13,6 +14,7 @@ from evaluation.agent_reporting import render_agent_markdown
 from evaluation.agent_runner import (
     AgentToolCall,
     AgentTurn,
+    evaluate_semantic_expectations,
     evaluate_tool_order,
     load_agent_scenarios,
     run_agent_evaluation,
@@ -51,6 +53,7 @@ class ScriptedBackend:
 class FixedProtocolBackend:
     def __init__(self, artifact_dir: Path) -> None:
         self.artifact_dir = artifact_dir
+        self.run_counts: dict[str, int] = {}
 
     async def complete(
         self,
@@ -69,6 +72,8 @@ class FixedProtocolBackend:
 
         prompt = messages[1]["content"]
         if "Agent Evaluation Growth" in prompt:
+            scenario_id = "construct_growth"
+            run_dir = self._next_run_dir(scenario_id)
             calls = [
                 _call(
                     "build",
@@ -105,18 +110,24 @@ class FixedProtocolBackend:
                     "save_model",
                     {
                         "model_id": "agent_growth",
-                        "filepath": str(self.artifact_dir / "agent_growth.stmx"),
+                        "filepath": str(run_dir / "agent_growth.stmx"),
                         "compat_mode": "strict",
                     },
                 ),
             ]
         elif "built-in SIR template" in prompt:
+            scenario_id = "modify_sir_template"
+            run_dir = self._next_run_dir(scenario_id)
             calls = [
                 _call("load", "load_template", {"template_name": "sir", "model_id": "agent_sir"}),
                 _call(
                     "update",
                     "update_aux",
-                    {"model_id": "agent_sir", "name": "beta", "equation": "0.2"},
+                    {
+                        "model_id": "agent_sir",
+                        "name": "transmission_rate",
+                        "equation": "0.2",
+                    },
                 ),
                 _call("validate", "validate_model", {"model_id": "agent_sir"}),
                 _call("simulate", "simulate", {"model_id": "agent_sir"}),
@@ -126,12 +137,14 @@ class FixedProtocolBackend:
                     "save_model",
                     {
                         "model_id": "agent_sir",
-                        "filepath": str(self.artifact_dir / "agent_sir.stmx"),
+                        "filepath": str(run_dir / "agent_sir.stmx"),
                         "compat_mode": "strict",
                     },
                 ),
             ]
         else:
+            scenario_id = "analyze_accumulator"
+            run_dir = self._next_run_dir(scenario_id)
             calls = [
                 _call(
                     "read",
@@ -153,7 +166,7 @@ class FixedProtocolBackend:
                         "model_id": "agent_analysis",
                         "scenarios": [{"name": "double rate", "overrides": {"rate": 2}}],
                         "save_comparison_csv": str(
-                            self.artifact_dir / "agent_accumulator_scenarios.csv"
+                            run_dir / "agent_accumulator_scenarios.csv"
                         ),
                     },
                 ),
@@ -165,7 +178,7 @@ class FixedProtocolBackend:
                         "parameters": [{"name": "rate", "start": 1, "stop": 3, "steps": 3}],
                         "output": {"variable": "Accumulator", "metric": "final"},
                         "save_sweep_csv": str(
-                            self.artifact_dir / "agent_accumulator_sensitivity.csv"
+                            run_dir / "agent_accumulator_sensitivity.csv"
                         ),
                     },
                 ),
@@ -174,12 +187,17 @@ class FixedProtocolBackend:
                     "save_model",
                     {
                         "model_id": "agent_analysis",
-                        "filepath": str(self.artifact_dir / "agent_accumulator.stmx"),
+                        "filepath": str(run_dir / "agent_accumulator.stmx"),
                         "compat_mode": "strict",
                     },
                 ),
             ]
         return AgentTurn(content=None, tool_calls=tuple(calls), stop_reason="tool_calls")
+
+    def _next_run_dir(self, scenario_id: str) -> Path:
+        run_index = self.run_counts.get(scenario_id, 0) + 1
+        self.run_counts[scenario_id] = run_index
+        return self.artifact_dir / scenario_id / f"run-{run_index}"
 
     def metadata(self) -> dict[str, Any]:
         return {
@@ -204,7 +222,7 @@ def _write_protocol(path: Path, *, max_tool_rounds: int = 4) -> None:
     path.write_text(
         json.dumps(
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "system_prompt": "Complete the task with Stella MCP tools.",
                 "model_request": {
                     "temperature": 0,
@@ -212,6 +230,7 @@ def _write_protocol(path: Path, *, max_tool_rounds: int = 4) -> None:
                     "max_completion_tokens": 4096,
                 },
                 "max_tool_rounds": max_tool_rounds,
+                "runs_per_scenario": 1,
                 "scenarios": [
                     {
                         "id": "scripted_build",
@@ -226,14 +245,24 @@ def _write_protocol(path: Path, *, max_tool_rounds: int = 4) -> None:
                                     "model_id": "scripted_model",
                                     "include_validation": True,
                                 },
-                                "expect": {
-                                    "is_error": False,
-                                    "fields": {
-                                        "model.name": "Scripted",
-                                        "model.counts.stocks": 1,
-                                        "validation.passed": True,
+                                "expect_error": False,
+                                "expectations": [
+                                    {
+                                        "path": "model.name",
+                                        "operator": "exact",
+                                        "value": "Scripted",
                                     },
-                                },
+                                    {
+                                        "path": "model.counts.stocks",
+                                        "operator": "one_of",
+                                        "values": [1],
+                                    },
+                                    {
+                                        "path": "validation.passed",
+                                        "operator": "exact",
+                                        "value": True,
+                                    },
+                                ],
                             }
                         ],
                         "artifacts": ["model.stmx"],
@@ -249,6 +278,8 @@ def _write_protocol(path: Path, *, max_tool_rounds: int = 4) -> None:
 def test_load_agent_scenarios_and_order_contract() -> None:
     document = load_agent_scenarios()
 
+    assert document["schema_version"] == 2
+    assert document["runs_per_scenario"] == 3
     assert [scenario["id"] for scenario in document["scenarios"]] == [
         "construct_growth",
         "modify_sir_template",
@@ -276,23 +307,35 @@ def test_fixed_agent_protocol_is_executable_with_scripted_backend(tmp_path: Path
         )
     )
 
-    assert result["summary"]["scenarios"] == 3
-    assert result["summary"]["passed"] == 3
+    assert result["schema_version"] == 2
+    assert result["summary"]["protocol_scenarios"] == 3
+    assert result["summary"]["scenario_runs"] == 9
+    assert result["summary"]["passed"] == 9
     assert result["summary"]["failed"] == 0
     assert result["summary"]["skipped"] == 0
-    assert result["summary"]["tool_calls"] == 17
+    assert result["summary"]["tool_calls"] == 51
+    assert result["summary"]["dimensions"]["workflow"]["passed"] == 9
+    assert result["summary"]["dimensions"]["semantic"]["passed"] == 9
+    assert result["summary"]["dimensions"]["artifacts"]["passed"] == 9
+    assert result["summary"]["dimensions"]["completion"]["passed"] == 9
+    assert result["summary"]["dimensions"]["tool_health"]["passed"] == 9
+    assert result["summary"]["by_scenario"]["construct_growth"]["passed"] == 3
     assert all(scenario["checks"][0]["status"] == "passed" for scenario in result["scenarios"])
+    assert all(scenario["evidence"]["scenario_sha256"] for scenario in result["scenarios"])
+    assert all(scenario["evidence"]["tool_catalog_sha256"] for scenario in result["scenarios"])
     assert str(tmp_path) not in json.dumps(result)
     markdown = render_agent_markdown(result)
     assert "# Stella MCP Free-Form Agent Evaluation" in markdown
-    assert "| `construct_growth` | passed | stop | 5 | 0 |" in markdown
-    assert "`agent_growth.stmx`" in markdown
+    assert "These are raw repeated outcomes" in markdown
+    assert "| `construct_growth` | 1 | passed | passed | passed | passed | passed | passed | 5 | 0 |" in markdown
+    assert "`construct_growth/run-1/agent_growth.stmx`" in markdown
     assert str(tmp_path) not in markdown
 
 
 def test_agent_runner_recovers_from_malformed_call_and_scores_outcome(tmp_path: Path) -> None:
     protocol = tmp_path / "protocol.json"
     artifacts = tmp_path / "artifacts"
+    run_artifacts = artifacts / "scripted_build" / "run-1"
     _write_protocol(protocol)
     backend = ScriptedBackend(
         [
@@ -322,7 +365,7 @@ def test_agent_runner_recovers_from_malformed_call_and_scores_outcome(tmp_path: 
                         json.dumps(
                             {
                                 "model_id": "scripted_model",
-                                "filepath": str(artifacts / "model.stmx"),
+                                "filepath": str(run_artifacts / "model.stmx"),
                                 "compat_mode": "strict",
                             }
                         ),
@@ -351,7 +394,13 @@ def test_agent_runner_recovers_from_malformed_call_and_scores_outcome(tmp_path: 
     }
     scenario = result["scenarios"][0]
     assert scenario["status"] == "passed"
+    assert scenario["dimensions"]["workflow"]["status"] == "passed"
+    assert scenario["dimensions"]["semantic"]["status"] == "passed"
+    assert scenario["dimensions"]["artifacts"]["status"] == "passed"
+    assert scenario["dimensions"]["completion"]["status"] == "passed"
+    assert scenario["dimensions"]["tool_health"]["status"] == "recovered"
     assert scenario["tool_calls"][0]["error_code"] == "invalid_tool_arguments"
+    assert scenario["tool_calls"][0]["recovered"] is True
     assert scenario["successful_tool_order"] == ["build_model", "save_model"]
     assert scenario["checks"][0]["status"] == "passed"
     assert scenario["artifacts"][0]["exists"] is True
@@ -377,14 +426,16 @@ def test_agent_runner_reports_tool_round_cap(tmp_path: Path) -> None:
     scenario = result["scenarios"][0]
     assert scenario["status"] == "failed"
     assert scenario["stop_reason"] == "tool_round_cap"
-    assert "no final response: tool_round_cap" in scenario["failures"]
+    assert scenario["dimensions"]["completion"]["status"] == "failed"
+    assert "completion: no final response: tool_round_cap" in scenario["failures"]
 
 
 def test_agent_runner_rejects_stale_expected_artifact(tmp_path: Path) -> None:
     protocol = tmp_path / "protocol.json"
     artifacts = tmp_path / "artifacts"
-    artifacts.mkdir()
-    (artifacts / "model.stmx").write_text("stale", encoding="utf-8")
+    stale_dir = artifacts / "scripted_build" / "run-1"
+    stale_dir.mkdir(parents=True)
+    (stale_dir / "model.stmx").write_text("stale", encoding="utf-8")
     _write_protocol(protocol)
 
     with pytest.raises(FileExistsError, match="model.stmx"):
@@ -399,4 +450,56 @@ def test_agent_scenario_loader_rejects_unsafe_artifact_path(tmp_path: Path) -> N
     protocol.write_text(json.dumps(document), encoding="utf-8")
 
     with pytest.raises(ValueError, match="unsafe artifact path"):
+        load_agent_scenarios(protocol)
+
+
+def test_agent_semantic_operators_are_explicit_and_normalize_time_units() -> None:
+    result = SimpleNamespace(
+        isError=False,
+        structuredContent={
+            "label": "value",
+            "time_units": "Year",
+            "number": 1.25,
+            "items": ["one"],
+        },
+    )
+    check = {
+        "expect_error": False,
+        "expectations": [
+            {"path": "label", "operator": "exact", "value": "value"},
+            {"path": "label", "operator": "one_of", "values": ["value", "other"]},
+            {
+                "path": "time_units",
+                "operator": "normalized_time_unit",
+                "value": "Years",
+            },
+            {"path": "number", "operator": "finite"},
+            {"path": "items", "operator": "non_empty"},
+        ],
+    }
+
+    assert evaluate_semantic_expectations(result, check) == []
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ({"operator": "approximately"}, "unknown expectation operator"),
+        ({"operator": "one_of", "values": []}, "requires non-empty values"),
+        ({"operator": "finite", "value": 1}, "malformed finite expectation"),
+    ],
+)
+def test_agent_scenario_loader_rejects_malformed_expectations(
+    tmp_path: Path, mutation: dict[str, Any], message: str
+) -> None:
+    protocol = tmp_path / "protocol.json"
+    _write_protocol(protocol)
+    document = json.loads(protocol.read_text(encoding="utf-8"))
+    expectation = document["scenarios"][0]["checks"][0]["expectations"][0]
+    expectation.update(mutation)
+    if mutation.get("operator") == "one_of":
+        expectation.pop("value", None)
+    protocol.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
         load_agent_scenarios(protocol)

@@ -1,0 +1,129 @@
+{
+  "schema_version": 2,
+  "engines": {
+    "pysd": {
+      "version": "3.14.3"
+    },
+    "stella": {
+      "application": "Stella Professional",
+      "version": "4.1.1"
+    }
+  },
+  "artifacts": {
+    "model": {
+      "path": "results/evaluation/0.13.0-desktop-candidates/package_scalar_graphical_function.stmx",
+      "sha256": "c3b91be2f84dcf476aa5a77751d3c5ff2505f5ea3d9c8ca85b8a13c0e9cf6e11"
+    },
+    "pysd_csv": {
+      "path": "results/evaluation/0.13.0-package_scalar_graphical_function-pysd.csv",
+      "sha256": "5663d7b3b9348d47e6e95a2d0cc4c42f2c5b624a53d49379de0ee7033fd91e76"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_scalar_graphical_function-stella.csv",
+      "sha256": "854d3a17825e7509d2e98d8203d4e14d9920c85f7508e0d5c31d7490ff29cea0"
+    }
+  },
+  "simulation": {
+    "backend": {
+      "name": "PySD",
+      "version": "3.14.3",
+      "actual_integration_method": "Euler",
+      "model_integration_method": "Euler",
+      "unsupported_feature_preflight": {
+        "status": "passed",
+        "feature_codes": []
+      },
+      "warnings": []
+    },
+    "sim_specs": {
+      "start": 0.0,
+      "stop": 10.0,
+      "dt": 1.0,
+      "method": "Euler",
+      "time_units": "Years"
+    },
+    "warnings": []
+  },
+  "comparison": {
+    "schema_version": 2,
+    "reference": "results/evaluation/0.13.0-package_scalar_graphical_function-pysd.csv",
+    "candidate": "results/evaluation/0.13.0-desktop-evidence/package_scalar_graphical_function-stella.csv",
+    "time_columns": {
+      "reference": "time",
+      "candidate": "Years"
+    },
+    "points": 11,
+    "comparison_policy": {
+      "time_alignment": "exact",
+      "candidate_decimal_places": null,
+      "interpolation": "none",
+      "max_time_label_difference": 0.0,
+      "relative_error_denominator": "max(abs(reference), abs(candidate))",
+      "pass_threshold": null
+    },
+    "columns": [
+      {
+        "reference_column": "Accumulated response",
+        "candidate_column": "Accumulated response",
+        "max_absolute_error": 8.881784197001252e-16,
+        "max_absolute_error_time": 8.0,
+        "max_relative_error": 2.0185873175002846e-16,
+        "max_relative_error_time": 8.0
+      },
+      {
+        "reference_column": "response input",
+        "candidate_column": "response input",
+        "max_absolute_error": 1.1102230246251565e-16,
+        "max_absolute_error_time": 3.0,
+        "max_relative_error": 2.7755575615628914e-16,
+        "max_relative_error_time": 9.0
+      },
+      {
+        "reference_column": "seasonal multiplier",
+        "candidate_column": "seasonal multiplier",
+        "max_absolute_error": 1.1102230246251565e-16,
+        "max_absolute_error_time": 3.0,
+        "max_relative_error": 2.7755575615628914e-16,
+        "max_relative_error_time": 9.0
+      }
+    ]
+  },
+  "desktop_evidence": {
+    "id": "package_scalar_graphical_function",
+    "opened_without_repair": true,
+    "run_completed": true,
+    "run_final_time": 10,
+    "visual_review": "pass",
+    "notes": "The graphical-function converter, inflow, stock, and information connector were visible and readable without overlap.",
+    "source_model": {
+      "path": "results/evaluation/0.13.0-desktop-candidates/package_scalar_graphical_function.stmx",
+      "sha256": "c3b91be2f84dcf476aa5a77751d3c5ff2505f5ea3d9c8ca85b8a13c0e9cf6e11"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_scalar_graphical_function-stella.csv",
+      "sha256": "854d3a17825e7509d2e98d8203d4e14d9920c85f7508e0d5c31d7490ff29cea0"
+    },
+    "stella_saved_model": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_scalar_graphical_function-stella-saved.stmx",
+      "sha256": "6e49fce1740c0f593eb05c0c79e353ac14e95524b3fc1a8f2c13bb8c5441fa24"
+    },
+    "saved_reimport_strict": true,
+    "identifier_renames": [],
+    "serialization_changes": [
+      {
+        "path": "/auxiliaries/seasonal_multiplier/graphical_function/gf_type",
+        "kind": "changed",
+        "before": "continuous",
+        "after": null
+      },
+      {
+        "path": "/flows/response_input/equation",
+        "kind": "changed",
+        "before": "\"seasonal multiplier\"",
+        "after": "seasonal_multiplier"
+      }
+    ],
+    "computational_changes": [],
+    "parity_report": "results/evaluation/0.13.0-package_scalar_graphical_function-parity.json"
+  }
+}

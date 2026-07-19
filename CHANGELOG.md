@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-18
+
+### Added
+
+- A pinned, MIT-licensed subset of the independently maintained SDXorg test-models
+  corpus, with source commit, per-file hashes, attribution, expected capability
+  classifications, and offline CI validation.
+- Deterministic XMILE feature reports for arrays, module instances, and additional
+  top-level models, plus typed `unsupported_model_feature` errors and retained
+  feature metadata in model inspection results.
+- Reusable supported-semantic signatures, separate UUID metadata signatures, and
+  stable JSON Pointer differences for round-trip and targeted-edit fidelity checks.
+- Numeric-comparison schema v2 with exact and explicit rounded-reference-label
+  alignment, finite/grid validation, backend metadata, raw discrepancies, and no
+  scientific pass threshold.
+- Retained Stella Professional 4.1.1 open, run, export, save, strict re-import,
+  layout-review, and numeric evidence for all five built-in templates plus a scalar
+  graphical-function case.
+- Agent evaluation protocol v2 with three fresh runs per scenario, explicit
+  expectation operators, separate workflow/semantic/artifact/completion/tool-health
+  dimensions, and raw aggregate counts.
+- Generated capability and numeric-fidelity reports that limit claims to the
+  retained external, package, desktop, and simulation fixtures.
+
+### Changed
+
+- Permissive XMILE import/export warns and structurally preserves the selected
+  unsupported constructs where practical; strict import/export rejects them.
+- Every PySD-backed result now identifies the PySD version, actual Euler integration,
+  model-declared method, unsupported-feature preflight, and simulation warnings.
+- The built-in SIR template uses `transmission_rate` and `recovery_rate` instead of
+  Stella-reserved `beta` and `gamma`, without changing parameter values, equations'
+  mathematical meaning, simulation settings, or the stock-flow structure.
+- Carbon-cycle, exponential-growth, Lotka-Volterra, and nutrient-box template layouts
+  were regenerated into compact one-page diagrams that passed automated layout gates
+  and Stella desktop visual review.
+
+### Fixed
+
+- Arrays, nested models, and compositional module instances can no longer pass strict
+  compatibility checks or reach PySD as partially scalarized models.
+- Strict import/export now rejects confirmed Stella/XMILE reserved identifiers;
+  permissive workflows preserve the requested name and emit a validation warning.
+- Stella-saved package candidates retain all identifiers and effective computational
+  semantics. The graphical-function case records Stella's two semantically equivalent
+  serialization rewrites separately from computational changes.
+
+### Known Limitations
+
+- Arrays, nested models, and compositional module instances remain preserved-only and
+  cannot be edited or simulated as supported semantics.
+- In the retained Lotka-Volterra case, Stella caps `predation` to enforce a
+  non-negative stock while PySD reports the uncapped flow equation before both
+  trajectories reach zero prey at the next time step. The raw discrepancy is retained
+  as a backend-semantic limitation and is not accepted through a tolerance.
+
 ## [0.12.0] - 2026-07-15
 
 ### Added
@@ -269,7 +325,8 @@ calibration behavior of 0.10.0.
   `tool_handlers.py`, `xmile_io.py`, `equation_parser.py`,
   `templates.py`).
 
-[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/bradleylab/stella-mcp/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/bradleylab/stella-mcp/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/bradleylab/stella-mcp/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/bradleylab/stella-mcp/compare/v0.9.0...v0.10.0

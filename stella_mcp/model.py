@@ -21,6 +21,7 @@ from stella_mcp.model_types import (
     SimSpecs,
     Stock,
 )
+from stella_mcp.xmile_features import XmileFeatureReport
 
 
 class StellaModel:
@@ -41,7 +42,12 @@ class StellaModel:
         self.last_layout_result = None
         self.last_layout_metrics = None
         self.layout_warnings = []
+        self.xmile_feature_report = XmileFeatureReport()
+        self.header_smile_extra_attrs: dict[str, str] = {}
         self.header_extra_children_xml: list[str] = []
+        self.root_extra_children_xml: list[str] = []
+        self.additional_model_xml: list[str] = []
+        self.variables_extra_children_xml: list[str] = []
         self.model_extra_children_xml: list[str] = []
         self.views_extra_children_xml: list[str] = []
         self.view_extra_children_xml: list[str] = []

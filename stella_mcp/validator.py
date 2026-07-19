@@ -2,7 +2,11 @@
 
 from dataclasses import dataclass
 
-from .equation_parser import extract_quoted_references, extract_variable_references
+from .equation_parser import (
+    extract_quoted_references,
+    extract_variable_references,
+    is_stella_reserved_identifier,
+)
 from .xmile import StellaModel
 
 # Canonical singular form for the XMILE-conventional time units (XMILE v1.0
@@ -25,8 +29,8 @@ def _norm_units(units: str) -> str:
     return units.strip().lower().replace(" ", "")
 
 
-def _norm_time_unit(units: str) -> str:
-    """Normalize a time unit, collapsing the known plural/singular pairs."""
+def normalize_time_unit(units: str) -> str:
+    """Normalize a time unit using the documented calendar-unit mapping."""
     normalized = _norm_units(units)
     return _TIME_UNIT_SINGULAR.get(normalized, normalized)
 
@@ -51,6 +55,7 @@ class ModelValidator:
         """Run all validation checks and return errors/warnings."""
         self.errors = []
 
+        self._check_reserved_identifiers()
         self._check_undefined_variables()
         self._check_mass_balance()
         self._check_missing_connections()
@@ -63,6 +68,27 @@ class ModelValidator:
         self._check_unused_variables()
 
         return self.errors
+
+    def _check_reserved_identifiers(self):
+        """Warn before Stella silently renames variables that shadow built-ins."""
+        variables = [
+            *(stock.name for stock in self.model.stocks.values()),
+            *(flow.name for flow in self.model.flows.values()),
+            *(aux.name for aux in self.model.auxs.values()),
+        ]
+        for name in sorted(variables, key=lambda value: (value.casefold(), value)):
+            if is_stella_reserved_identifier(name):
+                self.errors.append(
+                    ValidationError(
+                        severity="warning",
+                        category="reserved_identifier",
+                        message=(
+                            f"Variable '{name}' conflicts with a Stella/XMILE built-in; "
+                            "use a descriptive non-reserved name for stable desktop round-trips"
+                        ),
+                        variable=self.model._normalize_name(name),
+                    )
+                )
 
     def _get_all_variable_names(self) -> set[str]:
         """Get all variable names in the model."""
@@ -392,7 +418,7 @@ class ModelValidator:
                 numerator, denominator = flow_units.split("/")
                 consistent = (
                     _norm_units(numerator) == _norm_units(stock_units)
-                    and _norm_time_unit(denominator) == _norm_time_unit(time_unit)
+                    and normalize_time_unit(denominator) == normalize_time_unit(time_unit)
                 )
                 if consistent:
                     continue

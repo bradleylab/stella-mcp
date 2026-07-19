@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 
 from evaluation.layout_fixtures import fixture_builders, template_models
-from evaluation.layout_runner import run_layout_evaluation
+from evaluation.layout_runner import _canonicalize_report_value, run_layout_evaluation
 from stella_mcp.layout_quality import (
     ROUTE_BEND_CAP,
     ROUTE_LENGTH_MANHATTAN_MULTIPLIER,
@@ -18,6 +18,13 @@ BASELINE_REPORT = (
     / "docs"
     / "evaluation"
     / "layout-baseline-0.12"
+    / "layout-report.json"
+)
+RELEASE_REPORT = (
+    Path(__file__).parents[1]
+    / "docs"
+    / "evaluation"
+    / "layout-0.13"
     / "layout-report.json"
 )
 
@@ -89,6 +96,7 @@ def test_layout_evaluation_is_deterministic_and_writes_artifacts(tmp_path):
     second = run_layout_evaluation(second_dir)
 
     assert first == second
+    assert json.loads(RELEASE_REPORT.read_text(encoding="utf-8")) == first
     assert json.loads((first_dir / "layout-report.json").read_text()) == first
     assert {
         path.name: path.read_bytes() for path in sorted(first_dir.glob("*.stmx"))
@@ -114,3 +122,10 @@ def test_layout_evaluation_is_deterministic_and_writes_artifacts(tmp_path):
     assert first["incremental"]["moved_elements"] > 0
     assert first["incremental"]["total_displacement"] > 0
     assert first["incremental"]["before"]["routes"]["connector:1"]
+
+
+def test_layout_report_float_canonicalization_is_platform_stable():
+    first = {"length": 925.6016734282955, "bounds": (32.400000000000006, 32.0)}
+    second = {"length": 925.6016734282956, "bounds": (32.4, 32.0)}
+
+    assert _canonicalize_report_value(first) == _canonicalize_report_value(second)

@@ -3,7 +3,7 @@
 	<header>
 		<smile version="1.0" namespace="std, isee"/>
 		<name>Carbon Cycle 2 Box</name>
-		<uuid>5d39d036-084a-490c-bc7e-d83492fe926c</uuid>
+		<uuid>8998a000-87d4-5700-bf9c-9da82b2a5aef</uuid>
 		<vendor>isee systems, inc.</vendor>
 		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
 	</header>
@@ -12,7 +12,7 @@
 		<stop>100</stop>
 		<dt reciprocal="true">4</dt>
 	</sim_specs>
-	<isee:prefs show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true"/>
+	<ns0:prefs xmlns:ns0="http://iseesystems.com/XMILE" show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true" />
 	<model>
 		<variables>
 			<stock name="Atmosphere C">
@@ -43,51 +43,73 @@
 			</aux>
 		</variables>
 		<views>
-			<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
-				<text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt"/>
-			</style>
-			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="2" isee:page_rows="2" isee:popup_graphs_are_comparative="true" type="stock_flow">
-				<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
-					<stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
-						<shape type="rectangle" width="45" height="35"/>
-					</stock>
-					<flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom"/>
-					<aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
-						<shape type="circle" radius="18"/>
-					</aux>
-					<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>
-				</style>
-				<stock x="717" y="361" width="45" height="35" name="Atmosphere C"/>
-				<stock x="882" y="638" width="45" height="35" name="Land C"/>
-				<flow x="800.0" y="500" name="photosynthesis">
+			<ns0:style xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+							<ns0:text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" />
+						</ns0:style>
+			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="1" isee:page_rows="1" isee:popup_graphs_are_comparative="true" type="stock_flow">
+				<ns0:style xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:ns1="http://iseesystems.com/XMILE" color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+									<ns0:stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
+										<ns0:shape type="rectangle" width="45" height="35" />
+									</ns0:stock>
+									<ns0:flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom" />
+									<ns0:aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+										<ns0:shape type="circle" radius="18" />
+									</ns0:aux>
+									<ns0:connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" ns1:thickness="1" />
+								</ns0:style>
+				<stock x="415.0" y="63.0" name="Atmosphere C" label_side="top"/>
+				<stock x="415.0" y="398.0" name="Land C" label_side="bottom"/>
+				<flow x="393.0" y="231.0" name="photosynthesis" label_side="left">
 					<pts>
-						<pt x="717.6514269999684" y="379.0743018290576"/>
-						<pt x="882.3485730000316" y="620.9256981709424"/>
+						<pt x="415.0" y="81.0"/>
+						<pt x="393.0" y="81.0"/>
+						<pt x="393.0" y="381.0"/>
+						<pt x="415.0" y="381.0"/>
 					</pts>
 				</flow>
-				<flow x="800.0" y="500" name="respiration">
+				<flow x="415.0" y="231.0" name="respiration" label_side="right">
 					<pts>
-						<pt x="882.3485730000316" y="620.9256981709424"/>
-						<pt x="717.6514269999684" y="379.0743018290576"/>
+						<pt x="415.0" y="381.0"/>
+						<pt x="415.0" y="81.0"/>
 					</pts>
 				</flow>
-				<aux x="305" y="794" name="photosynthesis rate"/>
-				<aux x="1294" y="205" name="respiration rate"/>
-				<connector uid="1" angle="30.748146396134942">
+				<aux x="101.0" y="231.0" name="photosynthesis rate" label_side="bottom"/>
+				<aux x="450.0" y="196.0" name="respiration rate" label_side="right"/>
+				<connector uid="1" angle="-0.0">
 					<from>photosynthesis_rate</from>
 					<to>photosynthesis</to>
+					<pts>
+						<pt x="119.0" y="231.0"/>
+						<pt x="251.0" y="231.0"/>
+						<pt x="383.0" y="231.0"/>
+					</pts>
 				</connector>
-				<connector uid="2" angle="-59.25185360386505">
+				<connector uid="2" angle="-98.930590100419">
 					<from>Atmosphere_C</from>
 					<to>photosynthesis</to>
+					<pts>
+						<pt x="415.0" y="81.0"/>
+						<pt x="404.0" y="151.0"/>
+						<pt x="393.0" y="221.0"/>
+					</pts>
 				</connector>
-				<connector uid="3" angle="-149.25185360386507">
+				<connector uid="3" angle="-124.21570213243739">
 					<from>respiration_rate</from>
 					<to>respiration</to>
+					<pts>
+						<pt x="432.0" y="196.0"/>
+						<pt x="423.5" y="208.5"/>
+						<pt x="415.0" y="221.0"/>
+					</pts>
 				</connector>
-				<connector uid="4" angle="120.74814639613494">
+				<connector uid="4" angle="90.0">
 					<from>Land_C</from>
 					<to>respiration</to>
+					<pts>
+						<pt x="415.0" y="381.0"/>
+						<pt x="415.0" y="311.0"/>
+						<pt x="415.0" y="241.0"/>
+					</pts>
 				</connector>
 			</view>
 		</views>

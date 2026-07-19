@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+	<header>
+		<smile version="1.0" namespace="std, isee"/>
+		<name>Lotka Volterra</name>
+		<uuid>c2d901e5-2151-58f4-b986-657b056930b8</uuid>
+		<vendor>isee systems, inc.</vendor>
+		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
+	</header>
+	<sim_specs isee:sim_duration="1.5" isee:simulation_delay="0.0015" isee:restore_on_start="false" method="Euler" time_units="Years" isee:instantaneous_flows="false">
+		<start>0</start>
+		<stop>100</stop>
+		<dt reciprocal="true">4</dt>
+	</sim_specs>
+	<ns0:prefs xmlns:ns0="http://iseesystems.com/XMILE" show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true" />
+	<model>
+		<variables>
+			<stock name="Predator">
+				<eqn>20</eqn>
+				<inflow>predator_births</inflow>
+				<outflow>predator_deaths</outflow>
+				<non_negative/>
+			</stock>
+			<stock name="Prey">
+				<eqn>100</eqn>
+				<inflow>prey_births</inflow>
+				<outflow>predation</outflow>
+				<non_negative/>
+			</stock>
+			<flow name="predation">
+				<eqn>predation_rate * Prey * Predator</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="predator births">
+				<eqn>predator_efficiency * predation_rate * Prey * Predator</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="predator deaths">
+				<eqn>predator_death_rate * Predator</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="prey births">
+				<eqn>prey_birth_rate * Prey</eqn>
+				<non_negative/>
+			</flow>
+			<aux name="predation rate">
+				<eqn>0.02</eqn>
+			</aux>
+			<aux name="predator death rate">
+				<eqn>0.4</eqn>
+			</aux>
+			<aux name="predator efficiency">
+				<eqn>0.01</eqn>
+			</aux>
+			<aux name="prey birth rate">
+				<eqn>0.5</eqn>
+			</aux>
+		</variables>
+		<views>
+			<ns0:style xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+										<ns0:text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" />
+									</ns0:style>
+			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="1" isee:page_rows="1" isee:popup_graphs_are_comparative="true" type="stock_flow">
+				<ns0:style xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:ns1="http://iseesystems.com/XMILE" color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+													<ns0:stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
+														<ns0:shape type="rectangle" width="45" height="35" />
+													</ns0:stock>
+													<ns0:flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom" />
+													<ns0:aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+														<ns0:shape type="circle" radius="18" />
+													</ns0:aux>
+													<ns0:connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" ns1:thickness="1" />
+												</ns0:style>
+				<stock x="345.0" y="113.0" name="Predator" label_side="top"/>
+				<stock x="195.0" y="331.0" name="Prey" label_side="top"/>
+				<flow x="288.0" y="331.0" name="predation" label_side="bottom">
+					<pts>
+						<pt x="218.0" y="331.0"/>
+						<pt x="358.0" y="331.0"/>
+					</pts>
+				</flow>
+				<flow x="252.0" y="113.0" name="predator births" label_side="bottom">
+					<pts>
+						<pt x="182.0" y="113.0"/>
+						<pt x="322.0" y="113.0"/>
+					</pts>
+				</flow>
+				<flow x="438.0" y="113.0" name="predator deaths" label_side="bottom">
+					<pts>
+						<pt x="368.0" y="113.0"/>
+						<pt x="508.0" y="113.0"/>
+					</pts>
+				</flow>
+				<flow x="102.0" y="331.0" name="prey births" label_side="bottom">
+					<pts>
+						<pt x="32.0" y="331.0"/>
+						<pt x="172.0" y="331.0"/>
+					</pts>
+				</flow>
+				<aux x="270.0" y="172.0" name="predation rate" label_side="bottom"/>
+				<aux x="438.0" y="163.0" name="predator death rate" label_side="bottom"/>
+				<aux x="252.0" y="63.0" name="predator efficiency" label_side="top"/>
+				<aux x="102.0" y="281.0" name="prey birth rate" label_side="bottom"/>
+				<connector uid="1" angle="-90.0">
+					<from>prey_birth_rate</from>
+					<to>prey_births</to>
+					<pts>
+						<pt x="102.0" y="299.0"/>
+						<pt x="102.0" y="310.0"/>
+						<pt x="102.0" y="321.0"/>
+					</pts>
+				</connector>
+				<connector uid="2" angle="-180.0">
+					<from>Prey</from>
+					<to>prey_births</to>
+					<pts>
+						<pt x="172.0" y="331.0"/>
+						<pt x="142.0" y="331.0"/>
+						<pt x="112.0" y="331.0"/>
+					</pts>
+				</connector>
+				<connector uid="3" angle="-82.17628926811474">
+					<from>predation_rate</from>
+					<to>predation</to>
+					<pts>
+						<pt x="270.0" y="190.0"/>
+						<pt x="279.0" y="255.5"/>
+						<pt x="288.0" y="321.0"/>
+					</pts>
+				</connector>
+				<connector uid="4" angle="-0.0">
+					<from>Prey</from>
+					<to>predation</to>
+					<pts>
+						<pt x="218.0" y="331.0"/>
+						<pt x="248.0" y="331.0"/>
+						<pt x="278.0" y="331.0"/>
+					</pts>
+				</connector>
+				<connector uid="5" angle="-106.69924423399362">
+					<from>Predator</from>
+					<to>predation</to>
+					<pts>
+						<pt x="345.0" y="131.0"/>
+						<pt x="316.5" y="226.0"/>
+						<pt x="288.0" y="321.0"/>
+					</pts>
+				</connector>
+				<connector uid="6" angle="-90.0">
+					<from>predator_efficiency</from>
+					<to>predator_births</to>
+					<pts>
+						<pt x="252.0" y="81.0"/>
+						<pt x="252.0" y="92.0"/>
+						<pt x="252.0" y="103.0"/>
+					</pts>
+				</connector>
+				<connector uid="7" angle="120.14138555207535">
+					<from>predation_rate</from>
+					<to>predator_births</to>
+					<pts>
+						<pt x="270.0" y="154.0"/>
+						<pt x="261.0" y="138.5"/>
+						<pt x="252.0" y="123.0"/>
+					</pts>
+				</connector>
+				<connector uid="8" angle="90.0">
+					<from>Prey</from>
+					<to>predator_births</to>
+					<pts>
+						<pt x="195.0" y="313.0"/>
+						<pt x="195.0" y="302.0"/>
+						<pt x="195.0" y="291.0"/>
+						<pt x="207.5" y="202.0"/>
+						<pt x="220.0" y="113.0"/>
+						<pt x="231.0" y="113.0"/>
+						<pt x="242.0" y="113.0"/>
+					</pts>
+				</connector>
+				<connector uid="9" angle="-180.0">
+					<from>Predator</from>
+					<to>predator_births</to>
+					<pts>
+						<pt x="322.0" y="113.0"/>
+						<pt x="292.0" y="113.0"/>
+						<pt x="262.0" y="113.0"/>
+					</pts>
+				</connector>
+				<connector uid="10" angle="90.0">
+					<from>predator_death_rate</from>
+					<to>predator_deaths</to>
+					<pts>
+						<pt x="438.0" y="145.0"/>
+						<pt x="438.0" y="134.0"/>
+						<pt x="438.0" y="123.0"/>
+					</pts>
+				</connector>
+				<connector uid="11" angle="-0.0">
+					<from>Predator</from>
+					<to>predator_deaths</to>
+					<pts>
+						<pt x="368.0" y="113.0"/>
+						<pt x="398.0" y="113.0"/>
+						<pt x="428.0" y="113.0"/>
+					</pts>
+				</connector>
+			</view>
+		</views>
+	</model>
+</xmile>

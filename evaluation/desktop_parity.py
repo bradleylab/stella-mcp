@@ -40,8 +40,11 @@ def generate_desktop_parity_report(
     column_pairs: list[tuple[str, str]],
     *,
     stella_version: str,
+    stella_application: str = "Stella Professional",
     pysd_time: str = "time",
     stella_time: str = "time",
+    time_alignment: str = "exact",
+    candidate_decimal_places: int | None = None,
 ) -> dict[str, Any]:
     """Run PySD and compare its CSV with an existing Stella export.
 
@@ -68,6 +71,8 @@ def generate_desktop_parity_report(
 
     if not stella_version.strip():
         raise ValueError("stella_version must be non-empty")
+    if not stella_application.strip():
+        raise ValueError("stella_application must be non-empty")
     if not stella_csv_path.is_file():
         raise FileNotFoundError(f"Stella CSV does not exist: {stella_csv_path}")
     if pysd_csv_path in {model_path, stella_csv_path}:
@@ -82,16 +87,18 @@ def generate_desktop_parity_report(
         column_pairs,
         reference_time=pysd_time,
         candidate_time=stella_time,
+        time_alignment=time_alignment,
+        candidate_decimal_places=candidate_decimal_places,
     )
     comparison["reference"] = _portable_path(pysd_csv_path)
     comparison["candidate"] = _portable_path(stella_csv_path)
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "engines": {
             "pysd": {"version": package_version("pysd")},
             "stella": {
-                "application": "Stella Professional",
+                "application": stella_application,
                 "version": stella_version,
             },
         },
@@ -110,6 +117,7 @@ def generate_desktop_parity_report(
             },
         },
         "simulation": {
+            "backend": simulation["backend"],
             "sim_specs": simulation["sim_specs"],
             "warnings": simulation["warnings"],
         },
@@ -131,9 +139,16 @@ def main() -> int:
     parser.add_argument("--pysd-output", type=Path, required=True)
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument("--stella-version", required=True)
+    parser.add_argument("--stella-application", default="Stella Professional")
     parser.add_argument("--column", action="append", type=_parse_column_pair, required=True)
     parser.add_argument("--pysd-time", default="time")
     parser.add_argument("--stella-time", default="time")
+    parser.add_argument(
+        "--time-alignment",
+        choices=["exact", "rounded_reference_labels"],
+        default="exact",
+    )
+    parser.add_argument("--candidate-decimal-places", type=int)
     args = parser.parse_args()
 
     output_json = args.output_json.resolve()
@@ -147,8 +162,11 @@ def main() -> int:
         args.pysd_output,
         args.column,
         stella_version=args.stella_version,
+        stella_application=args.stella_application,
         pysd_time=args.pysd_time,
         stella_time=args.stella_time,
+        time_alignment=args.time_alignment,
+        candidate_decimal_places=args.candidate_decimal_places,
     )
     output_json.parent.mkdir(parents=True, exist_ok=True)
     output_json.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

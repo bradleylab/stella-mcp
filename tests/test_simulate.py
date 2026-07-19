@@ -49,6 +49,12 @@ def test_simulate_growth_model(monkeypatch):
     assert not result.isError
     sc = result.structuredContent
     assert sc["model_id"] == "g"
+    assert sc["backend"]["name"] == "PySD"
+    assert sc["backend"]["actual_integration_method"] == "Euler"
+    assert sc["backend"]["unsupported_feature_preflight"] == {
+        "status": "passed",
+        "feature_codes": [],
+    }
     [series] = sc["series"]
     assert series["name"] == "Population"
     assert len(series["points"]) <= 20
@@ -95,6 +101,10 @@ def test_simulate_rk4_model_warns_euler_only(monkeypatch):
 
     assert not result.isError
     assert any("Euler" in w for w in result.structuredContent["warnings"])
+    assert result.structuredContent["backend"]["model_integration_method"] == "RK4"
+    assert result.structuredContent["backend"]["warnings"] == result.structuredContent[
+        "warnings"
+    ]
 
 
 def test_simulate_does_not_mutate_session_model(monkeypatch):
