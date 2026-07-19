@@ -36,7 +36,9 @@ jobs:
         run: uv build
       - name: Validate distributions
         run: uv run twine check dist/*
-      - name: Validate wheel metadata and bundled templates
-        run: uv run python scripts/check_built_wheel.py dist/*.whl
+      - name: Validate distribution metadata and bundled templates
+        run: |
+          uv run python scripts/check_built_wheel.py dist/*.whl
+          uv run python scripts/check_built_sdist.py dist/*.tar.gz
       - name: Publish with PyPI Trusted Publishing
         uses: pypa/gh-action-pypi-publish@release/v1

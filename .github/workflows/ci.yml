@@ -24,7 +24,11 @@ jobs:
       - name: Run lint
         run: uv run ruff check .
       - name: Run compatibility corpus tests
-        run: uv run python -m pytest tests/test_compatibility_corpus.py
+        run: |
+          uv run python -m pytest \
+            tests/test_compatibility_corpus.py \
+            tests/test_external_corpus_manifest.py \
+            tests/test_external_compatibility_corpus.py
       - name: Run full test suite
         run: uv run python -m pytest
 
@@ -41,6 +45,20 @@ jobs:
         run: uv sync --locked --extra dev --extra sim
       - name: Run complete simulation, analysis, and calibration suite
         run: uv run python -m pytest
+      - name: Run numeric and desktop evidence tests
+        run: |
+          uv run python -m pytest \
+            tests/test_evaluation_compare.py \
+            tests/test_evaluation_desktop_parity.py \
+            tests/test_evaluation_external_parity.py \
+            tests/test_evaluation_package_desktop_evidence.py \
+            tests/test_evaluation_numeric_fidelity_report.py
+      - name: Run agent evaluator unit and retained-evidence tests
+        run: |
+          uv run python -m pytest \
+            tests/test_evaluation_agent_runner.py \
+            tests/test_evaluation_agent_evidence.py \
+            tests/test_evaluation_agent_v2_evidence.py
       - name: Run deterministic MCP evaluation
         run: |
           uv run python -m evaluation.runner \
@@ -48,6 +66,10 @@ jobs:
             --artifact-dir "$RUNNER_TEMP/stella-evaluation-artifacts" \
             --output-json "$RUNNER_TEMP/stella-evaluation.json" \
             --output-markdown "$RUNNER_TEMP/stella-evaluation.md"
+      - name: Check generated evidence is current
+        run: |
+          uv run python -m evaluation.numeric_fidelity_report --check
+          uv run python -m evaluation.capability_matrix --check
 
   test-mcp-floor:
     # Exercise the declared mcp minimum (the lockfile pins the latest, so the
@@ -79,8 +101,10 @@ jobs:
         run: uv build
       - name: Validate distributions
         run: uv run twine check dist/*
-      - name: Validate wheel metadata and bundled templates
-        run: uv run python scripts/check_built_wheel.py dist/*.whl
+      - name: Validate distribution metadata and bundled templates
+        run: |
+          uv run python scripts/check_built_wheel.py dist/*.whl
+          uv run python scripts/check_built_sdist.py dist/*.tar.gz
       - name: Install core wheel in a clean environment
         run: |
           uv venv .package-venv
