@@ -458,7 +458,7 @@
           "avoidable_route_detours": [],
           "backward_flow_edges": [],
           "bounds": [
-            32.400000000000006,
+            32.4,
             32.0,
             604.6,
             286.0
@@ -475,7 +475,7 @@
           "label_glyph_overlaps": [],
           "label_label_overlaps": [],
           "locked_route_movements": [],
-          "maximum_connector_length": 320.66493416025395,
+          "maximum_connector_length": 320.66493416,
           "maximum_flow_length": 106.0,
           "missing_positions": [],
           "page_overflow": [
@@ -489,7 +489,7 @@
           "repeated_route_points": [],
           "route_self_intersections": [],
           "total_bend_count": 0,
-          "total_connector_length": 925.6016734282956,
+          "total_connector_length": 925.601673428,
           "total_flow_length": 106.0
         },
         "viewport": {
@@ -515,7 +515,7 @@
         "label_glyph_overlaps": 0,
         "label_label_overlaps": 0,
         "locked_route_movements": 0,
-        "maximum_connector_length": 320.66493416025395,
+        "maximum_connector_length": 320.66493416,
         "maximum_flow_length": 106.0,
         "missing_positions": 0,
         "pinned_position_movements": 0,
@@ -523,14 +523,14 @@
         "repeated_route_points": 0,
         "route_self_intersections": 0,
         "total_bend_count": 0,
-        "total_connector_length": 925.6016734282956,
+        "total_connector_length": 925.601673428,
         "total_flow_length": 106.0
       },
       "metrics": {
         "avoidable_route_detours": [],
         "backward_flow_edges": [],
         "bounds": [
-          32.400000000000006,
+          32.4,
           32.0,
           604.6,
           286.0
@@ -547,7 +547,7 @@
         "label_glyph_overlaps": [],
         "label_label_overlaps": [],
         "locked_route_movements": [],
-        "maximum_connector_length": 320.66493416025395,
+        "maximum_connector_length": 320.66493416,
         "maximum_flow_length": 106.0,
         "missing_positions": [],
         "page_overflow": [
@@ -561,7 +561,7 @@
         "repeated_route_points": [],
         "route_self_intersections": [],
         "total_bend_count": 0,
-        "total_connector_length": 925.6016734282956,
+        "total_connector_length": 925.601673428,
         "total_flow_length": 106.0
       },
       "position_sources": {
@@ -972,7 +972,7 @@
           "repeated_route_points": [],
           "route_self_intersections": [],
           "total_bend_count": 25,
-          "total_connector_length": 1757.2543018382214,
+          "total_connector_length": 1757.254301838,
           "total_flow_length": 2096.0
         },
         "viewport": {
@@ -1006,7 +1006,7 @@
         "repeated_route_points": 0,
         "route_self_intersections": 0,
         "total_bend_count": 25,
-        "total_connector_length": 1757.2543018382214,
+        "total_connector_length": 1757.254301838,
         "total_flow_length": 2096.0
       },
       "metrics": {
@@ -1044,7 +1044,7 @@
         "repeated_route_points": [],
         "route_self_intersections": [],
         "total_bend_count": 25,
-        "total_connector_length": 1757.2543018382214,
+        "total_connector_length": 1757.254301838,
         "total_flow_length": 2096.0
       },
       "position_sources": {
@@ -1530,7 +1530,7 @@
           "avoidable_route_detours": [],
           "backward_flow_edges": [],
           "bounds": [
-            32.099999999999994,
+            32.1,
             32.0,
             572.8,
             583.0
@@ -1561,7 +1561,7 @@
           "repeated_route_points": [],
           "route_self_intersections": [],
           "total_bend_count": 10,
-          "total_connector_length": 2442.4111626521767,
+          "total_connector_length": 2442.411162652,
           "total_flow_length": 1172.0
         },
         "viewport": {
@@ -1595,14 +1595,14 @@
         "repeated_route_points": 0,
         "route_self_intersections": 0,
         "total_bend_count": 10,
-        "total_connector_length": 2442.4111626521767,
+        "total_connector_length": 2442.411162652,
         "total_flow_length": 1172.0
       },
       "metrics": {
         "avoidable_route_detours": [],
         "backward_flow_edges": [],
         "bounds": [
-          32.099999999999994,
+          32.1,
           32.0,
           572.8,
           583.0
@@ -1633,7 +1633,7 @@
         "repeated_route_points": [],
         "route_self_intersections": [],
         "total_bend_count": 10,
-        "total_connector_length": 2442.4111626521767,
+        "total_connector_length": 2442.411162652,
         "total_flow_length": 1172.0
       },
       "position_sources": {
@@ -2054,7 +2054,7 @@
           "avoidable_route_detours": [],
           "backward_flow_edges": [],
           "bounds": [
-            22.80000000000001,
+            22.8,
             32.0,
             767.2,
             136.0
@@ -2126,7 +2126,7 @@
         "avoidable_route_detours": [],
         "backward_flow_edges": [],
         "bounds": [
-          22.80000000000001,
+          22.8,
           32.0,
           767.2,
           136.0
@@ -2423,7 +2423,7 @@
           "repeated_route_points": [],
           "route_self_intersections": [],
           "total_bend_count": 7,
-          "total_connector_length": 1044.465321180982,
+          "total_connector_length": 1044.465321181,
           "total_flow_length": 0
         },
         "viewport": {
@@ -2466,7 +2466,7 @@
         "repeated_route_points": 0,
         "route_self_intersections": 0,
         "total_bend_count": 7,
-        "total_connector_length": 1044.465321180982,
+        "total_connector_length": 1044.465321181,
         "total_flow_length": 0
       },
       "metrics": {
@@ -2509,7 +2509,7 @@
         "repeated_route_points": [],
         "route_self_intersections": [],
         "total_bend_count": 7,
-        "total_connector_length": 1044.465321180982,
+        "total_connector_length": 1044.465321181,
         "total_flow_length": 0
       },
       "position_sources": {
@@ -2875,7 +2875,7 @@
           "avoidable_route_detours": [],
           "backward_flow_edges": [],
           "bounds": [
-            32.60000000000001,
+            32.6,
             32.5,
             584.2,
             428.5
@@ -2906,7 +2906,7 @@
           "repeated_route_points": [],
           "route_self_intersections": [],
           "total_bend_count": 2,
-          "total_connector_length": 575.9504628201169,
+          "total_connector_length": 575.95046282,
           "total_flow_length": 644.0
         },
         "viewport": {
@@ -2940,14 +2940,14 @@
         "repeated_route_points": 0,
         "route_self_intersections": 0,
         "total_bend_count": 2,
-        "total_connector_length": 575.9504628201169,
+        "total_connector_length": 575.95046282,
         "total_flow_length": 644.0
       },
       "metrics": {
         "avoidable_route_detours": [],
         "backward_flow_edges": [],
         "bounds": [
-          32.60000000000001,
+          32.6,
           32.5,
           584.2,
           428.5
@@ -2978,7 +2978,7 @@
         "repeated_route_points": [],
         "route_self_intersections": [],
         "total_bend_count": 2,
-        "total_connector_length": 575.9504628201169,
+        "total_connector_length": 575.95046282,
         "total_flow_length": 644.0
       },
       "position_sources": {
@@ -3283,7 +3283,7 @@
           "label_glyph_overlaps": [],
           "label_label_overlaps": [],
           "locked_route_movements": [],
-          "maximum_connector_length": 223.7470444819608,
+          "maximum_connector_length": 223.747044482,
           "maximum_flow_length": 140.0,
           "missing_positions": [],
           "page_overflow": [
@@ -3297,7 +3297,7 @@
           "repeated_route_points": [],
           "route_self_intersections": [],
           "total_bend_count": 2,
-          "total_connector_length": 896.1906235373417,
+          "total_connector_length": 896.190623537,
           "total_flow_length": 560.0
         },
         "viewport": {
@@ -3323,7 +3323,7 @@
         "label_glyph_overlaps": 0,
         "label_label_overlaps": 0,
         "locked_route_movements": 0,
-        "maximum_connector_length": 223.7470444819608,
+        "maximum_connector_length": 223.747044482,
         "maximum_flow_length": 140.0,
         "missing_positions": 0,
         "pinned_position_movements": 0,
@@ -3331,7 +3331,7 @@
         "repeated_route_points": 0,
         "route_self_intersections": 0,
         "total_bend_count": 2,
-        "total_connector_length": 896.1906235373417,
+        "total_connector_length": 896.190623537,
         "total_flow_length": 560.0
       },
       "metrics": {
@@ -3355,7 +3355,7 @@
         "label_glyph_overlaps": [],
         "label_label_overlaps": [],
         "locked_route_movements": [],
-        "maximum_connector_length": 223.7470444819608,
+        "maximum_connector_length": 223.747044482,
         "maximum_flow_length": 140.0,
         "missing_positions": [],
         "page_overflow": [
@@ -3369,7 +3369,7 @@
         "repeated_route_points": [],
         "route_self_intersections": [],
         "total_bend_count": 2,
-        "total_connector_length": 896.1906235373417,
+        "total_connector_length": 896.190623537,
         "total_flow_length": 560.0
       },
       "position_sources": {
@@ -3598,7 +3598,7 @@
           "avoidable_route_detours": [],
           "backward_flow_edges": [],
           "bounds": [
-            32.400000000000006,
+            32.4,
             32.0,
             574.0,
             426.0
@@ -3629,7 +3629,7 @@
           "repeated_route_points": [],
           "route_self_intersections": [],
           "total_bend_count": 2,
-          "total_connector_length": 716.1092976760957,
+          "total_connector_length": 716.109297676,
           "total_flow_length": 876.0
         },
         "viewport": {
@@ -3663,14 +3663,14 @@
         "repeated_route_points": 0,
         "route_self_intersections": 0,
         "total_bend_count": 2,
-        "total_connector_length": 716.1092976760957,
+        "total_connector_length": 716.109297676,
         "total_flow_length": 876.0
       },
       "metrics": {
         "avoidable_route_detours": [],
         "backward_flow_edges": [],
         "bounds": [
-          32.400000000000006,
+          32.4,
           32.0,
           574.0,
           426.0
@@ -3701,7 +3701,7 @@
         "repeated_route_points": [],
         "route_self_intersections": [],
         "total_bend_count": 2,
-        "total_connector_length": 716.1092976760957,
+        "total_connector_length": 716.109297676,
         "total_flow_length": 876.0
       },
       "position_sources": {
@@ -3931,7 +3931,7 @@
           "repeated_route_points": [],
           "route_self_intersections": [],
           "total_bend_count": 2,
-          "total_connector_length": 636.065556157337,
+          "total_connector_length": 636.065556157,
           "total_flow_length": 212.0
         },
         "viewport": {
@@ -3965,7 +3965,7 @@
         "repeated_route_points": 0,
         "route_self_intersections": 0,
         "total_bend_count": 2,
-        "total_connector_length": 636.065556157337,
+        "total_connector_length": 636.065556157,
         "total_flow_length": 212.0
       },
       "metrics": {
@@ -4003,7 +4003,7 @@
         "repeated_route_points": [],
         "route_self_intersections": [],
         "total_bend_count": 2,
-        "total_connector_length": 636.065556157337,
+        "total_connector_length": 636.065556157,
         "total_flow_length": 212.0
       },
       "position_sources": {
@@ -4547,12 +4547,12 @@
     },
     "displacement": {
       "first": 0.0,
-      "initial_rate": 35.17101079013795,
-      "initial_transfer": 35.17101079013795,
-      "second": 57.201398584300364
+      "initial_rate": 35.17101079,
+      "initial_transfer": 35.17101079,
+      "second": 57.201398584
     },
     "moved_elements": 3,
-    "total_displacement": 127.54342016457626
+    "total_displacement": 127.543420165
   },
   "schema_version": 1
 }

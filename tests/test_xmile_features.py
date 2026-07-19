@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -150,6 +151,18 @@ def test_pysd_backed_tools_reject_unsupported_models_before_import(
 
     with pytest.raises(UnsupportedModelFeatureError, match="xmile.arrays"):
         operation(model)
+
+
+def test_calibrate_rejects_unsupported_model_before_numpy_import(monkeypatch):
+    model = parse_stmx(str(_ARRAY), compat_mode="permissive")
+    monkeypatch.setitem(sys.modules, "numpy", None)
+
+    with pytest.raises(UnsupportedModelFeatureError, match="xmile.arrays"):
+        calibrate(
+            model,
+            observations={"time": [1, 2], "targets": {"Sales": [9, 9]}},
+            parameters=[{"name": "Price"}],
+        )
 
 
 def test_mcp_strict_import_returns_structured_compatibility_error():

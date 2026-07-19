@@ -34,6 +34,7 @@ from .simulate import (
     summarize_run,
 )
 from .xmile import StellaModel
+from .xmile_features import ensure_supported_for_simulation
 
 SEED = 0
 _METHODS = frozenset({"least_squares", "differential_evolution"})
@@ -565,6 +566,8 @@ def calibrate(
     linearized ``std_error``), the objective trajectory, convergence state, and
     warnings.
     """
+    ensure_supported_for_simulation(model.xmile_feature_report)
+
     import numpy as np
     from scipy import optimize
 
