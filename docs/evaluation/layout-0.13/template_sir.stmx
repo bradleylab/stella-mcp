@@ -2,8 +2,8 @@
 <xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
 	<header>
 		<smile version="1.0" namespace="std, isee"/>
-		<name>Nutrient Box 2 Box</name>
-		<uuid>fd4fd292-15ea-53d7-b931-9e13bec76e51</uuid>
+		<name>SIR</name>
+		<uuid>2b2236a4-49fc-5394-9c14-574c5814441c</uuid>
 		<vendor>isee systems, inc.</vendor>
 		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
 	</header>
@@ -15,47 +15,38 @@
 	<ns0:prefs xmlns:ns0="http://iseesystems.com/XMILE" show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true" />
 	<model>
 		<variables>
-			<stock name="Deep N">
-				<eqn>1000</eqn>
-				<inflow>downwelling</inflow>
-				<inflow>remin</inflow>
-				<outflow>upwelling</outflow>
+			<stock name="Infected">
+				<eqn>10</eqn>
+				<inflow>infection</inflow>
+				<outflow>recovery</outflow>
 				<non_negative/>
 			</stock>
-			<stock name="Surface N">
-				<eqn>100</eqn>
-				<inflow>upwelling</inflow>
-				<outflow>downwelling</outflow>
-				<outflow>uptake</outflow>
+			<stock name="Recovered">
+				<eqn>0</eqn>
+				<inflow>recovery</inflow>
 				<non_negative/>
 			</stock>
-			<flow name="downwelling">
-				<eqn>downwelling_rate * Surface_N</eqn>
+			<stock name="Susceptible">
+				<eqn>990</eqn>
+				<outflow>infection</outflow>
+				<non_negative/>
+			</stock>
+			<flow name="infection">
+				<eqn>transmission_rate * Susceptible * Infected / population_total</eqn>
 				<non_negative/>
 			</flow>
-			<flow name="remin">
-				<eqn>remin_rate * Deep_N</eqn>
+			<flow name="recovery">
+				<eqn>recovery_rate * Infected</eqn>
 				<non_negative/>
 			</flow>
-			<flow name="uptake">
-				<eqn>uptake_rate * Surface_N</eqn>
-				<non_negative/>
-			</flow>
-			<flow name="upwelling">
-				<eqn>upwelling_rate * Deep_N</eqn>
-				<non_negative/>
-			</flow>
-			<aux name="downwelling rate">
-				<eqn>0.03</eqn>
+			<aux name="population total">
+				<eqn>Susceptible + Infected + Recovered</eqn>
 			</aux>
-			<aux name="remin rate">
-				<eqn>0.02</eqn>
+			<aux name="recovery rate">
+				<eqn>0.1</eqn>
 			</aux>
-			<aux name="uptake rate">
-				<eqn>0.04</eqn>
-			</aux>
-			<aux name="upwelling rate">
-				<eqn>0.03</eqn>
+			<aux name="transmission rate">
+				<eqn>0.3</eqn>
 			</aux>
 		</variables>
 		<views>
@@ -73,108 +64,107 @@
 									</ns0:aux>
 									<ns0:connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" ns1:thickness="1" />
 								</ns0:style>
-				<stock x="404.0" y="68.0" name="Deep N" label_side="top"/>
-				<stock x="404.0" y="390.0" name="Surface N" label_side="bottom"/>
-				<flow x="382.0" y="229.0" name="downwelling" label_side="left">
+				<stock x="222.0" y="122.0" name="Infected" label_side="top"/>
+				<stock x="372.0" y="122.0" name="Recovered" label_side="top"/>
+				<stock x="72.0" y="122.0" name="Susceptible" label_side="top"/>
+				<flow x="147.0" y="122.0" name="infection" label_side="bottom">
 					<pts>
-						<pt x="404.0" y="367.0"/>
-						<pt x="382.0" y="367.0"/>
-						<pt x="382.0" y="91.0"/>
-						<pt x="404.0" y="91.0"/>
+						<pt x="94.0" y="122.0"/>
+						<pt x="200.0" y="122.0"/>
 					</pts>
 				</flow>
-				<flow x="304.0" y="68.0" name="remin" label_side="bottom">
+				<flow x="297.0" y="122.0" name="recovery" label_side="bottom">
 					<pts>
-						<pt x="234.0" y="68.0"/>
-						<pt x="374.0" y="68.0"/>
+						<pt x="244.0" y="122.0"/>
+						<pt x="350.0" y="122.0"/>
 					</pts>
 				</flow>
-				<flow x="504.0" y="390.0" name="uptake" label_side="bottom">
+				<aux x="147.0" y="72.0" name="population total" label_side="top"/>
+				<aux x="297.0" y="72.0" name="recovery rate" label_side="top"/>
+				<aux x="147.0" y="172.0" name="transmission rate" label_side="bottom"/>
+				<connector uid="1" angle="90.0">
+					<from>transmission_rate</from>
+					<to>infection</to>
 					<pts>
-						<pt x="434.0" y="390.0"/>
-						<pt x="574.0" y="390.0"/>
-					</pts>
-				</flow>
-				<flow x="404.0" y="229.0" name="upwelling" label_side="right">
-					<pts>
-						<pt x="404.0" y="91.0"/>
-						<pt x="404.0" y="367.0"/>
-					</pts>
-				</flow>
-				<aux x="90.0" y="229.0" name="downwelling rate" label_side="bottom"/>
-				<aux x="304.0" y="118.0" name="remin rate" label_side="bottom"/>
-				<aux x="504.0" y="340.0" name="uptake rate" label_side="top"/>
-				<aux x="439.0" y="194.0" name="upwelling rate" label_side="right"/>
-				<connector uid="1" angle="-124.21570213243739">
-					<from>upwelling_rate</from>
-					<to>upwelling</to>
-					<pts>
-						<pt x="421.0" y="194.0"/>
-						<pt x="412.5" y="206.5"/>
-						<pt x="404.0" y="219.0"/>
+						<pt x="147.0" y="154.0"/>
+						<pt x="147.0" y="143.0"/>
+						<pt x="147.0" y="132.0"/>
 					</pts>
 				</connector>
-				<connector uid="2" angle="-90.0">
-					<from>Deep_N</from>
-					<to>upwelling</to>
+				<connector uid="2" angle="-0.0">
+					<from>Susceptible</from>
+					<to>infection</to>
 					<pts>
-						<pt x="404.0" y="91.0"/>
-						<pt x="404.0" y="155.0"/>
-						<pt x="404.0" y="219.0"/>
+						<pt x="94.0" y="122.0"/>
+						<pt x="115.5" y="122.0"/>
+						<pt x="137.0" y="122.0"/>
 					</pts>
 				</connector>
-				<connector uid="3" angle="-0.0">
-					<from>downwelling_rate</from>
-					<to>downwelling</to>
+				<connector uid="3" angle="-180.0">
+					<from>Infected</from>
+					<to>infection</to>
 					<pts>
-						<pt x="108.0" y="229.0"/>
-						<pt x="240.0" y="229.0"/>
-						<pt x="372.0" y="229.0"/>
+						<pt x="200.0" y="122.0"/>
+						<pt x="178.5" y="122.0"/>
+						<pt x="157.0" y="122.0"/>
 					</pts>
 				</connector>
-				<connector uid="4" angle="99.7524249416538">
-					<from>Surface_N</from>
-					<to>downwelling</to>
+				<connector uid="4" angle="-90.0">
+					<from>population_total</from>
+					<to>infection</to>
 					<pts>
-						<pt x="404.0" y="367.0"/>
-						<pt x="393.0" y="303.0"/>
-						<pt x="382.0" y="239.0"/>
+						<pt x="147.0" y="90.0"/>
+						<pt x="147.0" y="101.0"/>
+						<pt x="147.0" y="112.0"/>
 					</pts>
 				</connector>
 				<connector uid="5" angle="-90.0">
-					<from>uptake_rate</from>
-					<to>uptake</to>
+					<from>recovery_rate</from>
+					<to>recovery</to>
 					<pts>
-						<pt x="504.0" y="358.0"/>
-						<pt x="504.0" y="369.0"/>
-						<pt x="504.0" y="380.0"/>
+						<pt x="297.0" y="90.0"/>
+						<pt x="297.0" y="101.0"/>
+						<pt x="297.0" y="112.0"/>
 					</pts>
 				</connector>
 				<connector uid="6" angle="-0.0">
-					<from>Surface_N</from>
-					<to>uptake</to>
+					<from>Infected</from>
+					<to>recovery</to>
 					<pts>
-						<pt x="434.0" y="390.0"/>
-						<pt x="464.0" y="390.0"/>
-						<pt x="494.0" y="390.0"/>
+						<pt x="244.0" y="122.0"/>
+						<pt x="265.5" y="122.0"/>
+						<pt x="287.0" y="122.0"/>
 					</pts>
 				</connector>
-				<connector uid="7" angle="90.0">
-					<from>remin_rate</from>
-					<to>remin</to>
+				<connector uid="7" angle="55.00797980144134">
+					<from>Susceptible</from>
+					<to>population_total</to>
 					<pts>
-						<pt x="304.0" y="100.0"/>
-						<pt x="304.0" y="89.0"/>
-						<pt x="304.0" y="78.0"/>
+						<pt x="94.0" y="122.0"/>
+						<pt x="111.5" y="97.0"/>
+						<pt x="129.0" y="72.0"/>
 					</pts>
 				</connector>
-				<connector uid="8" angle="-180.0">
-					<from>Deep_N</from>
-					<to>remin</to>
+				<connector uid="8" angle="124.99202019855868">
+					<from>Infected</from>
+					<to>population_total</to>
 					<pts>
-						<pt x="374.0" y="68.0"/>
-						<pt x="344.0" y="68.0"/>
-						<pt x="314.0" y="68.0"/>
+						<pt x="200.0" y="122.0"/>
+						<pt x="182.5" y="97.0"/>
+						<pt x="165.0" y="72.0"/>
+					</pts>
+				</connector>
+				<connector uid="9" angle="90.0">
+					<from>Recovered</from>
+					<to>population_total</to>
+					<pts>
+						<pt x="372.0" y="104.0"/>
+						<pt x="372.0" y="68.0"/>
+						<pt x="372.0" y="32.0"/>
+						<pt x="259.5" y="32.0"/>
+						<pt x="147.0" y="32.0"/>
+						<pt x="147.0" y="43.0"/>
+						<pt x="147.0" y="54.0"/>
 					</pts>
 				</connector>
 			</view>

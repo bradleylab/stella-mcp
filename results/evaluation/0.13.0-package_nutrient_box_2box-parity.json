@@ -1,0 +1,172 @@
+{
+  "schema_version": 2,
+  "engines": {
+    "pysd": {
+      "version": "3.14.3"
+    },
+    "stella": {
+      "application": "Stella Professional",
+      "version": "4.1.1"
+    }
+  },
+  "artifacts": {
+    "model": {
+      "path": "results/evaluation/0.13.0-desktop-candidates/package_nutrient_box_2box.stmx",
+      "sha256": "a065328bb65ec110c1c3d2be30b60f4b51b17ec51d0f15a45d1e6132bfc1c213"
+    },
+    "pysd_csv": {
+      "path": "results/evaluation/0.13.0-package_nutrient_box_2box-pysd.csv",
+      "sha256": "d4ca21357115f8fa131dd358694cb29c24b519481ef89069a5dc010162b0310c"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_nutrient_box_2box-stella.csv",
+      "sha256": "49fa6e0b5af5ca31700b5b3459da7fe653fe920810e26ba7c283091f99f14919"
+    }
+  },
+  "simulation": {
+    "backend": {
+      "name": "PySD",
+      "version": "3.14.3",
+      "actual_integration_method": "Euler",
+      "model_integration_method": "Euler",
+      "unsupported_feature_preflight": {
+        "status": "passed",
+        "feature_codes": []
+      },
+      "warnings": []
+    },
+    "sim_specs": {
+      "start": 0.0,
+      "stop": 100.0,
+      "dt": 0.25,
+      "method": "Euler",
+      "time_units": "Years"
+    },
+    "warnings": []
+  },
+  "comparison": {
+    "schema_version": 2,
+    "reference": "results/evaluation/0.13.0-package_nutrient_box_2box-pysd.csv",
+    "candidate": "results/evaluation/0.13.0-desktop-evidence/package_nutrient_box_2box-stella.csv",
+    "time_columns": {
+      "reference": "time",
+      "candidate": "Years"
+    },
+    "points": 401,
+    "comparison_policy": {
+      "time_alignment": "exact",
+      "candidate_decimal_places": null,
+      "interpolation": "none",
+      "max_time_label_difference": 0.0,
+      "relative_error_denominator": "max(abs(reference), abs(candidate))",
+      "pass_threshold": null
+    },
+    "columns": [
+      {
+        "reference_column": "Deep N",
+        "candidate_column": "Deep N",
+        "max_absolute_error": 4.996991265215911e-09,
+        "max_absolute_error_time": 95.75,
+        "max_relative_error": 4.8972710342617406e-12,
+        "max_relative_error_time": 49.5
+      },
+      {
+        "reference_column": "Surface N",
+        "candidate_column": "Surface N",
+        "max_absolute_error": 4.997389169147937e-10,
+        "max_absolute_error_time": 3.5,
+        "max_relative_error": 3.2939843907596383e-12,
+        "max_relative_error_time": 1.75
+      },
+      {
+        "reference_column": "downwelling",
+        "candidate_column": "downwelling",
+        "max_absolute_error": 4.949640697304858e-11,
+        "max_absolute_error_time": 43.0,
+        "max_relative_error": 4.680531095590865e-12,
+        "max_relative_error_time": 22.25
+      },
+      {
+        "reference_column": "remin",
+        "candidate_column": "remin",
+        "max_absolute_error": 4.9976023319686647e-11,
+        "max_absolute_error_time": 72.75,
+        "max_relative_error": 2.5947812421760216e-12,
+        "max_relative_error_time": 19.75
+      },
+      {
+        "reference_column": "uptake",
+        "candidate_column": "uptake",
+        "max_absolute_error": 4.9883652764037834e-11,
+        "max_absolute_error_time": 75.75,
+        "max_relative_error": 4.16959867529037e-12,
+        "max_relative_error_time": 9.5
+      },
+      {
+        "reference_column": "upwelling",
+        "candidate_column": "upwelling",
+        "max_absolute_error": 5.000089231543825e-11,
+        "max_absolute_error_time": 0.75,
+        "max_relative_error": 1.7394425178452447e-12,
+        "max_relative_error_time": 10.75
+      },
+      {
+        "reference_column": "downwelling rate",
+        "candidate_column": "downwelling rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "remin rate",
+        "candidate_column": "remin rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "uptake rate",
+        "candidate_column": "uptake rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "upwelling rate",
+        "candidate_column": "upwelling rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      }
+    ]
+  },
+  "desktop_evidence": {
+    "id": "package_nutrient_box_2box",
+    "opened_without_repair": true,
+    "run_completed": true,
+    "run_final_time": 100,
+    "visual_review": "pass",
+    "notes": "The corrected two-box vertical layout fit on one page; all four flows and rate connectors remained readable, with curved routes avoiding symbols.",
+    "source_model": {
+      "path": "results/evaluation/0.13.0-desktop-candidates/package_nutrient_box_2box.stmx",
+      "sha256": "a065328bb65ec110c1c3d2be30b60f4b51b17ec51d0f15a45d1e6132bfc1c213"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_nutrient_box_2box-stella.csv",
+      "sha256": "49fa6e0b5af5ca31700b5b3459da7fe653fe920810e26ba7c283091f99f14919"
+    },
+    "stella_saved_model": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_nutrient_box_2box-stella-saved.stmx",
+      "sha256": "7313ce7df5a945e0caa4307fef7834e8e399f42bde374fc41446ae7263b58df7"
+    },
+    "saved_reimport_strict": true,
+    "identifier_renames": [],
+    "serialization_changes": [],
+    "computational_changes": [],
+    "parity_report": "results/evaluation/0.13.0-package_nutrient_box_2box-parity.json"
+  }
+}

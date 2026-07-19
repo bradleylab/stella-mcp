@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="33.7 209.5 691.6 133.5" width="691.6" height="133.5">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>
+<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:12px;fill:#000}</style>
+<polyline class="flow-pipe" points="143,280 348,280"/>
+<path class="flow-valve" d="M239,273 L253,287 L253,273 L239,287 z"/>
+<text class="label" x="246" y="301.2" text-anchor="middle">first transfer</text>
+<polyline class="flow-pipe" points="392,280 598,280"/>
+<path class="flow-valve" d="M488,273 L502,287 L502,273 L488,287 z"/>
+<text class="label" x="495" y="301.2" text-anchor="middle">second transfer</text>
+<rect class="stock" x="347.5" y="262.5" width="45" height="35"/>
+<text class="label" x="370" y="259.7" text-anchor="middle">free middle</text>
+<rect class="stock" x="598" y="262.75" width="45" height="35"/>
+<text class="label" x="620.5" y="259.95" text-anchor="middle">pinned destination</text>
+<rect class="stock" x="98" y="262.75" width="45" height="35"/>
+<text class="label" x="120.5" y="259.95" text-anchor="middle">pinned source</text>
+</svg>

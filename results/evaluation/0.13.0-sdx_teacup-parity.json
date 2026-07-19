@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "engines": {
+    "pysd": {
+      "version": "3.14.3"
+    },
+    "stella": {
+      "application": "Stella",
+      "version": "10.0.6 for Windows"
+    }
+  },
+  "artifacts": {
+    "model": {
+      "path": "tests/fixtures/external_corpus/sdxorg/samples/teacup/teacup.stmx",
+      "sha256": "821be7a73ef5b7b53b232ea8eb2ec63a0b2fd7ea47a50248af9443d7e9a33e18"
+    },
+    "pysd_csv": {
+      "path": "results/evaluation/0.13.0-sdx_teacup-pysd.csv",
+      "sha256": "84dbe1e5e90d5e73262d8aed226fb65efca7f0fbfb18af966b27ed167740490f"
+    },
+    "stella_csv": {
+      "path": "tests/fixtures/external_corpus/sdxorg/samples/teacup/output_stella1006.csv",
+      "sha256": "bba3e55ba01aa2216af45a8b9596b50639e00ff079067b89cab7e2b439be2157"
+    }
+  },
+  "simulation": {
+    "backend": {
+      "name": "PySD",
+      "version": "3.14.3",
+      "actual_integration_method": "Euler",
+      "model_integration_method": "Euler",
+      "unsupported_feature_preflight": {
+        "status": "passed",
+        "feature_codes": []
+      },
+      "warnings": []
+    },
+    "sim_specs": {
+      "start": 0.0,
+      "stop": 30.0,
+      "dt": 0.125,
+      "method": "Euler",
+      "time_units": "Time"
+    },
+    "warnings": []
+  },
+  "comparison": {
+    "schema_version": 2,
+    "reference": "results/evaluation/0.13.0-sdx_teacup-pysd.csv",
+    "candidate": "tests/fixtures/external_corpus/sdxorg/samples/teacup/output_stella1006.csv",
+    "time_columns": {
+      "reference": "time",
+      "candidate": "Time"
+    },
+    "points": 241,
+    "comparison_policy": {
+      "time_alignment": "exact",
+      "candidate_decimal_places": null,
+      "interpolation": "none",
+      "max_time_label_difference": 0.0,
+      "relative_error_denominator": "max(abs(reference), abs(candidate))",
+      "pass_threshold": null
+    },
+    "columns": [
+      {
+        "reference_column": "teacup temperature",
+        "candidate_column": "teacup temperature",
+        "max_absolute_error": 4.939977316098521e-10,
+        "max_absolute_error_time": 8.125,
+        "max_relative_error": 4.705908223352309e-12,
+        "max_relative_error_time": 11.875
+      }
+    ]
+  },
+  "fixture": {
+    "id": "sdx_teacup",
+    "source": "sdxorg_test_models",
+    "constructs": [
+      "scalar",
+      "linear_cooling"
+    ],
+    "manifest": "tests/fixtures/external_corpus/manifest.json"
+  }
+}

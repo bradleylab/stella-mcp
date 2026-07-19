@@ -20,6 +20,13 @@ BASELINE_REPORT = (
     / "layout-baseline-0.12"
     / "layout-report.json"
 )
+RELEASE_REPORT = (
+    Path(__file__).parents[1]
+    / "docs"
+    / "evaluation"
+    / "layout-0.13"
+    / "layout-report.json"
+)
 
 
 def test_route_limits_are_derived_from_the_phase_one_baseline():
@@ -89,6 +96,7 @@ def test_layout_evaluation_is_deterministic_and_writes_artifacts(tmp_path):
     second = run_layout_evaluation(second_dir)
 
     assert first == second
+    assert json.loads(RELEASE_REPORT.read_text(encoding="utf-8")) == first
     assert json.loads((first_dir / "layout-report.json").read_text()) == first
     assert {
         path.name: path.read_bytes() for path in sorted(first_dir.glob("*.stmx"))

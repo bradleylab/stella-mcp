@@ -58,19 +58,19 @@
 		</variables>
 		<views>
 			<ns0:style xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
-							<ns0:text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" />
-						</ns0:style>
+										<ns0:text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" />
+									</ns0:style>
 			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="1" isee:page_rows="1" isee:popup_graphs_are_comparative="true" type="stock_flow">
 				<ns0:style xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:ns1="http://iseesystems.com/XMILE" color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
-									<ns0:stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
-										<ns0:shape type="rectangle" width="45" height="35" />
-									</ns0:stock>
-									<ns0:flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom" />
-									<ns0:aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
-										<ns0:shape type="circle" radius="18" />
-									</ns0:aux>
-									<ns0:connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" ns1:thickness="1" />
-								</ns0:style>
+													<ns0:stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
+														<ns0:shape type="rectangle" width="45" height="35" />
+													</ns0:stock>
+													<ns0:flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom" />
+													<ns0:aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+														<ns0:shape type="circle" radius="18" />
+													</ns0:aux>
+													<ns0:connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" ns1:thickness="1" />
+												</ns0:style>
 				<stock x="345.0" y="113.0" name="Predator" label_side="top"/>
 				<stock x="195.0" y="331.0" name="Prey" label_side="top"/>
 				<flow x="288.0" y="331.0" name="predation" label_side="bottom">

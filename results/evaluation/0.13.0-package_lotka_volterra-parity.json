@@ -1,0 +1,172 @@
+{
+  "schema_version": 2,
+  "engines": {
+    "pysd": {
+      "version": "3.14.3"
+    },
+    "stella": {
+      "application": "Stella Professional",
+      "version": "4.1.1"
+    }
+  },
+  "artifacts": {
+    "model": {
+      "path": "results/evaluation/0.13.0-desktop-candidates/package_lotka_volterra.stmx",
+      "sha256": "8503f22ca38fe2acae31f68cc1ab354a270600ac867ec20dff8ed54a411ced2f"
+    },
+    "pysd_csv": {
+      "path": "results/evaluation/0.13.0-package_lotka_volterra-pysd.csv",
+      "sha256": "1681ff533267a8f49549981cd63ea119475a89b7802a7a3a361c58a339e02812"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_lotka_volterra-stella.csv",
+      "sha256": "4a32dcf08bfbb547b5530d6bb651149098c407dec4eb80445b886dc7d8020487"
+    }
+  },
+  "simulation": {
+    "backend": {
+      "name": "PySD",
+      "version": "3.14.3",
+      "actual_integration_method": "Euler",
+      "model_integration_method": "Euler",
+      "unsupported_feature_preflight": {
+        "status": "passed",
+        "feature_codes": []
+      },
+      "warnings": []
+    },
+    "sim_specs": {
+      "start": 0.0,
+      "stop": 100.0,
+      "dt": 0.25,
+      "method": "Euler",
+      "time_units": "Years"
+    },
+    "warnings": []
+  },
+  "comparison": {
+    "schema_version": 2,
+    "reference": "results/evaluation/0.13.0-package_lotka_volterra-pysd.csv",
+    "candidate": "results/evaluation/0.13.0-desktop-evidence/package_lotka_volterra-stella.csv",
+    "time_columns": {
+      "reference": "time",
+      "candidate": "Years"
+    },
+    "points": 401,
+    "comparison_policy": {
+      "time_alignment": "exact",
+      "candidate_decimal_places": null,
+      "interpolation": "none",
+      "max_time_label_difference": 0.0,
+      "relative_error_denominator": "max(abs(reference), abs(candidate))",
+      "pass_threshold": null
+    },
+    "columns": [
+      {
+        "reference_column": "Predator",
+        "candidate_column": "Predator",
+        "max_absolute_error": 4.999662905902369e-10,
+        "max_absolute_error_time": 40.75,
+        "max_relative_error": 4.5698719358091775e-12,
+        "max_relative_error_time": 93.0
+      },
+      {
+        "reference_column": "Prey",
+        "candidate_column": "Prey",
+        "max_absolute_error": 4.8348738346248865e-08,
+        "max_absolute_error_time": 13.25,
+        "max_relative_error": 4.403856038637162e-12,
+        "max_relative_error_time": 13.25
+      },
+      {
+        "reference_column": "predation",
+        "candidate_column": "predation",
+        "max_absolute_error": 1652.2784644028288,
+        "max_absolute_error_time": 41.0,
+        "max_relative_error": 0.04190330067278697,
+        "max_relative_error_time": 41.0
+      },
+      {
+        "reference_column": "predator births",
+        "candidate_column": "predator births",
+        "max_absolute_error": 4.817479748453479e-10,
+        "max_absolute_error_time": 40.25,
+        "max_relative_error": 4.8510009629978646e-12,
+        "max_relative_error_time": 28.5
+      },
+      {
+        "reference_column": "predator deaths",
+        "candidate_column": "predator deaths",
+        "max_absolute_error": 4.4153125600132626e-10,
+        "max_absolute_error_time": 41.25,
+        "max_relative_error": 4.729622323951099e-12,
+        "max_relative_error_time": 39.25
+      },
+      {
+        "reference_column": "prey births",
+        "candidate_column": "prey births",
+        "max_absolute_error": 4.1003659134730697e-08,
+        "max_absolute_error_time": 40.25,
+        "max_relative_error": 4.8339611859110575e-12,
+        "max_relative_error_time": 34.75
+      },
+      {
+        "reference_column": "predation rate",
+        "candidate_column": "predation rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "predator death rate",
+        "candidate_column": "predator death rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "predator efficiency",
+        "candidate_column": "predator efficiency",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      },
+      {
+        "reference_column": "prey birth rate",
+        "candidate_column": "prey birth rate",
+        "max_absolute_error": 0.0,
+        "max_absolute_error_time": 0.0,
+        "max_relative_error": 0.0,
+        "max_relative_error_time": 0.0
+      }
+    ]
+  },
+  "desktop_evidence": {
+    "id": "package_lotka_volterra",
+    "opened_without_repair": true,
+    "run_completed": true,
+    "run_final_time": 100,
+    "visual_review": "pass",
+    "notes": "The predator and prey loops fit on one page with clear vertical separation and no stock overlap or connector crossing.",
+    "source_model": {
+      "path": "results/evaluation/0.13.0-desktop-candidates/package_lotka_volterra.stmx",
+      "sha256": "8503f22ca38fe2acae31f68cc1ab354a270600ac867ec20dff8ed54a411ced2f"
+    },
+    "stella_csv": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_lotka_volterra-stella.csv",
+      "sha256": "4a32dcf08bfbb547b5530d6bb651149098c407dec4eb80445b886dc7d8020487"
+    },
+    "stella_saved_model": {
+      "path": "results/evaluation/0.13.0-desktop-evidence/package_lotka_volterra-stella-saved.stmx",
+      "sha256": "015b968585023daee46da298fd248a0f626d27ad22e0e3182a451750a6c34fec"
+    },
+    "saved_reimport_strict": true,
+    "identifier_renames": [],
+    "serialization_changes": [],
+    "computational_changes": [],
+    "parity_report": "results/evaluation/0.13.0-package_lotka_volterra-parity.json"
+  }
+}

@@ -27,6 +27,11 @@ def test_generate_desktop_parity_report_records_reproducibility_metadata(
         assert save_results_csv == str(pysd_csv)
         Path(save_results_csv).write_text("time,Stock\n0,0\n1,1\n", encoding="utf-8")
         return {
+            "backend": {
+                "name": "PySD",
+                "version": "3.14.3",
+                "actual_integration_method": "Euler",
+            },
             "sim_specs": {
                 "start": 0,
                 "stop": 1,
@@ -50,6 +55,7 @@ def test_generate_desktop_parity_report_records_reproducibility_metadata(
         stella_time="Years",
     )
 
+    assert report["schema_version"] == 2
     assert report["engines"] == {
         "pysd": {"version": "3.14.3"},
         "stella": {"application": "Stella Professional", "version": "4.1.1"},
@@ -61,6 +67,7 @@ def test_generate_desktop_parity_report_records_reproducibility_metadata(
     assert report["artifacts"]["stella_csv"]["path"] == "stella.csv"
     assert report["artifacts"]["pysd_csv"]["path"] == "pysd.csv"
     assert report["simulation"]["warnings"] == []
+    assert report["simulation"]["backend"]["name"] == "PySD"
     assert report["comparison"]["points"] == 2
     assert report["comparison"]["comparison_policy"]["pass_threshold"] is None
     assert report["comparison"]["columns"][0]["max_absolute_error"] == 0.0

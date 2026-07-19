@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+	<header>
+		<smile version="1.0" namespace="std, isee"/>
+		<name>Disconnected components</name>
+		<uuid>9de39489-2f93-5197-bfb7-23f18a352549</uuid>
+		<vendor>isee systems, inc.</vendor>
+		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
+	</header>
+	<sim_specs isee:sim_duration="1.5" isee:simulation_delay="0.0015" isee:restore_on_start="false" method="Euler" time_units="Years" isee:instantaneous_flows="false">
+		<start>0</start>
+		<stop>100</stop>
+		<dt reciprocal="true">4</dt>
+	</sim_specs>
+	<isee:prefs show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true"/>
+	<model>
+		<variables>
+			<stock name="destination">
+				<eqn>0</eqn>
+				<inflow>transfer</inflow>
+				<non_negative/>
+			</stock>
+			<stock name="source">
+				<eqn>100</eqn>
+				<outflow>transfer</outflow>
+				<non_negative/>
+			</stock>
+			<flow name="external exchange">
+				<eqn>0</eqn>
+				<non_negative/>
+			</flow>
+			<flow name="transfer">
+				<eqn>&quot;transfer rate&quot;</eqn>
+				<non_negative/>
+			</flow>
+			<aux name="observation">
+				<eqn>10</eqn>
+			</aux>
+			<aux name="scaled observation">
+				<eqn>observation * 2</eqn>
+			</aux>
+			<aux name="transfer rate">
+				<eqn>1</eqn>
+			</aux>
+		</variables>
+		<views>
+			<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+				<text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt"/>
+			</style>
+			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="1" isee:page_rows="1" isee:popup_graphs_are_comparative="true" type="stock_flow">
+				<style color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+					<stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
+						<shape type="rectangle" width="45" height="35"/>
+					</stock>
+					<flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom"/>
+					<aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+						<shape type="circle" radius="18"/>
+					</aux>
+					<group color="#666666" background="#F5F5F5" font_color="black" font_size="9pt" label_side="top"/>
+					<connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" isee:thickness="1"/>
+				</style>
+				<stock x="219.0" y="113.0" name="destination" label_side="top"/>
+				<stock x="69.0" y="113.0" name="source" label_side="top"/>
+				<flow x="145.0" y="233.0" name="external exchange" label_side="bottom">
+					<pts>
+						<pt x="115.0" y="233.0"/>
+						<pt x="175.0" y="233.0"/>
+					</pts>
+				</flow>
+				<flow x="144.0" y="113.0" name="transfer" label_side="bottom">
+					<pts>
+						<pt x="91.0" y="113.0"/>
+						<pt x="197.0" y="113.0"/>
+					</pts>
+				</flow>
+				<aux x="155.0" y="313.0" name="observation" label_side="bottom"/>
+				<aux x="97.0" y="313.0" name="scaled observation" label_side="top"/>
+				<aux x="144.0" y="63.0" name="transfer rate" label_side="top"/>
+				<connector uid="1" angle="-90.0">
+					<from>transfer_rate</from>
+					<to>transfer</to>
+					<pts>
+						<pt x="144.0" y="81.0"/>
+						<pt x="144.0" y="92.0"/>
+						<pt x="144.0" y="103.0"/>
+					</pts>
+				</connector>
+				<connector uid="2" angle="-180.0">
+					<from>observation</from>
+					<to>scaled_observation</to>
+					<pts>
+						<pt x="137.0" y="313.0"/>
+						<pt x="126.0" y="313.0"/>
+						<pt x="115.0" y="313.0"/>
+					</pts>
+				</connector>
+			</view>
+		</views>
+	</model>
+</xmile>
