@@ -5,6 +5,10 @@ from __future__ import annotations
 import re
 from html import escape
 
+from .equation_parser import (
+    StellaReservedIdentifierError,
+    find_stella_reserved_identifiers,
+)
 from .model_types import ISEE_NS, XMILE_NS, GraphicalFunction
 
 # Stella accepts GRAPH(input), while XMILE stores only the input expression
@@ -43,6 +47,7 @@ def _xml_attr_name(self, attr_key: str) -> str:
 
 def _iter_all_extra_attrs(self):
     """Iterate over all preserved extra-attribute dictionaries."""
+    yield self.header_smile_extra_attrs
     yield self.sim_specs.extra_attrs
     yield self.view_extra_attrs
     for stock in self.stocks.values():
@@ -233,6 +238,31 @@ def model_to_xml(
             raise ValueError(message)
         export_warnings.append(message)
 
+    if model.xmile_feature_report.preserved_only:
+        if mode == "strict":
+            from .xmile_features import UnsupportedModelFeatureError
+
+            raise UnsupportedModelFeatureError(model.xmile_feature_report.preserved_only)
+        export_warnings.extend(
+            finding.message for finding in model.xmile_feature_report.preserved_only
+        )
+
+    reserved_identifiers = find_stella_reserved_identifiers(
+        [
+            *(stock.name for stock in model.stocks.values()),
+            *(flow.name for flow in model.flows.values()),
+            *(aux.name for aux in model.auxs.values()),
+        ]
+    )
+    if reserved_identifiers:
+        if mode == "strict":
+            raise StellaReservedIdentifierError(reserved_identifiers)
+        export_warnings.extend(
+            f"Variable '{name}' conflicts with a Stella/XMILE built-in and may be renamed "
+            "by Stella"
+            for name in reserved_identifiers
+        )
+
     if model.sim_specs.dt <= 0:
         compat_issue(
             f"sim_specs.dt={model.sim_specs.dt} is invalid; exporting with default dt=0.25"
@@ -302,7 +332,11 @@ def model_to_xml(
 
     # Header
     lines.append("\t<header>")
-    lines.append('\t\t<smile version="1.0" namespace="std, isee"/>')
+    smile_extra = model._format_extra_attrs(
+        model.header_smile_extra_attrs,
+        reserved_names={"version", "namespace"},
+    )
+    lines.append(f'\t\t<smile version="1.0" namespace="std, isee"{smile_extra}/>')
     lines.append(f"\t\t<name>{escape(model.name)}</name>")
     lines.append(f"\t\t<uuid>{model.uuid}</uuid>")
     lines.append("\t\t<vendor>isee systems, inc.</vendor>")
@@ -346,6 +380,9 @@ def model_to_xml(
         lines.append(
             '\t<isee:prefs show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" saved_runs="5" keep="false" rifp="true"/>'
         )
+
+    for fragment in model.root_extra_children_xml:
+        model._append_xml_fragment(lines, fragment, "\t")
 
     # Model
     lines.append("\t<model>")
@@ -430,6 +467,9 @@ def model_to_xml(
         for fragment in module.extra_children_xml:
             model._append_xml_fragment(lines, fragment, "\t\t\t\t")
         lines.append("\t\t\t</group>")
+
+    for fragment in model.variables_extra_children_xml:
+        model._append_xml_fragment(lines, fragment, "\t\t\t")
 
     lines.append("\t\t</variables>")
 
@@ -533,16 +573,23 @@ def model_to_xml(
         stock = model.stocks[name]
         display = escape(model._display_name(stock.name))
         # Explicit stock dimensions switch Stella's x/y interpretation from
-        # center coordinates to the upper-left corner.
-        sx = stock.x - stock.width / 2 if stock.x is not None else 0
-        sy = stock.y - stock.height / 2 if stock.y is not None else 0
+        # center coordinates to the upper-left corner. Preserve that distinction
+        # so an unlocked default size does not become locked after a round-trip.
+        if stock.size_locked:
+            sx = stock.x - stock.width / 2 if stock.x is not None else 0
+            sy = stock.y - stock.height / 2 if stock.y is not None else 0
+            size_attrs = f' width="{stock.width}" height="{stock.height}"'
+        else:
+            sx = stock.x if stock.x is not None else 0
+            sy = stock.y if stock.y is not None else 0
+            size_attrs = ""
         label_side = f' label_side="{stock.label_side}"' if stock.label_side else ""
         stock_view_extra_attrs = model._format_extra_attrs(
             stock.view_extra_attrs,
             reserved_names={"x", "y", "width", "height", "name", "label_side"},
         )
         lines.append(
-            f'\t\t\t\t<stock x="{sx}" y="{sy}" width="{stock.width}" height="{stock.height}" name="{display}"{label_side}{stock_view_extra_attrs}/>'
+            f'\t\t\t\t<stock x="{sx}" y="{sy}"{size_attrs} name="{display}"{label_side}{stock_view_extra_attrs}/>'
         )
 
     # Flow visuals (positions guaranteed by _auto_layout)
@@ -616,6 +663,8 @@ def model_to_xml(
     for fragment in model.model_extra_children_xml:
         model._append_xml_fragment(lines, fragment, "\t\t")
     lines.append("\t</model>")
+    for fragment in model.additional_model_xml:
+        model._append_xml_fragment(lines, fragment, "\t")
     lines.append("</xmile>")
 
     return "\n".join(lines)

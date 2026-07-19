@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
+from .equation_parser import (
+    StellaReservedIdentifierError,
+    find_stella_reserved_identifiers,
+)
 from .model import StellaModel
 from .model_types import (
     ISEE_NS,
@@ -15,6 +19,7 @@ from .model_types import (
     Module,
     Stock,
 )
+from .xmile_features import UnsupportedModelFeatureError, detect_xmile_features
 
 
 def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaModel:
@@ -35,6 +40,10 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
 
     tree = ET.parse(filepath)
     root = tree.getroot()
+    feature_report = detect_xmile_features(root)
+    if mode == "strict" and feature_report.preserved_only:
+        raise UnsupportedModelFeatureError(feature_report.preserved_only)
+    compat_warnings.extend(finding.message for finding in feature_report.preserved_only)
 
     # Handle namespaces with full Clark notation
     xmile = f"{{{XMILE_NS}}}"
@@ -186,7 +195,14 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
     name_elem = find_child(header, "name") if header is not None else None
     model_name = name_elem.text if name_elem is not None and name_elem.text else "Untitled"
     model = StellaModel(name=model_name)
+    model.xmile_feature_report = feature_report
     if header is not None:
+        smile_elem = find_child(header, "smile")
+        if smile_elem is not None:
+            model.header_smile_extra_attrs = collect_extra_attrs(
+                smile_elem,
+                known_attr_names={"version", "namespace"},
+            )
         model.header_extra_children_xml = collect_extra_children(
             header,
             known_child_names={"smile", "name", "uuid", "vendor", "product"},
@@ -249,8 +265,21 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
         model.prefs_xml = ET.tostring(prefs_elem, encoding="unicode")
 
     # Find variables section
-    model_elem = find_child(root, "model")
+    model_elems = findall_children(root, "model")
+    model_elem = model_elems[0] if model_elems else None
+    model.root_extra_children_xml = collect_extra_children(
+        root,
+        known_child_names={"header", "sim_specs", "prefs", "model"},
+    )
+    model.additional_model_xml = [
+        ET.tostring(extra_model, encoding="unicode") for extra_model in model_elems[1:]
+    ]
     variables = find_child(model_elem, "variables") if model_elem is not None else None
+    if variables is not None:
+        model.variables_extra_children_xml = collect_extra_children(
+            variables,
+            known_child_names={"stock", "flow", "aux", "group"},
+        )
 
     def name_collides(norm_name: str) -> bool:
         return norm_name in model.stocks or norm_name in model.flows or norm_name in model.auxs
@@ -740,6 +769,22 @@ def parse_stmx_file(filepath: str, compat_mode: str = "permissive") -> StellaMod
                     connector.points_locked = True
             model.connectors.append(connector)
             model._connector_uid = max(model._connector_uid, uid)
+
+    reserved_identifiers = find_stella_reserved_identifiers(
+        [
+            *(stock.name for stock in model.stocks.values()),
+            *(flow.name for flow in model.flows.values()),
+            *(aux.name for aux in model.auxs.values()),
+        ]
+    )
+    if reserved_identifiers:
+        if mode == "strict":
+            raise StellaReservedIdentifierError(reserved_identifiers)
+        compat_warnings.extend(
+            f"Variable '{name}' conflicts with a Stella/XMILE built-in and may be renamed "
+            "by Stella"
+            for name in reserved_identifiers
+        )
 
     model.compatibility_warnings = compat_warnings
     return model

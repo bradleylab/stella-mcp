@@ -167,6 +167,7 @@ def test_compare_scenarios_tool(monkeypatch):
     assert not result.isError
     sc = result.structuredContent
     assert sc["model_id"] == "g"
+    assert sc["backend"]["name"] == "PySD"
     assert sc["scenarios"][0]["name"] == "high"
     assert sc["scenarios"][0]["delta_vs_baseline"]["Population"]["final_abs"] > 0
 
@@ -320,6 +321,7 @@ def test_sensitivity_tool(monkeypatch):
     }))
     assert not result.isError
     sc = result.structuredContent
+    assert sc["backend"]["actual_integration_method"] == "Euler"
     assert sc["total_runs"] == 5
     assert sc["parameters"][0]["range_sensitivity"] > 0
 

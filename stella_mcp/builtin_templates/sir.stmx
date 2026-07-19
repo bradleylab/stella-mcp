@@ -32,17 +32,17 @@
 				<non_negative/>
 			</stock>
 			<flow name="infection">
-				<eqn>beta * Susceptible * Infected / population_total</eqn>
+				<eqn>transmission_rate * Susceptible * Infected / population_total</eqn>
 				<non_negative/>
 			</flow>
 			<flow name="recovery">
-				<eqn>gamma * Infected</eqn>
+				<eqn>recovery_rate * Infected</eqn>
 				<non_negative/>
 			</flow>
-			<aux name="beta">
+			<aux name="transmission rate">
 				<eqn>0.3</eqn>
 			</aux>
-			<aux name="gamma">
+			<aux name="recovery rate">
 				<eqn>0.1</eqn>
 			</aux>
 			<aux name="population total">
@@ -79,11 +79,11 @@
 						<pt x="567.5" y="280"/>
 					</pts>
 				</flow>
-				<aux x="275" y="140" name="beta"/>
-				<aux x="485" y="140" name="gamma"/>
+				<aux x="275" y="140" name="transmission rate"/>
+				<aux x="485" y="140" name="recovery rate"/>
 				<aux x="380" y="430" name="population total"/>
 				<connector uid="1" angle="-90">
-					<from>beta</from>
+					<from>transmission_rate</from>
 					<to>infection</to>
 				</connector>
 				<connector uid="2" angle="0">
@@ -99,7 +99,7 @@
 					<to>infection</to>
 				</connector>
 				<connector uid="5" angle="-90">
-					<from>gamma</from>
+					<from>recovery_rate</from>
 					<to>recovery</to>
 				</connector>
 				<connector uid="6" angle="0">

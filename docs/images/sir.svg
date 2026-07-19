@@ -1,34 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="581.55 314.84 436.9 370.33" width="436.9" height="370.33">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="112.9 82 572 406" width="572" height="406">
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>
-<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:11px;fill:#000}</style>
-<path class="connector" d="M800.92,492.57 Q776.5,496.15 759.96,514.48" marker-end="url(#arrow)"/>
-<path class="connector" d="M719,536.38 Q743.42,532.8 759.96,514.48" marker-end="url(#arrow)"/>
-<path class="connector" d="M639.55,627.16 Q720.04,592.49 759.96,514.48" marker-end="url(#arrow)"/>
-<path class="connector" d="M651.8,397.28 Q684.79,475.35 759.96,514.48" marker-end="url(#arrow)"/>
-<path class="connector" d="M832.48,595.69 Q810.84,542.03 759.96,514.48" marker-end="url(#arrow)"/>
-<path class="connector" d="M800.92,492.57 Q832.92,505.78 865.99,495.57" marker-end="url(#arrow)"/>
-<path class="connector" d="M960.45,372.84 Q891.13,417.2 865.99,495.57" marker-end="url(#arrow)"/>
-<path class="connector" d="M800.92,492.57 Q798.14,549.81 832.48,595.69" marker-end="url(#arrow)"/>
-<path class="connector" d="M931.07,498.56 Q864.29,529.38 832.48,595.69" marker-end="url(#arrow)"/>
-<path class="connector" d="M719,536.38 Q765.06,586.46 832.48,595.69" marker-end="url(#arrow)"/>
-<polyline class="flow-pipe" points="741.5,536.38 778.42,492.57"/>
-<path class="flow-valve" d="M752.96,507.48 L766.96,521.48 L766.96,507.48 L752.96,521.48 z"/>
-<text class="label" x="759.96" y="534.48" text-anchor="middle">infection</text>
-<polyline class="flow-pipe" points="823.42,492.57 908.57,498.56"/>
-<path class="flow-valve" d="M858.99,488.57 L872.99,502.57 L872.99,488.57 L858.99,502.57 z"/>
-<text class="label" x="865.99" y="515.57" text-anchor="middle">recovery</text>
-<rect class="stock" x="778.42" y="475.07" width="45" height="35"/>
-<text class="label" x="800.92" y="523.07" text-anchor="middle">Infected</text>
-<rect class="stock" x="908.57" y="481.06" width="45" height="35"/>
-<text class="label" x="931.07" y="529.06" text-anchor="middle">Recovered</text>
-<rect class="stock" x="696.5" y="518.88" width="45" height="35"/>
-<text class="label" x="719" y="566.88" text-anchor="middle">Susceptible</text>
-<circle class="aux" cx="639.55" cy="627.16" r="18"/>
-<text class="label" x="639.55" y="658.16" text-anchor="middle">contact rate</text>
-<circle class="aux" cx="651.8" cy="397.28" r="18"/>
-<text class="label" x="651.8" y="428.28" text-anchor="middle">infectivity</text>
-<circle class="aux" cx="960.45" cy="372.84" r="18"/>
-<text class="label" x="960.45" y="403.84" text-anchor="middle">recovery time</text>
-<circle class="aux" cx="832.48" cy="595.69" r="18"/>
-<text class="label" x="832.48" y="626.69" text-anchor="middle">total population</text>
+<style>.stock{fill:#fff;stroke:#000;stroke-width:1.5}.aux{fill:#fff;stroke:#000;stroke-width:1.5}.flow-pipe{fill:none;stroke:#000;stroke-width:3}.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}.cloud{fill:#fff;stroke:#000;stroke-width:1}.connector{fill:none;stroke:#FF007F;stroke-width:1}.module{fill:none;stroke:#666;stroke-width:1}.label{font-family:Arial,sans-serif;font-size:12px;fill:#000}</style>
+<polyline class="connector" points="275,158 275,270" marker-end="url(#arrow)"/>
+<polyline class="connector" points="215,298 265,280" marker-end="url(#arrow)"/>
+<polyline class="connector" points="380,298 285,280" marker-end="url(#arrow)"/>
+<polyline class="connector" points="380,412 275,290" marker-end="url(#arrow)"/>
+<polyline class="connector" points="485,158 485,270" marker-end="url(#arrow)"/>
+<polyline class="connector" points="425,298 475,280" marker-end="url(#arrow)"/>
+<polyline class="connector" points="215,298 362,430" marker-end="url(#arrow)"/>
+<polyline class="connector" points="402,315 380,412" marker-end="url(#arrow)"/>
+<polyline class="connector" points="590,298 398,430" marker-end="url(#arrow)"/>
+<polyline class="flow-pipe" points="192.5,280 357.5,280"/>
+<path class="flow-valve" d="M268,273 L282,287 L282,273 L268,287 z"/>
+<text class="label" x="275" y="301.2" text-anchor="middle">infection</text>
+<polyline class="flow-pipe" points="402.5,280 567.5,280"/>
+<path class="flow-valve" d="M478,273 L492,287 L492,273 L478,287 z"/>
+<text class="label" x="485" y="301.2" text-anchor="middle">recovery</text>
+<rect class="stock" x="380" y="280" width="45" height="35"/>
+<text class="label" x="402.5" y="277.2" text-anchor="middle">Infected</text>
+<rect class="stock" x="590" y="280" width="45" height="35"/>
+<text class="label" x="612.5" y="277.2" text-anchor="middle">Recovered</text>
+<rect class="stock" x="170" y="280" width="45" height="35"/>
+<text class="label" x="192.5" y="277.2" text-anchor="middle">Susceptible</text>
+<circle class="aux" cx="380" cy="430" r="18"/>
+<text class="label" x="380" y="409.2" text-anchor="middle">population total</text>
+<circle class="aux" cx="485" cy="140" r="18"/>
+<text class="label" x="485" y="169.2" text-anchor="middle">recovery rate</text>
+<circle class="aux" cx="275" cy="140" r="18"/>
+<text class="label" x="275" y="169.2" text-anchor="middle">transmission rate</text>
 </svg>

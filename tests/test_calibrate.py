@@ -519,6 +519,7 @@ def test_calibrate_tool(monkeypatch):
     assert not result.isError
     sc = result.structuredContent
     assert sc["model_id"] == "cal"
+    assert sc["backend"]["actual_integration_method"] == "Euler"
     assert sc["optimizer"]["converged"]
     assert sc["objective"]["metric"] == "weighted_sse"
     assert "weighted RMSE" in result.content[0].text

@@ -21,6 +21,7 @@ from .simulate import (
     method_warnings,
     resolve_overrides,
     resolve_report_keys,
+    simulation_backend_metadata,
     summarize_run,
 )
 from .xmile import StellaModel
@@ -192,6 +193,7 @@ def compare_scenarios(
         )
 
     return {
+        "backend": simulation_backend_metadata(model),
         "sim_specs": {
             "start": model.sim_specs.start,
             "stop": model.sim_specs.stop,
@@ -511,6 +513,7 @@ def sensitivity_analysis(
     if metric == "time_to_threshold":
         output_payload["threshold"] = threshold
     return {
+        "backend": simulation_backend_metadata(model),
         "output": output_payload,
         "baseline": {"overrides": {}, "metric_value": baseline_metric},
         "parameters": param_payload,

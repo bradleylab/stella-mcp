@@ -157,4 +157,5 @@ def model_to_summary(model_id: str, model: StellaModel) -> dict[str, Any]:
         "modules": [module_to_dict(model, key, model.modules[key]) for key in sorted(model.modules)],
         "compatibility_warnings": model.compatibility_warnings,
         "last_export_warnings": model.last_export_warnings,
+        "xmile_features": model.xmile_feature_report.to_dict(),
     }

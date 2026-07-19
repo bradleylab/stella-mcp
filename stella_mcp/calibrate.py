@@ -30,6 +30,7 @@ from .simulate import (
     constant_parameter_value,
     method_warnings,
     resolve_overrides,
+    simulation_backend_metadata,
     summarize_run,
 )
 from .xmile import StellaModel
@@ -695,6 +696,7 @@ def calibrate(
         })
 
     return {
+        "backend": simulation_backend_metadata(model),
         "objective": {
             "metric": "weighted_sse",
             "initial": sse_initial,
