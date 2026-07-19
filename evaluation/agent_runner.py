@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import json
+import math
 import platform
 import sys
 import time
@@ -17,18 +18,27 @@ import anyio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from stella_mcp.validator import normalize_time_unit
+
 from .runner import (
     REPO_ROOT,
     _artifact_evidence,
     _capabilities,
     _content_text,
     _replace_tokens,
-    evaluate_expectation,
     sanitize_text,
 )
 
 DEFAULT_AGENT_SCENARIOS = Path(__file__).with_name("agent_scenarios.json")
 DEFAULT_SCENARIO_TIMEOUT_SECONDS = 600
+AGENT_PROTOCOL_SCHEMA_VERSION = 2
+EXPECTATION_OPERATORS = {
+    "exact",
+    "one_of",
+    "normalized_time_unit",
+    "finite",
+    "non_empty",
+}
 
 
 @dataclass(frozen=True)
@@ -66,7 +76,7 @@ class AgentBackend(Protocol):
 def load_agent_scenarios(path: Path = DEFAULT_AGENT_SCENARIOS) -> dict[str, Any]:
     """Load and validate the fixed free-form evaluation protocol."""
     document = json.loads(path.read_text(encoding="utf-8"))
-    if document.get("schema_version") != 1:
+    if document.get("schema_version") != AGENT_PROTOCOL_SCHEMA_VERSION:
         raise ValueError(f"Unsupported agent scenario document: {path}")
     if not isinstance(document.get("system_prompt"), str) or not document["system_prompt"]:
         raise ValueError("Agent protocol requires a non-empty system_prompt")
@@ -89,6 +99,13 @@ def load_agent_scenarios(path: Path = DEFAULT_AGENT_SCENARIOS) -> dict[str, Any]
     max_rounds = document.get("max_tool_rounds")
     if isinstance(max_rounds, bool) or not isinstance(max_rounds, int) or max_rounds < 1:
         raise ValueError("max_tool_rounds must be a positive integer")
+    runs_per_scenario = document.get("runs_per_scenario")
+    if (
+        isinstance(runs_per_scenario, bool)
+        or not isinstance(runs_per_scenario, int)
+        or runs_per_scenario < 1
+    ):
+        raise ValueError("runs_per_scenario must be a positive integer")
     scenarios = document.get("scenarios")
     if not isinstance(scenarios, list) or not scenarios:
         raise ValueError("Agent protocol requires a non-empty scenarios array")
@@ -128,8 +145,13 @@ def load_agent_scenarios(path: Path = DEFAULT_AGENT_SCENARIOS) -> dict[str, Any]
                 raise ValueError(f"Agent scenario {scenario_id} has a check without a tool")
             if not isinstance(check.get("arguments", {}), dict):
                 raise ValueError(f"Agent scenario {scenario_id} has invalid check arguments")
-            if not isinstance(check.get("expect"), dict):
-                raise ValueError(f"Agent scenario {scenario_id} has invalid check expectations")
+            if not isinstance(check.get("expect_error"), bool):
+                raise ValueError(f"Agent scenario {scenario_id} has invalid expect_error")
+            expectations = check.get("expectations")
+            if not isinstance(expectations, list) or not expectations:
+                raise ValueError(f"Agent scenario {scenario_id} has invalid expectations")
+            for expectation in expectations:
+                _validate_expectation_definition(scenario_id, expectation)
         artifacts = scenario.get("artifacts")
         if not isinstance(artifacts, list) or not artifacts:
             raise ValueError(f"Agent scenario {scenario_id} requires expected artifacts")
@@ -146,6 +168,40 @@ def load_agent_scenarios(path: Path = DEFAULT_AGENT_SCENARIOS) -> dict[str, Any]
                     f"{scenario_id!r}"
                 )
     return document
+
+
+def _validate_expectation_definition(scenario_id: str, expectation: Any) -> None:
+    if not isinstance(expectation, dict):
+        raise ValueError(f"Agent scenario {scenario_id} has a malformed expectation")
+    path = expectation.get("path")
+    operator = expectation.get("operator")
+    if not isinstance(path, str) or not path:
+        raise ValueError(f"Agent scenario {scenario_id} has an expectation without a path")
+    if operator not in EXPECTATION_OPERATORS:
+        raise ValueError(
+            f"Agent scenario {scenario_id} has unknown expectation operator {operator!r}"
+        )
+
+    required_keys = {"path", "operator"}
+    if operator in {"exact", "normalized_time_unit"}:
+        required_keys.add("value")
+    elif operator == "one_of":
+        required_keys.add("values")
+        values = expectation.get("values")
+        if not isinstance(values, list) or not values:
+            raise ValueError(
+                f"Agent scenario {scenario_id} one_of expectation requires non-empty values"
+            )
+    if operator == "normalized_time_unit" and (
+        not isinstance(expectation.get("value"), str) or not expectation["value"]
+    ):
+        raise ValueError(
+            f"Agent scenario {scenario_id} normalized_time_unit requires a string value"
+        )
+    if set(expectation) != required_keys:
+        raise ValueError(
+            f"Agent scenario {scenario_id} has malformed {operator} expectation for {path}"
+        )
 
 
 def _select_scenarios(
@@ -174,8 +230,9 @@ def preflight_agent_artifacts(
         scenario for scenario in scenarios if not set(scenario.get("requires", [])) - available
     ]
     expected_paths = [
-        artifact_dir / name
+        _run_artifact_dir(artifact_dir, scenario["id"], run_index) / name
         for scenario in runnable_scenarios
+        for run_index in range(1, document["runs_per_scenario"] + 1)
         for name in scenario.get("artifacts", [])
     ]
     preexisting = sorted(str(path) for path in expected_paths if path.exists())
@@ -197,6 +254,93 @@ def evaluate_tool_order(actual: list[str], required: list[str]) -> list[str]:
         "required successful tool order not observed; "
         f"missing from {required[next_index:]!r} after actual sequence {actual!r}"
     ]
+
+
+def _lookup(value: Any, path: str) -> Any:
+    current = value
+    for part in path.split("."):
+        if isinstance(current, list):
+            current = current[int(part)]
+        elif isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            raise KeyError(path)
+    return current
+
+
+def _is_non_empty(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, dict, set)):
+        return bool(value)
+    return True
+
+
+def evaluate_semantic_expectations(result: Any, check: dict[str, Any]) -> list[str]:
+    """Evaluate one protocol-v2 post-run semantic check."""
+    failures: list[str] = []
+    actual_error = bool(result.isError)
+    expected_error = check["expect_error"]
+    if actual_error != expected_error:
+        failures.append(f"is_error expected {expected_error}, got {actual_error}")
+
+    structured = result.structuredContent or {}
+    for expectation in check["expectations"]:
+        path = expectation["path"]
+        operator = expectation["operator"]
+        try:
+            actual = _lookup(structured, path)
+        except (KeyError, IndexError, ValueError):
+            failures.append(f"missing structured field {path}")
+            continue
+
+        if operator == "exact":
+            expected = expectation["value"]
+            if actual != expected:
+                failures.append(f"{path} expected {expected!r}, got {actual!r}")
+        elif operator == "one_of":
+            expected_values = expectation["values"]
+            if actual not in expected_values:
+                failures.append(f"{path} expected one of {expected_values!r}, got {actual!r}")
+        elif operator == "normalized_time_unit":
+            expected = expectation["value"]
+            if not isinstance(actual, str):
+                failures.append(f"{path} is not a string time unit")
+            elif normalize_time_unit(actual) != normalize_time_unit(expected):
+                failures.append(
+                    f"{path} expected time unit equivalent to {expected!r}, got {actual!r}"
+                )
+        elif operator == "finite":
+            if isinstance(actual, bool) or not isinstance(actual, (int, float)):
+                failures.append(f"{path} is not numeric")
+            elif not math.isfinite(actual):
+                failures.append(f"{path} is not finite")
+        elif operator == "non_empty" and not _is_non_empty(actual):
+            failures.append(f"{path} is empty")
+    return failures
+
+
+def _scenario_hash(scenario: dict[str, Any]) -> str:
+    serialized = json.dumps(scenario, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(serialized).hexdigest()
+
+
+def _run_artifact_dir(artifact_dir: Path, scenario_id: str, run_index: int) -> Path:
+    return artifact_dir / scenario_id / f"run-{run_index}"
+
+
+def _endpoint_category(metadata: dict[str, Any]) -> str:
+    provider = metadata.get("provider")
+    endpoint = metadata.get("endpoint")
+    if provider == "openai":
+        return "personal_openai"
+    if provider == "washu":
+        return "washu_secure"
+    if endpoint == "offline":
+        return "offline_test"
+    return "other"
 
 
 def _portable_path(path: Path) -> str:
@@ -304,6 +448,11 @@ async def _run_scenario(
     artifact_dir: Path,
     replacements: dict[str, str],
     redactions: dict[str, str],
+    *,
+    run_index: int,
+    scenario_sha256: str,
+    tool_catalog_sha256: str,
+    server_name: str,
 ) -> dict[str, Any]:
     started = time.perf_counter()
     prompt = _replace_tokens(scenario["prompt"], replacements)
@@ -357,7 +506,7 @@ async def _run_scenario(
     for index, check in enumerate(scenario.get("checks", [])):
         arguments = _replace_tokens(check.get("arguments", {}), replacements)
         result = await session.call_tool(check["tool"], arguments)
-        failures = evaluate_expectation(result, check.get("expect", {}))
+        failures = evaluate_semantic_expectations(result, check)
         structured = result.structuredContent or {}
         check_results.append(
             {
@@ -374,19 +523,81 @@ async def _run_scenario(
         check_failures.extend(f"check {index}: {failure}" for failure in failures)
 
     artifacts = _artifact_evidence(artifact_dir, scenario.get("artifacts", []))
+    artifact_failures = []
+    for item in artifacts:
+        if not item["exists"]:
+            artifact_failures.append(f"missing artifact: {item['path']}")
+        elif item["bytes"] < 1:
+            artifact_failures.append(f"empty artifact: {item['path']}")
     missing_artifacts = [item["path"] for item in artifacts if not item["exists"]]
-    order_failures = evaluate_tool_order(successful_tools, scenario.get("required_tool_order", []))
-    failures = [*order_failures, *check_failures]
-    if final_response is None:
-        failures.append(f"no final response: {stop_reason}")
+    workflow_failures = evaluate_tool_order(
+        successful_tools, scenario.get("required_tool_order", [])
+    )
+    completion_failures = []
+    if final_response is None or not final_response.strip():
+        completion_failures.append(f"no final response: {stop_reason}")
+    if stop_reason in {"tool_round_cap", "backend_error"} and not completion_failures:
+        completion_failures.append(f"incomplete stop reason: {stop_reason}")
     if backend_failure:
-        failures.append(backend_failure)
-    failures.extend(f"missing artifact: {path}" for path in missing_artifacts)
+        completion_failures.append(backend_failure)
+
+    core_dimensions = {
+        "workflow": {
+            "status": "passed" if not workflow_failures else "failed",
+            "failures": workflow_failures,
+        },
+        "semantic": {
+            "status": "passed" if not check_failures else "failed",
+            "failures": check_failures,
+        },
+        "artifacts": {
+            "status": "passed" if not artifact_failures else "failed",
+            "failures": artifact_failures,
+        },
+        "completion": {
+            "status": "passed" if not completion_failures else "failed",
+            "failures": completion_failures,
+        },
+    }
+    core_passed = all(item["status"] == "passed" for item in core_dimensions.values())
+    for event_index, event in enumerate(events):
+        if not event["is_error"]:
+            continue
+        retried_successfully = any(
+            later["tool"] == event["tool"] and not later["is_error"]
+            for later in events[event_index + 1 :]
+        )
+        event["recovered"] = retried_successfully or core_passed
+    check_tool_errors = sum(check["is_error"] for check in check_results)
+    error_events = [event for event in events if event["is_error"]]
+    unrecovered_errors = sum(not event.get("recovered", False) for event in error_events)
+    if not error_events and not check_tool_errors:
+        tool_health_status = "passed"
+    elif not unrecovered_errors and not check_tool_errors:
+        tool_health_status = "recovered"
+    else:
+        tool_health_status = "failed"
+    tool_health = {
+        "status": tool_health_status,
+        "agent_errors": len(error_events),
+        "recovered_agent_errors": len(error_events) - unrecovered_errors,
+        "unrecovered_agent_errors": unrecovered_errors,
+        "check_errors": check_tool_errors,
+    }
+    dimensions = {**core_dimensions, "tool_health": tool_health}
+    failures = [
+        f"{dimension}: {failure}"
+        for dimension, outcome in core_dimensions.items()
+        for failure in outcome["failures"]
+    ]
+    backend_metadata = backend.metadata()
 
     return {
         "id": scenario["id"],
+        "run_index": run_index,
         "description": scenario["description"],
-        "status": "passed" if not failures else "failed",
+        "status": "passed" if core_passed else "failed",
+        "dimensions": dimensions,
         "duration_ms": round((time.perf_counter() - started) * 1000, 3),
         "prompt": sanitize_text(prompt, redactions),
         "stop_reason": stop_reason,
@@ -400,6 +611,18 @@ async def _run_scenario(
         "checks": check_results,
         "artifacts": artifacts,
         "missing_artifacts": missing_artifacts,
+        "backend_failure": backend_failure,
+        "evidence": {
+            "scenario_sha256": scenario_sha256,
+            "tool_catalog_sha256": tool_catalog_sha256,
+            "tool_count": len(tools),
+            "server_name": server_name,
+            "provider": backend_metadata.get("provider"),
+            "requested_model": backend_metadata.get("model"),
+            "resolved_model": backend_metadata.get("resolved_model"),
+            "effective_model_request": backend_metadata.get("effective_model_request"),
+            "endpoint_category": _endpoint_category(backend_metadata),
+        },
         "failures": failures,
     }
 
@@ -416,11 +639,6 @@ async def run_agent_evaluation(
 
     preflight_agent_artifacts(scenario_path, artifact_dir, selected_ids)
     artifact_dir.mkdir(parents=True, exist_ok=True)
-    replacements = {
-        "${ARTIFACT_DIR}": str(artifact_dir.resolve()),
-        "${REPO_ROOT}": str(REPO_ROOT),
-    }
-    redactions = {value: token for token, value in replacements.items()}
     available = _capabilities()
     results: list[dict[str, Any]] = []
     catalog_hashes: set[str] = set()
@@ -431,75 +649,137 @@ async def run_agent_evaluation(
     for scenario in scenarios:
         missing = sorted(set(scenario.get("requires", [])) - available)
         if missing:
-            results.append(
-                {
-                    "id": scenario["id"],
-                    "description": scenario["description"],
-                    "status": "skipped",
-                    "missing_capabilities": missing,
-                    "tool_calls": [],
-                    "checks": [],
-                    "artifacts": [],
-                    "failures": [],
+            for run_index in range(1, document["runs_per_scenario"] + 1):
+                skipped_dimensions = {
+                    name: {"status": "skipped", "failures": []}
+                    for name in ("workflow", "semantic", "artifacts", "completion")
                 }
-            )
+                skipped_dimensions["tool_health"] = {
+                    "status": "skipped",
+                    "agent_errors": 0,
+                    "recovered_agent_errors": 0,
+                    "unrecovered_agent_errors": 0,
+                    "check_errors": 0,
+                }
+                results.append(
+                    {
+                        "id": scenario["id"],
+                        "run_index": run_index,
+                        "description": scenario["description"],
+                        "status": "skipped",
+                        "dimensions": skipped_dimensions,
+                        "missing_capabilities": missing,
+                        "tool_calls": [],
+                        "checks": [],
+                        "artifacts": [],
+                        "failures": [],
+                    }
+                )
             continue
 
-        server = StdioServerParameters(
-            command=sys.executable,
-            args=["-m", "stella_mcp.server"],
-            cwd=REPO_ROOT,
-        )
-        scenario_started = time.perf_counter()
-        try:
-            with anyio.fail_after(DEFAULT_SCENARIO_TIMEOUT_SECONDS):
-                async with stdio_client(server) as (read_stream, write_stream):
-                    async with ClientSession(read_stream, write_stream) as session:
-                        initialized = await session.initialize()
-                        listed_tools = await session.list_tools()
-                        catalog = _catalog_tools(listed_tools)
-                        catalog_json = json.dumps(
-                            catalog,
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        ).encode("utf-8")
-                        catalog_hashes.add(hashlib.sha256(catalog_json).hexdigest())
-                        tool_count = len(catalog)
-                        server_name = initialized.serverInfo.name
-                        results.append(
-                            await _run_scenario(
+        scenario_sha256 = _scenario_hash(scenario)
+        for run_index in range(1, document["runs_per_scenario"] + 1):
+            run_artifact_dir = _run_artifact_dir(artifact_dir, scenario["id"], run_index)
+            run_artifact_dir.mkdir(parents=True, exist_ok=False)
+            replacements = {
+                "${ARTIFACT_DIR}": str(run_artifact_dir.resolve()),
+                "${REPO_ROOT}": str(REPO_ROOT),
+            }
+            redactions = {value: token for token, value in replacements.items()}
+            server = StdioServerParameters(
+                command=sys.executable,
+                args=["-m", "stella_mcp.server"],
+                cwd=REPO_ROOT,
+            )
+            scenario_started = time.perf_counter()
+            try:
+                with anyio.fail_after(DEFAULT_SCENARIO_TIMEOUT_SECONDS):
+                    async with stdio_client(server) as (read_stream, write_stream):
+                        async with ClientSession(read_stream, write_stream) as session:
+                            initialized = await session.initialize()
+                            listed_tools = await session.list_tools()
+                            catalog = _catalog_tools(listed_tools)
+                            catalog_json = json.dumps(
+                                catalog,
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ).encode("utf-8")
+                            catalog_sha256 = hashlib.sha256(catalog_json).hexdigest()
+                            catalog_hashes.add(catalog_sha256)
+                            tool_count = len(catalog)
+                            server_name = initialized.serverInfo.name
+                            run_result = await _run_scenario(
                                 session,
                                 backend,
                                 scenario,
                                 document,
                                 catalog,
-                                artifact_dir,
+                                run_artifact_dir,
                                 replacements,
                                 redactions,
+                                run_index=run_index,
+                                scenario_sha256=scenario_sha256,
+                                tool_catalog_sha256=catalog_sha256,
+                                server_name=server_name,
                             )
-                        )
-        except TimeoutError:
-            artifacts = _artifact_evidence(artifact_dir, scenario.get("artifacts", []))
-            missing_artifacts = [item["path"] for item in artifacts if not item["exists"]]
-            results.append(
-                {
-                    "id": scenario["id"],
-                    "description": scenario["description"],
-                    "status": "failed",
-                    "duration_ms": round((time.perf_counter() - scenario_started) * 1000, 3),
-                    "prompt": scenario["prompt"],
-                    "stop_reason": "scenario_timeout",
-                    "final_response": None,
-                    "usage": {},
-                    "required_tool_order": scenario.get("required_tool_order", []),
-                    "successful_tool_order": [],
-                    "tool_calls": [],
-                    "checks": [],
-                    "artifacts": artifacts,
-                    "missing_artifacts": missing_artifacts,
-                    "failures": [f"scenario exceeded {DEFAULT_SCENARIO_TIMEOUT_SECONDS} seconds"],
-                }
-            )
+                            run_result["artifact_subdirectory"] = (
+                                f"{scenario['id']}/run-{run_index}"
+                            )
+                            results.append(run_result)
+            except TimeoutError:
+                artifacts = _artifact_evidence(
+                    run_artifact_dir, scenario.get("artifacts", [])
+                )
+                missing_artifacts = [
+                    item["path"] for item in artifacts if not item["exists"]
+                ]
+                timeout_message = (
+                    f"scenario exceeded {DEFAULT_SCENARIO_TIMEOUT_SECONDS} seconds"
+                )
+                results.append(
+                    {
+                        "id": scenario["id"],
+                        "run_index": run_index,
+                        "description": scenario["description"],
+                        "status": "failed",
+                        "dimensions": {
+                            "workflow": {"status": "failed", "failures": [timeout_message]},
+                            "semantic": {"status": "failed", "failures": [timeout_message]},
+                            "artifacts": {
+                                "status": "failed" if missing_artifacts else "passed",
+                                "failures": [
+                                    f"missing artifact: {path}" for path in missing_artifacts
+                                ],
+                            },
+                            "completion": {
+                                "status": "failed",
+                                "failures": [timeout_message],
+                            },
+                            "tool_health": {
+                                "status": "failed",
+                                "agent_errors": 0,
+                                "recovered_agent_errors": 0,
+                                "unrecovered_agent_errors": 0,
+                                "check_errors": 0,
+                            },
+                        },
+                        "duration_ms": round(
+                            (time.perf_counter() - scenario_started) * 1000, 3
+                        ),
+                        "prompt": sanitize_text(scenario["prompt"], redactions),
+                        "stop_reason": "scenario_timeout",
+                        "final_response": None,
+                        "usage": {},
+                        "required_tool_order": scenario.get("required_tool_order", []),
+                        "successful_tool_order": [],
+                        "tool_calls": [],
+                        "checks": [],
+                        "artifacts": artifacts,
+                        "artifact_subdirectory": f"{scenario['id']}/run-{run_index}",
+                        "missing_artifacts": missing_artifacts,
+                        "failures": [f"completion: {timeout_message}"],
+                    }
+                )
 
     counts = {
         status: sum(item["status"] == status for item in results)
@@ -509,8 +789,38 @@ async def run_agent_evaluation(
     for result in results:
         _sum_usage(total_usage, result.get("usage", {}))
     scenario_bytes = scenario_path.read_bytes()
+    dimension_names = ("workflow", "semantic", "artifacts", "completion", "tool_health")
+    dimension_counts = {
+        name: {
+            status: sum(
+                item.get("dimensions", {}).get(name, {}).get("status") == status
+                for item in results
+            )
+            for status in ("passed", "recovered", "failed", "skipped")
+        }
+        for name in dimension_names
+    }
+    by_scenario = {}
+    for scenario in scenarios:
+        scenario_results = [item for item in results if item["id"] == scenario["id"]]
+        by_scenario[scenario["id"]] = {
+            "runs": len(scenario_results),
+            "passed": sum(item["status"] == "passed" for item in scenario_results),
+            "failed": sum(item["status"] == "failed" for item in scenario_results),
+            "skipped": sum(item["status"] == "skipped" for item in scenario_results),
+            "dimensions": {
+                name: {
+                    status: sum(
+                        item.get("dimensions", {}).get(name, {}).get("status") == status
+                        for item in scenario_results
+                    )
+                    for status in ("passed", "recovered", "failed", "skipped")
+                }
+                for name in dimension_names
+            },
+        }
     return {
-        "schema_version": 1,
+        "schema_version": AGENT_PROTOCOL_SCHEMA_VERSION,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "environment": {
             "python": platform.python_version(),
@@ -525,6 +835,7 @@ async def run_agent_evaluation(
             "scenario_sha256": hashlib.sha256(scenario_bytes).hexdigest(),
             "requested_model_request": document["model_request"],
             "max_tool_rounds": document["max_tool_rounds"],
+            "runs_per_scenario": document["runs_per_scenario"],
             "scenario_timeout_seconds": DEFAULT_SCENARIO_TIMEOUT_SECONDS,
             "server_name": server_name,
             "tool_count": tool_count,
@@ -534,6 +845,8 @@ async def run_agent_evaluation(
         },
         "summary": {
             "scenarios": len(results),
+            "protocol_scenarios": len(scenarios),
+            "scenario_runs": len(results),
             **counts,
             "tool_calls": sum(len(item.get("tool_calls", [])) for item in results),
             "tool_errors": sum(
@@ -541,6 +854,8 @@ async def run_agent_evaluation(
             ),
             "usage": total_usage,
             "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+            "dimensions": dimension_counts,
+            "by_scenario": by_scenario,
         },
         "scenarios": results,
     }

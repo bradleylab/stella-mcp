@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results" / "evaluation"
 ARTIFACTS = RESULTS / "0.12.0-agent-artifacts"
-PROTOCOL = ROOT / "evaluation" / "agent_scenarios.json"
+PROTOCOL = ROOT / "tests" / "fixtures" / "evaluation" / "agent_scenarios_v1.json"
 
 
 def _load(name: str) -> dict:

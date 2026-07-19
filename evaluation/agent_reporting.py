@@ -14,38 +14,65 @@ def render_agent_markdown(report: dict[str, Any]) -> str:
         "",
         "## Run",
         "",
-        f"- Provider: `{backend['provider']}`",
-        f"- API: `{backend['api']}`",
-        f"- Requested model: `{backend['model']}`",
+        f"- Provider: `{backend.get('provider')}`",
+        f"- API: `{backend.get('api')}`",
+        f"- Requested model: `{backend.get('model')}`",
         f"- Resolved model: `{backend.get('resolved_model')}`",
-        f"- Endpoint: `{backend['endpoint']}`",
+        f"- Endpoint: `{backend.get('endpoint')}`",
         f"- Effective model request: `{backend.get('effective_model_request')}`",
         "",
         "## Summary",
         "",
-        f"- Scenarios: {summary['scenarios']}",
-        f"- Passed: {summary['passed']}",
-        f"- Failed: {summary['failed']}",
-        f"- Skipped: {summary['skipped']}",
+        f"- Protocol scenarios: {summary['protocol_scenarios']}",
+        f"- Repetitions per scenario: {report['protocol']['runs_per_scenario']}",
+        f"- Scenario runs: {summary['scenario_runs']}",
+        f"- Passed runs: {summary['passed']}",
+        f"- Failed runs: {summary['failed']}",
+        f"- Skipped runs: {summary['skipped']}",
         f"- MCP tool calls: {summary['tool_calls']}",
         f"- Tool errors: {summary['tool_errors']}",
         f"- Usage: `{summary['usage']}`",
         "",
-        "## Scenarios",
+        "These are raw repeated outcomes, not an estimated general success rate.",
         "",
-        "| Scenario | Status | Stop reason | Calls | Errors |",
-        "|---|---|---|---:|---:|",
+        "## Dimension Counts",
+        "",
+        "| Dimension | Passed | Recovered | Failed | Skipped |",
+        "|---|---:|---:|---:|---:|",
     ]
+    for name, counts in summary["dimensions"].items():
+        lines.append(
+            f"| {name} | {counts['passed']} | {counts['recovered']} | "
+            f"{counts['failed']} | {counts['skipped']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Scenario Runs",
+            "",
+            "| Scenario | Run | Overall | Workflow | Semantic | Artifacts | Completion | "
+            "Tool health | Calls | Errors |",
+            "|---|---:|---|---|---|---|---|---|---:|---:|",
+        ]
+    )
     for scenario in report["scenarios"]:
         calls = scenario.get("tool_calls", [])
         errors = sum(call.get("is_error", False) for call in calls)
+        dimensions = scenario.get("dimensions", {})
         lines.append(
-            f"| `{scenario['id']}` | {scenario['status']} | "
-            f"{scenario.get('stop_reason', '')} | {len(calls)} | {errors} |"
+            f"| `{scenario['id']}` | {scenario.get('run_index', '')} | {scenario['status']} | "
+            f"{dimensions.get('workflow', {}).get('status', '')} | "
+            f"{dimensions.get('semantic', {}).get('status', '')} | "
+            f"{dimensions.get('artifacts', {}).get('status', '')} | "
+            f"{dimensions.get('completion', {}).get('status', '')} | "
+            f"{dimensions.get('tool_health', {}).get('status', '')} | "
+            f"{len(calls)} | {errors} |"
         )
 
     for scenario in report["scenarios"]:
-        lines.extend(["", f"### {scenario['id']}", ""])
+        lines.extend(
+            ["", f"### {scenario['id']} / run {scenario.get('run_index', '')}", ""]
+        )
         lines.append(
             "Successful tool order: "
             + (
@@ -58,14 +85,18 @@ def render_agent_markdown(report: dict[str, Any]) -> str:
             lines.extend(f"- {failure}" for failure in scenario["failures"])
         if scenario.get("artifacts"):
             lines.extend(["", "Artifacts:"])
+            prefix = scenario.get("artifact_subdirectory", "")
             for artifact in scenario["artifacts"]:
+                artifact_path = "/".join(
+                    part for part in (prefix, artifact["path"]) if part
+                )
                 if artifact["exists"]:
                     lines.append(
-                        f"- `{artifact['path']}`: {artifact['bytes']} bytes, "
+                        f"- `{artifact_path}`: {artifact['bytes']} bytes, "
                         f"SHA-256 `{artifact['sha256']}`"
                     )
                 else:
-                    lines.append(f"- `{artifact['path']}`: missing")
+                    lines.append(f"- `{artifact_path}`: missing")
         if scenario.get("final_response") is not None:
             lines.extend(["", "Final response:", ""])
             lines.extend(

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xmile version="1.0" xmlns="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:isee="http://iseesystems.com/XMILE">
+	<header>
+		<smile version="1.0" namespace="std, isee"/>
+		<name>stella_4_1_1_accumulator</name>
+		<uuid>99ee2a58-73ae-435a-b955-53da1911ef76</uuid>
+		<vendor>isee systems, inc.</vendor>
+		<product version="1.9.3" isee:build_number="1954" isee:saved_by_v1="true" lang="en">Stella Professional</product>
+	</header>
+	<sim_specs isee:sim_duration="1.5" isee:simulation_delay="0.0015" isee:restore_on_start="false" method="Euler" time_units="Years" isee:instantaneous_flows="false" isee:ignore_module_errors="false" isee:loop_exhaustive_allowed="1000" isee:loop_scores="true" isee:run_prefix="Run" isee:strict_units="false">
+		<start>0</start>
+		<stop>4</stop>
+		<dt>1</dt>
+	</sim_specs>
+	<ns0:prefs xmlns:ns0="http://iseesystems.com/XMILE" saved_runs="5" keep="false" show_module_prefix="true" live_update_on_drag="true" show_restore_buttons="false" layer="model" ns0:design="" ns0:design_custom="false" interface_scale_ui="true" interface_max_page_width="10000" interface_max_page_height="10000" interface_min_page_width="0" interface_min_page_height="0" rifp="true" />
+	<ns0:ai_information xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0">
+			<ns0:status verified="false" />
+		</ns0:ai_information>
+	<ns0:multiplayer_settings xmlns:ns0="http://iseesystems.com/XMILE" include_chat="true" allow_observers="false" advance_time_increment="1" max_advance_time_in_ms="0" model_stops_when_players_drop="false" observer_start_page="home_page" enabled="false" />
+	<ns0:time_formats xmlns:ns0="http://iseesystems.com/XMILE" default_format="Builtin">
+			<ns0:time_format name="Builtin" type="adaptive" />
+		</ns0:time_formats>
+	<ns0:number_format_extenders xmlns:ns0="http://iseesystems.com/XMILE" />
+	<ns0:default_format xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" />
+	<ns0:model_units xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" />
+	<model>
+		<variables>
+			<stock name="Accumulator">
+				<eqn>0</eqn>
+				<inflow>input</inflow>
+				<non_negative/>
+			</stock>
+			<flow name="input">
+				<eqn>rate</eqn>
+				<non_negative/>
+			</flow>
+			<aux name="rate">
+				<eqn>1</eqn>
+			</aux>
+		</variables>
+		<views>
+			<ns0:style xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:ns1="http://iseesystems.com/XMILE" color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+							<ns0:text_box color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" />
+							<ns1:loop_indicator color="black" background="white" vertical_text_align="top" font_size="12pt" />
+							<ns0:numeric_display color="black" background="white" font_size="12pt" border_width="thin" border_style="solid" ns1:transparent="false" ns1:show_divider="true" ns1:show_bounding_box="true" label_side="left" />
+							<ns0:graph color="black" background="white" axis_color="#666666" grid_color="#C8C8C8" ns1:graph_area_color="white" legend_position="bottom" ns1:transparent="false" ns1:hide_border="false" axis_title_font_style="normal" axis_title_font_weight="normal" axis_title_text_decoration="none" axis_title_text_align="center" axis_title_vertical_text_align="center" axis_title_font_color="black" axis_title_font_family="Arial" axis_title_font_size="12pt" axis_title_text_padding="2" axis_title_text_border_color="black" axis_title_text_border_width="thin" axis_title_text_border_style="none" axis_label_font_style="normal" axis_label_font_weight="normal" axis_label_text_decoration="none" axis_label_text_align="center" axis_label_vertical_text_align="center" axis_label_font_color="black" axis_label_font_family="Arial" axis_label_font_size="9pt" axis_label_text_padding="2" axis_label_text_border_color="black" axis_label_text_border_width="thin" axis_label_text_border_style="none">
+								<ns1:series_styles>
+									<ns1:series_style color="blue" thickness="1" />
+									<ns1:series_style color="red" thickness="1" pen_style="dot_dashed" />
+									<ns1:series_style color="fuchsia" thickness="1" pen_style="dotted" />
+									<ns1:series_style color="#008F44" thickness="1" pen_style="dashed" />
+									<ns1:series_style color="#FF7F00" thickness="1" />
+									<ns1:series_style color="#7F00FF" thickness="1" pen_style="dot_dashed" />
+									<ns1:series_style color="#0CA0FF" thickness="1" pen_style="dotted" />
+									<ns1:series_style color="lime" thickness="1" pen_style="dashed" />
+									<ns1:series_style color="#FF007F" thickness="1" />
+									<ns1:series_style color="aqua" thickness="1" pen_style="dot_dashed" />
+									<ns1:series_style color="#F586FF" thickness="1" pen_style="dotted" />
+									<ns1:series_style color="black" thickness="1" pen_style="dashed" />
+									<ns1:series_style color="#C8C8C8" thickness="1" />
+								</ns1:series_styles>
+							</ns0:graph>
+							<ns0:table color="black" background="white" orientation="vertical" wrap_text="false" ns1:auto_fit="true" ns1:use_alternate_row_colors="false" ns1:unlimited_table_length="false" blank_column_width="80" column_width="160" interval="1" report_balances="beginning" report_flows="instantaneous" header_font_style="normal" header_font_weight="normal" header_text_decoration="none" header_text_align="center" header_vertical_text_align="center" header_font_color="black" header_font_family="Arial" header_font_size="12pt" header_text_padding="2" header_text_border_color="black" header_text_border_width="thin" header_text_border_style="none" />
+							<ns0:button color="black" background="white" font_size="12pt" border_width="thin" border_style="solid" transparent="false" corner_radius="0" ns1:flat="false" icon_side="top" ns1:highlight_on_hover="false" ns1:highlight_color="#959595" />
+							<ns1:annotation color="black" background="white" font_size="12pt" border_width="thin" border_style="solid" transparent="false" corner_radius="0" ns1:flat="false" icon_side="top" ns1:highlight_on_hover="false" ns1:highlight_color="#959595" popup_corner_radius="0" popup_background_color="#FFFECF" />
+							<ns0:slider color="#0075FF" background="white" font_size="12pt" num_ticks="3" label_side="top" wrap_title="true" vertical="false" ns1:fancy_appearance="false" ns1:show_hover_tip="when_deciding" input_expands="true" input_width="100" />
+							<ns1:stacked_container color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" padding="6 8" border_color="#999999" border_width="thin" border_style="solid" item_spacing="0" corner_radius="4" selected_item_color="black" selected_item_background="white" item_background="#DDDDDD" transparent_bg="false" />
+							<ns1:dual_slider color="black" background="white" font_size="12pt" num_ticks="3" label_side="top" wrap_title="true" ns1:show_hover_tip="when_deciding" input_expands="true" input_width="100" />
+							<ns1:sim_speed_slider color="black" background="white" />
+							<ns1:time_slider color="black" background="white" />
+							<ns1:pie_input color="black" background="white" font_size="12pt" legend_position="bottom" ns1:transparent="false" />
+							<ns0:knob color="black" background="white" font_size="12pt" label_side="bottom" wrap_title="true" />
+							<ns0:numeric_input color="black" background="white" font_size="12pt" label_side="left" wrap_title="true" input_expands="false" input_width="100" />
+							<ns1:dropdown_input color="black" background="white" font_size="12pt" label_side="left" wrap_title="true" input_expands="false" input_width="100" />
+							<ns0:switch color="black" background="white" font_size="12pt" label_side="top" wrap_title="true" ns1:appearance="switch" ns1:on_color="green" />
+							<ns0:options color="black" background="white" appearance="radio-buttons" arrangement="vertical" />
+							<ns0:graphical_input color="black" background="white" font_size="12pt" ns1:show_hover_tip="true" />
+							<ns0:group_input color="black" background="white" font_size="12pt" />
+							<ns0:lamp color="black" background="white" font_size="9pt" />
+							<ns0:gauge color="black" background="white" font_size="9pt" needle_color="#F09F72" bar_color="#EEEEEE" bar_progress_color="black" appearance="radial" num_major_ticks="11" num_minor_ticks="1" show_numeric_value="true" />
+							<ns1:spatial_map color="black" background="white" font_size="12pt" />
+							<ns1:animation_object color="black" background="white" font_size="12pt" />
+							<ns1:navigation_widget color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" padding="6 8" border_color="#999999" border_width="thin" border_style="solid" item_spacing="6" appearance="tabs" corner_radius="4" selected_item_color="black" selected_item_background="white" item_background="#DDDDDD" transparent_bg="false" />
+							<ns1:shape color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" border_width="thin" border_style="solid" opacity="1" transparent_background="true" corner_radius="1" />
+							<ns1:selector color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" />
+							<ns1:iframe color="black" background="white" text_align="left" vertical_text_align="top" font_size="12pt" border_width="thin" border_style="solid" />
+							<ns1:financial_table color="black" background="white" text_align="right" font_size="12pt" hide_border="false" auto_fit="true" first_column_width="250" other_column_width="100" header_font_style="normal" header_font_weight="bold" header_text_decoration="none" header_text_align="center" header_vertical_text_align="center" header_font_color="black" header_font_family="Arial" header_font_size="14pt" header_text_padding="2" header_text_border_color="black" header_text_border_width="thin" header_text_border_style="none" />
+						</ns0:style>
+			<view isee:show_pages="false" background="white" page_width="768" page_height="596" isee:page_cols="2" isee:page_rows="2" isee:popup_graphs_are_comparative="true" type="stock_flow" isee:enable_non_negative_highlights="false">
+				<ns0:style xmlns:ns0="http://docs.oasis-open.org/xmile/ns/XMILE/v1.0" xmlns:ns1="http://iseesystems.com/XMILE" color="black" background="white" font_style="normal" font_weight="normal" text_decoration="none" text_align="center" vertical_text_align="center" font_color="black" font_family="Arial" font_size="10pt" padding="2" border_color="black" border_width="thin" border_style="none">
+									<ns0:stock color="blue" background="white" font_color="blue" font_size="9pt" label_side="top">
+										<ns0:shape type="rectangle" width="45" height="35" />
+									</ns0:stock>
+									<ns0:flow color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+										<ns0:shape type="circle" radius="18" />
+									</ns0:flow>
+									<ns1:placeholder color="black" background="white" label_side="bottom" />
+									<ns0:module color="black" background="white" label_side="top">
+										<ns0:shape type="rectangle" width="55" height="45" />
+									</ns0:module>
+									<ns0:aux color="blue" background="white" font_color="blue" font_size="9pt" label_side="bottom">
+										<ns0:shape type="circle" radius="18" />
+									</ns0:aux>
+									<ns0:group color="#666666" background="#F5F5F5" font_size="9pt" />
+									<ns0:connector color="#FF007F" background="white" font_color="#FF007F" font_size="9pt" ns1:thickness="1" />
+									<ns0:text_box color="black" background="white" />
+									<ns1:loop_indicator color="black" background="white" />
+									<ns0:numeric_display color="black" background="white" border_width="thin" border_style="solid" ns1:transparent="false" ns1:show_divider="true" ns1:show_bounding_box="true" label_side="left" />
+									<ns0:graph color="black" background="white" axis_color="#666666" grid_color="#C8C8C8" ns1:graph_area_color="white" legend_position="bottom" ns1:transparent="false" ns1:hide_border="false" axis_title_font_style="normal" axis_title_font_weight="normal" axis_title_text_decoration="none" axis_title_text_align="center" axis_title_vertical_text_align="center" axis_title_font_color="black" axis_title_font_family="Arial" axis_title_font_size="12pt" axis_title_text_padding="2" axis_title_text_border_color="black" axis_title_text_border_width="thin" axis_title_text_border_style="none" axis_label_font_style="normal" axis_label_font_weight="normal" axis_label_text_decoration="none" axis_label_text_align="center" axis_label_vertical_text_align="center" axis_label_font_color="black" axis_label_font_family="Arial" axis_label_font_size="9pt" axis_label_text_padding="2" axis_label_text_border_color="black" axis_label_text_border_width="thin" axis_label_text_border_style="none">
+										<ns1:series_styles>
+											<ns1:series_style color="blue" thickness="1" />
+											<ns1:series_style color="red" thickness="1" pen_style="dot_dashed" />
+											<ns1:series_style color="fuchsia" thickness="1" pen_style="dotted" />
+											<ns1:series_style color="#008F44" thickness="1" pen_style="dashed" />
+											<ns1:series_style color="#FF7F00" thickness="1" />
+											<ns1:series_style color="#7F00FF" thickness="1" pen_style="dot_dashed" />
+											<ns1:series_style color="#0CA0FF" thickness="1" pen_style="dotted" />
+											<ns1:series_style color="lime" thickness="1" pen_style="dashed" />
+											<ns1:series_style color="#FF007F" thickness="1" />
+											<ns1:series_style color="aqua" thickness="1" pen_style="dot_dashed" />
+											<ns1:series_style color="#F586FF" thickness="1" pen_style="dotted" />
+											<ns1:series_style color="black" thickness="1" pen_style="dashed" />
+											<ns1:series_style color="#C8C8C8" thickness="1" />
+										</ns1:series_styles>
+									</ns0:graph>
+									<ns0:table color="black" background="white" orientation="vertical" wrap_text="false" ns1:auto_fit="true" ns1:use_alternate_row_colors="false" ns1:unlimited_table_length="false" blank_column_width="80" column_width="160" interval="1" report_balances="beginning" report_flows="instantaneous" header_font_style="normal" header_font_weight="normal" header_text_decoration="none" header_text_align="center" header_vertical_text_align="center" header_font_color="black" header_font_family="Arial" header_font_size="12pt" header_text_padding="2" header_text_border_color="black" header_text_border_width="thin" header_text_border_style="none" />
+								</ns0:style>
+				<stock x="888.5" y="517.5" name="Accumulator" label_side="top"/>
+				<flow x="786.0" y="500.0" name="input" label_side="bottom">
+					<pts>
+						<pt x="706.001" y="500.0"/>
+						<pt x="866.0" y="500.0"/>
+					</pts>
+				</flow>
+				<aux x="733.0" y="500.0" name="rate" label_side="top"/>
+				<connector uid="1" angle="-0.0">
+					<from>rate</from>
+					<to>input</to>
+					<pts>
+						<pt x="751.0" y="500.0"/>
+						<pt x="763.5" y="500.0"/>
+						<pt x="776.0" y="500.0"/>
+					</pts>
+				</connector>
+			</view>
+		</views>
+	</model>
+</xmile>
