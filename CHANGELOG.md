@@ -7,7 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-08-09
+
+This is the cumulative public successor to `0.12.0`. It includes both the
+compatibility and evaluation hardening developed under the unpublished
+`0.13.0` internal candidate and the MCP-v2 migration described below.
+
+### Added
+
+- Explicit application workspaces with opaque routing handles, caller-selected
+  expiry, revocation, per-workspace serialization, and workspace-scoped model
+  resource URIs.
+- Additive structured success results for every previously text-only tool and
+  JSON Schema 2020-12 `outputSchema` contracts for the complete tool catalog.
+- Dual-era stdio acceptance tests covering MCP 2026-07-28 discovery and calls
+  alongside the supported legacy initialization workflow.
+- A pinned, attributed subset of the MIT-licensed SDXorg test-models corpus,
+  with offline validation, deterministic XMILE feature reports, supported-
+  semantic signatures, stable JSON Pointer differences, and synchronized
+  capability evidence.
+- Numeric-comparison schema v2 with exact or explicitly declared rounded-label
+  alignment, finite/grid validation, backend metadata, raw discrepancies, and
+  no scientific pass threshold.
+- Retained Stella Professional 4.1.1 open, run, export, save, strict re-import,
+  layout-review, and numeric evidence for the five built-in templates plus a
+  scalar graphical-function case.
+- Agent evaluation protocol v2 with three fresh runs per scenario and separate
+  workflow, semantic, artifact, completion, and tool-health outcomes.
+
+### Changed
+
+- Migrated the protocol adapter to the stable MCP Python SDK v2 line and the
+  stateless MCP 2026-07-28 request/response core.
+- Stateful modern calls require `workspace_id`; supported legacy stdio calls
+  that omit it use one documented process-local compatibility workspace.
+  Discovery advertises the field as required to modern clients and optional to
+  legacy clients.
+- Python-facing MCP fields and handlers use SDK v2 naming and explicit request
+  context while preserving SDK-owned camelCase wire serialization.
+- Permissive XMILE import/export warns and structurally preserves selected
+  unsupported constructs where practical; strict import/export rejects them.
+- PySD-backed results identify the PySD version, actual Euler integration,
+  model-declared method, unsupported-feature preflight, and simulation warnings.
+- The built-in SIR template uses `transmission_rate` and `recovery_rate` instead
+  of Stella-reserved `beta` and `gamma`, without changing parameter values,
+  equations' mathematical meaning, simulation settings, or stock-flow structure.
+- Four built-in layouts were regenerated as compact one-page diagrams and
+  passed the retained automated layout gates and Stella desktop visual review.
+
+### Compatibility
+
+- Existing 42 tool names, ordering, text responses, scientific methods, XMILE
+  behavior, and evaluation thresholds are retained. The two workspace lifecycle
+  tools are appended, producing a 44-tool catalog.
+- Model resources for modern workflows use
+  `stella://workspaces/{workspace_id}/models/{model_id}`. Legacy stdio retains
+  `stella://models/{model_id}` inside its compatibility workspace.
+- Code Mode, `StellaAPI`, and any model-generated code executor are not included.
+
+### Fixed
+
+- Workspace model-resource reads no longer change the current-model pointer.
+- Repeated and concurrently waiting calls retain expired/revoked workspace
+  classification through bounded lifecycle tombstones.
+- Workspace lifecycle successes use the same runtime output-schema validation
+  path as all other successful tool calls.
+- Unexpected internal failures return a generic message without exposing
+  exception details; classified user and workspace errors remain actionable.
+- Arrays, nested models, and compositional module instances cannot pass strict
+  compatibility checks or reach PySD as partially scalarized models.
+- Strict import/export rejects confirmed Stella/XMILE reserved identifiers;
+  permissive workflows preserve the requested name and emit a warning.
+- Stella-saved package candidates retain all identifiers and effective
+  computational semantics. The graphical-function case records two
+  semantically equivalent Stella serialization rewrites separately from
+  computational changes.
+
+### Known Limitations
+
+- Arrays, nested models, and compositional module instances remain
+  preserved-only and cannot be edited or simulated as supported semantics.
+- In the retained Lotka-Volterra case, Stella caps `predation` to enforce a
+  non-negative stock while PySD reports the uncapped flow equation before both
+  trajectories reach zero prey at the next time step. The raw discrepancy is
+  retained as a backend-semantic limitation and is not accepted through a
+  tolerance.
+
 ## [0.13.0] - 2026-07-18
+
+**Unpublished internal candidate.** This milestone was never tagged, released
+on GitHub, or published to PyPI. Its dated entry and measurements are retained
+as development provenance; its user-visible changes are included in `0.14.0`.
 
 ### Added
 
@@ -325,8 +415,8 @@ calibration behavior of 0.10.0.
   `tool_handlers.py`, `xmile_io.py`, `equation_parser.py`,
   `templates.py`).
 
-[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.13.0...HEAD
-[0.13.0]: https://github.com/bradleylab/stella-mcp/compare/v0.12.0...v0.13.0
+[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/bradleylab/stella-mcp/compare/v0.12.0...v0.14.0
 [0.12.0]: https://github.com/bradleylab/stella-mcp/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/bradleylab/stella-mcp/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/bradleylab/stella-mcp/compare/v0.9.0...v0.10.0

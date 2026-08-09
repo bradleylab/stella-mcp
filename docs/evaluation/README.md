@@ -1,16 +1,18 @@
 # Evaluation Guide
 
-## 0.13 Trust Evidence
+## Unpublished 0.13 Candidate Evidence
 
-Version 0.13 combines several distinct evidence sources. The generated
+The unpublished internal `0.13.0` candidate combined several distinct evidence
+sources. It was never tagged or published, and its retained measurements now
+support the cumulative `0.14.0` release record. The generated
 [`0.13.0-capability-matrix.md`](0.13.0-capability-matrix.md) keeps permissive
 parsing, strict acceptance, supported-semantic preservation, unsupported-XML
 preservation, PySD simulation, Stella numeric exports, and desktop open/run/save
 evidence separate. It applies only to the retained fixtures.
 
-The completed local automated, distribution, and manual release checks are
-recorded in [`0.13.0-release-gates.md`](0.13.0-release-gates.md). GitHub Actions
-remains a separate gate after the release branch is pushed.
+The completed local automated, distribution, and manual candidate checks are
+recorded in [`0.13.0-release-gates.md`](0.13.0-release-gates.md). They are
+historical candidate evidence, not evidence of a public `0.13.0` release.
 
 The pinned external corpus manifest is
 `tests/fixtures/external_corpus/manifest.json`. Tests run from vendored files and
@@ -162,7 +164,7 @@ rate. CI validates the protocol, runner, scoring, redaction, and deterministic
 MCP workflows without calling an external model API; paid endpoint runs remain
 retained manual release evidence.
 
-The retained 0.13 personal OpenAI run is
+The retained unpublished-0.13 personal OpenAI run is
 [`0.13.0-agent-evaluation.md`](../../results/evaluation/0.13.0-agent-evaluation.md).
 All 9 runs passed every required dimension across 51 MCP calls with no failed,
 recovered, or errored tool outcomes. This is descriptive evidence for the

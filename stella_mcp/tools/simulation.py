@@ -37,7 +37,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "optional pysd dependency (pip install 'stella-mcp[sim]'). "
                 "Integration is Euler regardless of the model's method setting."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -76,7 +76,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "percent change. Requires the optional pysd dependency "
                 "(pip install 'stella-mcp[sim]')."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -142,7 +142,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "baseline-normalized elasticity for ranking. Requires the "
                 "optional pysd dependency (pip install 'stella-mcp[sim]')."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -258,7 +258,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "Requires the optional pysd dependency "
                 "(pip install 'stella-mcp[sim]')."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,

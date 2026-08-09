@@ -2,11 +2,13 @@
 
 Pure helpers (no async, no server object) so the resource catalog, content
 resolution, and prompt construction can be unit-tested directly. server.py
-wires these into the low-level decorators.
+wires these into the low-level MCP v2 handlers.
 
 Resource URIs:
 - ``stella://templates/{name}`` — a built-in or user template's raw .stmx
-- ``stella://models/{model_id}`` — a session model's current XMILE export
+- ``stella://workspaces/{workspace_id}/models/{model_id}`` — an explicit
+  workspace model's current XMILE export
+- ``stella://models/{model_id}`` — the legacy stdio workspace compatibility URI
 """
 
 from __future__ import annotations
@@ -17,11 +19,12 @@ from urllib.parse import quote, unquote
 
 from mcp.types import GetPromptResult, Prompt, PromptArgument, PromptMessage, Resource, TextContent
 
-from .session_store import SessionModelEntry
+from .session_store import LEGACY_WORKSPACE_ID, SessionModelEntry, WorkspaceStore
 from .templates import list_templates as list_available_templates
 
 _TEMPLATE_SCHEME = "stella://templates/"
 _MODEL_SCHEME = "stella://models/"
+_WORKSPACE_SCHEME = "stella://workspaces/"
 
 BUILD_MODEL_PROMPT = "build-stella-model"
 
@@ -37,31 +40,52 @@ def list_template_resources() -> list[Resource]:
             name=info.name,
             title=info.title or info.name,
             description=info.description or f"{info.source} template",
-            mimeType="application/xml",
+            mime_type="application/xml",
         ))
     return resources
 
 
-def list_model_resources(session_models: Sequence[SessionModelEntry]) -> list[Resource]:
-    """One resource per model currently loaded in the session."""
+def list_model_resources(
+    session_models: Sequence[SessionModelEntry],
+    *,
+    workspace_id: str = LEGACY_WORKSPACE_ID,
+) -> list[Resource]:
+    """One resource per model currently loaded in an explicit workspace."""
     resources: list[Resource] = []
     for entry in session_models:
+        uri = (
+            f"{_MODEL_SCHEME}{quote(entry.model_id, safe='')}"
+            if workspace_id == LEGACY_WORKSPACE_ID
+            else (
+                f"{_WORKSPACE_SCHEME}{quote(workspace_id, safe='')}/models/"
+                f"{quote(entry.model_id, safe='')}"
+            )
+        )
         resources.append(Resource(
-            uri=f"{_MODEL_SCHEME}{quote(entry.model_id, safe='')}",  # type: ignore[arg-type]
+            uri=uri,  # type: ignore[arg-type]
             name=entry.model_id,
             title=entry.model.name,
-            description=f"Session model '{entry.model_id}' as XMILE",
-            mimeType="application/xml",
+            description=f"Workspace model '{entry.model_id}' as XMILE",
+            mime_type="application/xml",
         ))
     return resources
 
 
-def list_all_resources(session_models: Sequence[SessionModelEntry]) -> list[Resource]:
-    return list_template_resources() + list_model_resources(session_models)
+def list_all_resources(
+    session_models: Sequence[SessionModelEntry],
+    *,
+    workspace_id: str = LEGACY_WORKSPACE_ID,
+) -> list[Resource]:
+    return list_template_resources() + list_model_resources(
+        session_models, workspace_id=workspace_id
+    )
 
 
 def read_resource_content(
-    uri: str, session_models: Sequence[SessionModelEntry]
+    uri: str,
+    legacy_models: Sequence[SessionModelEntry] = (),
+    *,
+    workspace_store: WorkspaceStore | None = None,
 ) -> tuple[str, str]:
     """Resolve a ``stella://`` URI to (content, mime_type).
 
@@ -78,13 +102,23 @@ def read_resource_content(
     if uri.startswith(_MODEL_SCHEME):
         model_id = unquote(uri[len(_MODEL_SCHEME):].rstrip("/"))
         model = next(
-            (entry.model for entry in session_models if entry.model_id == model_id),
+            (entry.model for entry in legacy_models if entry.model_id == model_id),
             None,
         )
         if model is None:
             raise ValueError(f"Unknown model resource '{model_id}'")
         # Export mutates layout state, so render from a copy — a resource
         # read must not rewrite the session model's diagram.
+        return copy.deepcopy(model).to_xml(compat_mode="permissive"), "application/xml"
+    if uri.startswith(_WORKSPACE_SCHEME):
+        if workspace_store is None:
+            raise ValueError("Workspace model resources require an explicit workspace store")
+        path = uri[len(_WORKSPACE_SCHEME):].rstrip("/").split("/")
+        if len(path) != 3 or path[1] != "models":
+            raise ValueError(f"Unsupported workspace resource URI '{uri}'")
+        workspace_id = unquote(path[0])
+        model_id = unquote(path[2])
+        model = workspace_store.lookup(workspace_id, model_id)
         return copy.deepcopy(model).to_xml(compat_mode="permissive"), "application/xml"
     raise ValueError(f"Unsupported resource URI '{uri}'")
 
@@ -107,17 +141,19 @@ def build_model_prompt(description: str | None) -> GetPromptResult:
     text = (
         f"Build a Stella system dynamics model of {target}.\n\n"
         "Recommended workflow:\n"
-        "1. Call build_model with a stable model_id and the full set of "
+        "1. On MCP 2026-07-28, call create_workspace and include its returned "
+        "workspace_id in every stateful call. Legacy stdio clients may omit it.\n"
+        "2. Call build_model with a stable model_id and the full set of "
         "stocks, auxiliaries, and flows in one call. Connector sync and "
         "validation run by default, so the response doubles as an inspection.\n"
-        "2. Fix any validation errors with update_*, rename_variable, or "
+        "3. Fix any validation errors with update_*, rename_variable, or "
         "delete_variable.\n"
-        "3. Extend incrementally with add_variables (batch) or the single-add "
+        "4. Extend incrementally with add_variables (batch) or the single-add "
         "tools.\n"
-        "4. If the sim extra is installed, call simulate to sanity-check the "
+        "5. If the sim extra is installed, call simulate to sanity-check the "
         "model's behavior over time.\n"
-        "5. Call render_diagram to inspect the stock-and-flow layout.\n"
-        "6. Save with save_model.\n\n"
+        "6. Call render_diagram to inspect the stock-and-flow layout.\n"
+        "7. Save with save_model.\n\n"
         "Identify the stocks (accumulations), flows (rates of change), and "
         "auxiliaries (parameters and intermediate calculations) before "
         "calling build_model."

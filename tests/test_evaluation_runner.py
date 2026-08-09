@@ -16,8 +16,8 @@ from evaluation.runner import (
 
 def test_expectation_checks_nested_fields_and_finite_values() -> None:
     result = SimpleNamespace(
-        isError=False,
-        structuredContent={"validation": {"passed": True}, "value": 1.5, "items": [1]},
+        is_error=False,
+        structured_content={"validation": {"passed": True}, "value": 1.5, "items": [1]},
     )
 
     failures = evaluate_expectation(
@@ -34,7 +34,7 @@ def test_expectation_checks_nested_fields_and_finite_values() -> None:
 
 
 def test_expectation_reports_missing_and_mismatched_fields() -> None:
-    result = SimpleNamespace(isError=True, structuredContent={"value": float("nan")})
+    result = SimpleNamespace(is_error=True, structured_content={"value": float("nan")})
 
     failures = evaluate_expectation(
         result,
@@ -69,7 +69,7 @@ def test_core_evaluation_scenario_runs_over_stdio(tmp_path: Path) -> None:
     )
 
     assert result["protocol"]["server_name"] == "stella-mcp"
-    assert result["protocol"]["tool_count"] == 42
+    assert result["protocol"]["tool_count"] == 44
     assert result["summary"] == {
         "scenarios": 1,
         "passed": 1,

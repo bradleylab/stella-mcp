@@ -53,8 +53,8 @@ def test_build_model_creates_full_model_in_one_call(monkeypatch):
 
     result = _call("build_model", SIR_BATCH)
 
-    assert not result.isError
-    sc = result.structuredContent
+    assert not result.is_error
+    sc = result.structured_content
     assert sc["model_id"] == "sir"
     assert sc["added"] == {
         "stocks": 3, "flows": 2, "auxiliaries": 4, "connectors": 0, "modules": 1,
@@ -65,8 +65,8 @@ def test_build_model_creates_full_model_in_one_call(monkeypatch):
     assert sc["model"]["counts"]["stocks"] == 3
     # The built model is registered and current.
     listed = _call("list_models", {})
-    assert [m["model_id"] for m in listed.structuredContent["models"]] == ["sir"]
-    assert listed.structuredContent["models"][0]["current"] is True
+    assert [m["model_id"] for m in listed.structured_content["models"]] == ["sir"]
+    assert listed.structured_content["models"][0]["current"] is True
 
 
 def test_build_model_failure_is_atomic(monkeypatch):
@@ -84,14 +84,14 @@ def test_build_model_failure_is_atomic(monkeypatch):
 
     result = _call("build_model", bad)
 
-    assert result.isError
-    err = result.structuredContent["error"]
+    assert result.is_error
+    err = result.structured_content["error"]
     assert err["code"] == "invalid_input"
     assert err["stage"] == "flows"
     assert err["index"] == 1
     assert err["item_name"] == "bad_flow"
     listed = _call("list_models", {})
-    assert listed.structuredContent["models"] == []
+    assert listed.structured_content["models"] == []
 
 
 def test_add_variables_extends_existing_model(monkeypatch):
@@ -111,8 +111,8 @@ def test_add_variables_extends_existing_model(monkeypatch):
         ],
     })
 
-    assert not result.isError
-    sc = result.structuredContent
+    assert not result.is_error
+    sc = result.structured_content
     assert sc["added"]["flows"] == 1
     assert sc["added"]["auxiliaries"] == 1
     assert sc["connector_sync"]["added"] == 2
@@ -132,12 +132,12 @@ def test_add_variables_failure_leaves_model_unchanged(monkeypatch):
         ],
     })
 
-    assert result.isError
-    err = result.structuredContent["error"]
+    assert result.is_error
+    err = result.structured_content["error"]
     assert err["stage"] == "auxs"
     assert err["index"] == 1
     inspected = _call("inspect_model", {"model_id": "pop", "include_validation": False})
-    counts = inspected.structuredContent["model"]["counts"]
+    counts = inspected.structured_content["model"]["counts"]
     # Neither aux landed: the partial batch was rolled back wholesale.
     assert counts["auxiliaries"] == 0
     assert counts["stocks"] == 1
@@ -156,7 +156,7 @@ def test_build_model_sync_connectors_false_respected(monkeypatch):
 
     result = _call("build_model", args)
 
-    sc = result.structuredContent
+    sc = result.structured_content
     assert "connector_sync" not in sc
     assert sc["model"]["counts"]["connectors"] == 0
 
@@ -181,8 +181,8 @@ def test_build_model_accepts_graphical_function_items(monkeypatch):
 
     result = _call("build_model", args)
 
-    assert not result.isError
-    aux = result.structuredContent["model"]["variables"]["auxiliaries"][0]
+    assert not result.is_error
+    aux = result.structured_content["model"]["variables"]["auxiliaries"][0]
     assert aux["graphical_function"]["ypts"] == [0.1, 0.2, 0.4, 0.6]
 
 
@@ -195,8 +195,8 @@ def test_build_model_missing_required_field_names_item(monkeypatch):
 
     result = _call("build_model", args)
 
-    assert result.isError
-    err = result.structuredContent["error"]
+    assert result.is_error
+    err = result.structured_content["error"]
     assert err["stage"] == "stocks"
     assert err["index"] == 0
     assert "initial_value" in err["message"]
@@ -220,8 +220,8 @@ def test_build_model_module_view_and_style_applied(monkeypatch):
 
     result = _call("build_model", args)
 
-    assert not result.isError
-    module = result.structuredContent["model"]["modules"][0]
+    assert not result.is_error
+    module = result.structured_content["model"]["modules"][0]
     assert module["box"] == {"x": 100, "y": 100, "width": 300, "height": 200}
     assert module["style"]["background"] == "#FFF7E6"
     assert module["style"]["label_side"] == "top"
@@ -244,13 +244,13 @@ def test_build_model_non_string_equation_fails_atomically(monkeypatch):
 
     result = _call("build_model", args)
 
-    assert result.isError
-    err = result.structuredContent["error"]
+    assert result.is_error
+    err = result.structured_content["error"]
     assert err["code"] == "invalid_input"
     assert err["stage"] == "auxs"
     assert err["index"] == 0
     listed = _call("list_models", {})
-    assert listed.structuredContent["models"] == []
+    assert listed.structured_content["models"] == []
 
 
 def test_add_variables_non_string_equation_leaves_model_unchanged(monkeypatch):
@@ -263,10 +263,10 @@ def test_add_variables_non_string_equation_leaves_model_unchanged(monkeypatch):
         "auxs": [{"name": "k", "equation": {"bad": True}}],
     })
 
-    assert result.isError
-    assert result.structuredContent["error"]["stage"] == "auxs"
+    assert result.is_error
+    assert result.structured_content["error"]["stage"] == "auxs"
     inspected = _call("inspect_model", {"model_id": "pop", "include_validation": False})
-    assert inspected.structuredContent["model"]["counts"]["auxiliaries"] == 0
+    assert inspected.structured_content["model"]["counts"]["auxiliaries"] == 0
 
 
 def test_build_model_numeric_equation_coerced(monkeypatch):
@@ -281,8 +281,8 @@ def test_build_model_numeric_equation_coerced(monkeypatch):
 
     result = _call("build_model", args)
 
-    assert not result.isError
-    model = result.structuredContent["model"]
+    assert not result.is_error
+    model = result.structured_content["model"]
     assert model["variables"]["stocks"][0]["initial_value"] == "100"
     assert model["variables"]["auxiliaries"][0]["equation"] == "0.1"
 
@@ -298,7 +298,7 @@ def test_error_details_cannot_clobber_envelope_keys():
         details={"code": "spoofed", "message": "spoofed", "stage": "flows"},
     )
 
-    err = result.structuredContent["error"]
+    err = result.structured_content["error"]
     assert err["code"] == "invalid_input"
     assert err["message"] == "real message"
     assert err["stage"] == "flows"

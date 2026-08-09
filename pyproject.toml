@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stella-mcp"
-version = "0.13.0"
+version = "0.14.0"
 description = "MCP server for creating and manipulating Stella system dynamics models (.stmx files)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -20,7 +20,8 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "mcp>=1.19.0,<2",
+    "jsonschema>=4.20.0",
+    "mcp>=2.0.0,<3",
 ]
 
 [project.optional-dependencies]

@@ -176,8 +176,8 @@ def test_server_delete_variable_requires_force(monkeypatch):
         server_mod.call_tool("delete_variable", {"model_id": "m1", "name": "S1"})
     )
     assert isinstance(result, CallToolResult)
-    assert result.isError is True
-    assert result.structuredContent["error"]["code"] == "invalid_input"
+    assert result.is_error is True
+    assert result.structured_content["error"]["code"] == "invalid_input"
 
 
 def test_update_stock_flow_aux_and_sim_specs():

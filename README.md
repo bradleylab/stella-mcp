@@ -1,6 +1,9 @@
 # Stella MCP Server
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for creating and manipulating [Stella](https://www.iseesystems.com/store/products/stella-professional.aspx) system dynamics models. This enables AI assistants like Claude to programmatically build, read, validate, and save `.stmx` files in the XMILE format.
+A vendor-neutral [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
+server for creating and manipulating [Stella](https://www.iseesystems.com/store/products/stella-professional.aspx)
+system dynamics models. Any compliant MCP client can build, read, validate, and
+save `.stmx` files in the XMILE format; optional host features still vary.
 
 ## What is this for?
 
@@ -37,7 +40,7 @@ pip install -e .
 ### Requirements
 
 - Python 3.10+
-- `mcp>=1.19.0,<2`
+- `mcp>=2.0.0,<3`
 
 ## Configuration
 
@@ -105,13 +108,15 @@ If running from source:
 
 For a new model:
 
-1. `build_model` with a stable `model_id` and the full set of stocks,
+1. On MCP 2026-07-28, call `create_workspace` and carry the returned
+   `workspace_id` through stateful calls. Legacy stdio clients may omit it.
+2. `build_model` with a stable `model_id` and the full set of stocks,
    auxiliaries, and flows in one call (connector sync and validation run by
    default, so the response doubles as an inspection).
-2. Fix validation errors with `update_*`, `rename_variable`, or `delete_variable`.
-3. Extend incrementally with `add_variables` (batch) or the single-add tools.
-4. `simulate` to sanity-check behavior (requires the `sim` extra).
-5. Save with `save_model`.
+3. Fix validation errors with `update_*`, `rename_variable`, or `delete_variable`.
+4. Extend incrementally with `add_variables` (batch) or the single-add tools.
+5. `simulate` to sanity-check behavior (requires the `sim` extra).
+6. Save with `save_model`.
 
 For imported models:
 
@@ -129,7 +134,7 @@ For imported models:
 | `set_sim_specs` | Update simulation time settings on an existing model |
 | `read_model` | Load an existing .stmx file |
 | `save_model` | Save model to a .stmx file |
-| `delete_model` | Remove a model from the session (saved files untouched) |
+| `delete_model` | Remove a model from the workspace (saved files untouched) |
 
 ### Templates
 
@@ -137,7 +142,7 @@ For imported models:
 |------|-------------|
 | `list_templates` | List built-in and user-defined templates (supports source/query/tag filters) |
 | `get_template_info` | Get detailed metadata for one template |
-| `load_template` | Load a template as a model in the current session |
+| `load_template` | Load a template as a model in the current workspace |
 | `save_as_template` | Save the current model as a reusable user template (optional description/tags) |
 
 ### Model Building
@@ -167,8 +172,15 @@ For imported models:
 | `auto_place_module_boxes` | Auto-place module boxes around their members |
 
 Notes:
-- Tools accept optional `model_id` so one MCP session can manage multiple models safely.
-- `create_model` and `read_model` set the session's current `model_id` and return it.
+- MCP 2026-07-28 clients call `create_workspace` once and include its returned
+  `workspace_id` in stateful calls. Modern tool discovery marks that field as
+  required on stateful tools. The ID routes application state; it is not an
+  authorization credential.
+- Supported legacy stdio clients may omit `workspace_id` and use one
+  process-local compatibility workspace; legacy discovery keeps the field
+  optional.
+- Tools accept optional `model_id` so one workspace can manage multiple models safely.
+- `create_model` and `read_model` set the workspace's current `model_id` and return it.
 - `add_flow` and `add_aux` support optional `graphical_function` payloads (`ypts` plus exactly one of `xscale` or `xpts`).
 - `add_stock`/`add_flow`/`add_aux` reject duplicate variable names across variable types; `add_connector` requires both variables to exist.
 - `set_connector_routing` can target a connector by `connector_uid` or by `from_var` + `to_var`.
@@ -182,12 +194,21 @@ Notes:
 - `set_module_style` updates module view styling and persists those attributes in XMILE view `<group .../>` elements.
 - `save_as_template` writes user templates to `~/.stella-mcp/templates` by default (override via `STELLA_MCP_TEMPLATE_DIR`) and stores metadata in a `.meta.json` sidecar.
 - Tool failures return structured MCP errors with `error.code`, `error.category`, and `error.message`.
+- Every successful tool result retains readable text and supplies schema-validated
+  `structuredContent` described by its JSON Schema 2020-12 `outputSchema`.
+
+### Workspace Lifecycle
+
+| Tool | Description |
+|------|-------------|
+| `create_workspace` | Create an isolated workspace, optionally with a caller-selected lifetime |
+| `revoke_workspace` | Revoke a workspace and discard its in-memory models |
 
 ### Model Inspection
 
 | Tool | Description |
 |------|-------------|
-| `list_models` | List available session model IDs and indicate the current model |
+| `list_models` | List available workspace model IDs and indicate the current model |
 | `inspect_model` | Return a structured model summary for agent inspection |
 | `list_modules` | List modules/groups in the current model |
 | `list_connectors` | List connector IDs, endpoints, angles, and routing metadata |
@@ -243,7 +264,7 @@ full structured model summary, so no follow-up `inspect_model` call is needed.
 
 ### Tool Payload Examples
 
-Create and switch between session models:
+Create and switch between workspace models:
 
 ```json
 {"name":"create_model","arguments":{"name":"Population","model_id":"pop_v1"}}
@@ -487,7 +508,7 @@ Notes and caveats:
   identifies the installed PySD version, actual method, declared method,
   unsupported-feature preflight, and warnings.
 - Arrays, compositional module instances, and additional top-level models are
-  preserved-only in 0.13. They fail before PySD with a structured
+  preserved-only in 0.14. They fail before PySD with a structured
   `unsupported_model_feature` error rather than being silently scalarized or
   flattened.
 - PySD and Stella do not have identical output semantics in every supported
@@ -498,7 +519,7 @@ Notes and caveats:
   underscore (`growth_rate`) form and replaces the variable with a constant.
 - `save_results_csv` writes the full-resolution results table with a `time`
   column.
-- The session model is never modified by simulation (the run uses a
+- The workspace model is never modified by simulation (the run uses a
   throwaway copy).
 
 ## Scenario Comparison
@@ -615,9 +636,11 @@ Beyond tools, the server exposes MCP-native affordances:
   parallelize read-only calls. Inspection tools (`inspect_model`,
   `validate_model`, `list_*`, `get_model_xml`) are read-only; `delete_*` are
   marked destructive.
-- **Resources.** Templates and session models are readable as resources:
+- **Resources.** Templates and workspace models are readable as resources:
   - `stella://templates/{name}` — a built-in or user template's `.stmx`
-  - `stella://models/{model_id}` — a session model's current XMILE export
+  - `stella://workspaces/{workspace_id}/models/{model_id}` — an explicit
+    workspace model's current XMILE export
+  - `stella://models/{model_id}` — the legacy stdio compatibility workspace only
 - **Prompt.** A `build-stella-model` prompt (argument: `description`) encodes
   the recommended build → validate → simulate → render → save workflow, so it
   is discoverable inside MCP clients.
@@ -650,7 +673,7 @@ The `validate_model` tool checks for:
   fragments are updated.
 - `strict` import/export rejects arrays, compositional module instances,
   additional top-level models, and confirmed Stella/XMILE reserved identifiers.
-  Arrays and nested models are not implemented features in 0.13.
+  Arrays and nested models are not implemented features in 0.14.
 - Reserved names such as `beta` and `gamma` are preserved with warnings in
   permissive mode and rejected in strict mode. The built-in SIR template uses
   `transmission_rate` and `recovery_rate` so Stella does not rename them on save.
@@ -693,7 +716,8 @@ uv run --extra sim python -m evaluation.runner --require sim
 ```
 
 The runner writes JSON and Markdown reports under `results/evaluation/` by
-default. The 0.13 evidence includes a generated
+default. The unpublished 0.13 internal-candidate evidence, retained as part of
+the cumulative 0.14 release record, includes a generated
 [capability matrix](docs/evaluation/0.13.0-capability-matrix.md), an explicit
 [numeric discrepancy review](docs/evaluation/0.13.0-numeric-fidelity.md), and
 [Stella Professional desktop acceptance](docs/evaluation/0.13.0-desktop-acceptance.md).
@@ -705,7 +729,7 @@ and evidence limits.
 ## Project Structure
 
 See [`docs/architecture.md`](docs/architecture.md) for dependency boundaries,
-module ownership, session lifecycle assumptions, and compatibility contracts.
+module ownership, workspace lifecycle, and compatibility contracts.
 
 ```
 stella-mcp/
@@ -721,7 +745,7 @@ stella-mcp/
     ├── tool_schemas.py   # Compatibility facade for the tool catalog
     ├── tools/            # Domain schemas and handlers
     ├── mcp_resources.py  # MCP resources and prompts
-    ├── session_store.py  # Session-scoped model state
+    ├── session_store.py  # Explicit application workspace state
     ├── simulate.py       # PySD-backed simulation
     ├── analysis.py       # Scenario comparison and sensitivity analysis
     ├── calibrate.py      # Parameter fitting and native-unit error metrics
@@ -750,20 +774,34 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 PyPI publishing is handled by `.github/workflows/publish.yml` using PyPI Trusted
 Publishing. To release a new version:
 
+The current public upgrade path skips the unpublished `0.13.0` internal
+candidate: `0.14.0` is prepared as the cumulative successor to public `0.12.0`.
+
 1. Synchronize the version in `pyproject.toml`, `stella_mcp/__init__.py`,
    `CITATION.cff`, and `CHANGELOG.md`; keep the citation and changelog release
    dates identical.
 2. Run `uv lock --check`, the core and simulation test suites, the MCP-floor
    suite, and the package job. Prepare a release-notes file such as
-   `docs/releases/0.13.0.md`.
-3. Merge the release changes to `main` and wait for every main-branch CI job to
-   pass.
-4. Create and publish a GitHub release from `main` with the matching tag and
-   notes file, for example `v0.13.0`. The publish workflow validates that tag
-   against the package metadata before uploading.
+   `docs/releases/0.14.0.md`.
+3. Before pushing the release branch, verify the protected `main` and `v*` tag
+   rules, the `pypi` environment's protected-tag policy, and the configured
+   PyPI Trusted Publisher.
+4. Open a draft pull request so every release-critical check runs, require those
+   exact checks, obtain review, and separately approve the merge.
+5. Wait for a fresh `main` CI run at the exact merge commit. If the Chicago
+   release date has changed, correct the metadata through another reviewed pull
+   request before continuing.
+6. With separate approval, create the lightweight version tag at that audited
+   merge commit. With another approval, create and inspect the draft GitHub
+   release from the matching notes file.
+7. With final publication approval, publish the draft. The release event builds
+   and validates the source distribution and wheel without OIDC authority; the
+   `pypi` job's configured deployment policy accepts only tags matching the
+   protected `v*` release-tag policy before Trusted Publishing can upload the
+   verified artifacts.
 
-The GitHub release event builds the source distribution and wheel, then publishes
-them to PyPI through the configured trusted publisher.
+Tagging, draft creation, and publication are distinct approval gates. Do not
+move or replace a public tag or uploaded distribution to repair a release.
 
 ## License
 

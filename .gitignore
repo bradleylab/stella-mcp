@@ -50,8 +50,15 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Claude Code
+# Local assistant and workflow state
 .claude/
+.codex/
+.agents/
+.elves/
+.elves-session.json
+.beads/
+HANDOFF.md
+docs/superpowers/
 
 # Test outputs
 *.stmx

@@ -46,8 +46,8 @@ def test_simulate_growth_model(monkeypatch):
 
     result = _call("simulate", {"model_id": "g", "max_points": 20})
 
-    assert not result.isError
-    sc = result.structuredContent
+    assert not result.is_error
+    sc = result.structured_content
     assert sc["model_id"] == "g"
     assert sc["backend"]["name"] == "PySD"
     assert sc["backend"]["actual_integration_method"] == "Euler"
@@ -72,7 +72,7 @@ def test_simulate_override_flattens_growth(monkeypatch):
         "overrides": {"growth_rate": 0},
     })
 
-    [series] = result.structuredContent["series"]
+    [series] = result.structured_content["series"]
     assert series["summary"]["final"] == 100.0
 
 
@@ -81,8 +81,8 @@ def test_simulate_unknown_override_lists_candidates(monkeypatch):
 
     result = _call("simulate", {"model_id": "g", "overrides": {"nope": 1}})
 
-    assert result.isError
-    err = result.structuredContent["error"]
+    assert result.is_error
+    err = result.structured_content["error"]
     assert err["code"] == "invalid_input"
     assert "growth rate" in err["message"]
 
@@ -99,10 +99,10 @@ def test_simulate_rk4_model_warns_euler_only(monkeypatch):
 
     result = _call("simulate", {"model_id": "rk"})
 
-    assert not result.isError
-    assert any("Euler" in w for w in result.structuredContent["warnings"])
-    assert result.structuredContent["backend"]["model_integration_method"] == "RK4"
-    assert result.structuredContent["backend"]["warnings"] == result.structuredContent[
+    assert not result.is_error
+    assert any("Euler" in w for w in result.structured_content["warnings"])
+    assert result.structured_content["backend"]["model_integration_method"] == "RK4"
+    assert result.structured_content["backend"]["warnings"] == result.structured_content[
         "warnings"
     ]
 
@@ -139,7 +139,7 @@ def test_simulate_does_not_mutate_session_model(monkeypatch):
 
     result = _call("simulate", {"model_id": "gf"})
 
-    assert not result.isError
+    assert not result.is_error
     # GRAPH shim applied only to the simulation copy.
     assert model.auxs["seasonal"].equation == "GRAPH(TIME)"
     # to_xml() ran on a deep copy: no layout positions appeared on the
@@ -154,8 +154,8 @@ def test_simulate_saves_csv_with_time_column(monkeypatch, tmp_path):
 
     result = _call("simulate", {"model_id": "g", "save_results_csv": str(csv_path)})
 
-    assert not result.isError
-    assert result.structuredContent["csv_path"] == str(csv_path)
+    assert not result.is_error
+    assert result.structured_content["csv_path"] == str(csv_path)
     header = csv_path.read_text().splitlines()[0]
     assert header.startswith("time,")
     assert "Population" in header
@@ -166,7 +166,7 @@ def test_simulate_include_selects_variables(monkeypatch):
 
     result = _call("simulate", {"model_id": "g", "include": ["growth"]})
 
-    names = [s["name"] for s in result.structuredContent["series"]]
+    names = [s["name"] for s in result.structured_content["series"]]
     assert names == ["growth"]
 
 

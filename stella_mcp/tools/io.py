@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from mcp.types import TextContent, Tool
+from mcp.types import Tool
 
 from ..layout_quality import layout_report_to_dict, layout_warning_suffix
 from ..model_snapshot import model_to_summary, template_info_to_dict
@@ -35,7 +35,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="save_model",
             description="Save the current model to a .stmx file",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -71,7 +71,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "and optionally written to a file. Defaults to running "
                 "auto-layout first so freshly built models render sensibly."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -94,7 +94,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="read_model",
             description="Read an existing .stmx file and load it as the current model",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": {
@@ -117,7 +117,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="list_templates",
             description="List built-in and user-defined templates",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "source": {
@@ -143,7 +143,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="get_template_info",
             description="Get detailed metadata for one template",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "template_name": {"type": "string", "description": "Template name"},
@@ -154,7 +154,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="load_template",
             description="Load a template into the current session as a model",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "template_name": {"type": "string", "description": "Template name"},
@@ -169,7 +169,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="save_as_template",
             description="Save the current model as a user-defined template",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -275,14 +275,19 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
         n_flows = len(model.flows)
         n_aux = len(model.auxs)
         warning_suffix = compat_warning_suffix(model.compatibility_warnings)
-        return [TextContent(
-            type="text",
-            text=(
+        return success_result(
+            (
                 f"Loaded model '{model.name}' as model_id={model_id} "
                 f"with {n_stocks} stocks, {n_flows} flows, {n_aux} auxiliaries"
                 f"{warning_suffix}"
             ),
-        )]
+            {
+                "model_id": model_id,
+                "filepath": str(filepath),
+                "model": model_to_summary(model_id, model),
+                "compatibility_warnings": list(model.compatibility_warnings),
+            },
+        )
 
     @register("list_templates")
     def _handle_list_templates(arguments: dict[str, Any]) -> ToolResponse:

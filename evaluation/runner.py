@@ -66,12 +66,12 @@ def _lookup(value: Any, path: str) -> Any:
 def evaluate_expectation(result: Any, expectation: dict[str, Any]) -> list[str]:
     """Return assertion failures for one MCP result."""
     failures: list[str] = []
-    actual_error = bool(result.isError)
+    actual_error = bool(result.is_error)
     expected_error = bool(expectation.get("is_error", False))
     if actual_error != expected_error:
         failures.append(f"is_error expected {expected_error}, got {actual_error}")
 
-    structured = result.structuredContent or {}
+    structured = result.structured_content or {}
     for path, expected in expectation.get("fields", {}).items():
         try:
             actual = _lookup(structured, path)
@@ -206,14 +206,14 @@ async def run_evaluation(
                         step_started = time.perf_counter()
                         result = await session.call_tool(step["tool"], arguments)
                         failures = evaluate_expectation(result, step.get("expect", {}))
-                        structured = result.structuredContent or {}
+                        structured = result.structured_content or {}
                         step_results.append(
                             {
                                 "index": index,
                                 "tool": step["tool"],
                                 "status": "passed" if not failures else "failed",
                                 "duration_ms": round((time.perf_counter() - step_started) * 1000, 3),
-                                "is_error": bool(result.isError),
+                                "is_error": bool(result.is_error),
                                 "error_code": (structured.get("error") or {}).get("code"),
                                 "structured_keys": sorted(structured),
                                 "text": sanitize_text(_content_text(result), redactions),
@@ -256,7 +256,7 @@ async def run_evaluation(
             "capabilities": sorted(available),
         },
         "protocol": {
-            "server_name": initialized.serverInfo.name,
+            "server_name": initialized.server_info.name,
             "tool_count": len(tools.tools),
             "tool_catalog_sha256": hashlib.sha256(catalog_json).hexdigest(),
             "resource_count_at_start": len(resources.resources),
