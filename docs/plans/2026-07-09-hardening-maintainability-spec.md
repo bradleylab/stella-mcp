@@ -450,7 +450,6 @@ Changes:
 6. Replace the obsolete v0.5.0 example with the current release pattern.
 7. Mark the 0.10.0 calibration plan IMPLEMENTED / HARDENING and update its
    maxiter text and review status.
-8. Do not modify HANDOFF.md without a separate preview and operator approval.
 
 Acceptance:
 

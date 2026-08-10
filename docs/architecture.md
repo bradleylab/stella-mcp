@@ -7,16 +7,16 @@ live in focused modules.
 
 ## Dependency Boundaries
 
-The package has one unconditional runtime dependency: `mcp>=1.19.0,<2`.
-MCP 1.19.0 is the first tested SDK release whose low-level stdio server
-correctly transports this package's direct `CallToolResult` responses with
-structured content. The upper bound keeps the package on the v1 API until an
-MCP v2 migration is tested.
+The package has two unconditional runtime dependencies: `mcp>=2.0.0,<3` and
+`jsonschema>=4.20.0`. MCP 2.0.0 is the first stable SDK v2 release and supplies
+the dual-era server for MCP 2026-07-28 and supported legacy clients. JSON Schema
+validation is declared directly because Stella validates every successful
+structured tool result before returning it.
 
 | Layer | Modules | Dependency rule |
 | --- | --- | --- |
 | Model core | `model_types`, `model`, `model_layout`, `layout_graph`, `layout_router`, `layout_quality`, `layout_pipeline`, `xmile_features`, `xmile_parse`, `xmile_export`, `validator`, `render_svg` | Uses the Python standard library and project modules. It must not require simulation dependencies. |
-| MCP | `server`, `mcp_resources`, `tool_schemas`, `tool_handlers`, `tools/*`, `session_store` | Depends on `mcp` and the model core. Importing the server must work with only core dependencies installed. |
+| MCP | `server`, `mcp_resources`, `tool_schemas`, `tool_handlers`, `tools/*`, `session_store` | Depends on `mcp`, `jsonschema`, and the model core. Importing the server must work with only core dependencies installed. |
 | Simulation | `simulate`, `analysis`, `calibrate` | Uses the optional `sim` extra: PySD, NumPy, pandas, and SciPy. Optional packages are imported only on simulation call paths. |
 
 The `sim` extra is an additive capability. Model creation, XMILE import/export,
@@ -29,11 +29,15 @@ errors. Tool definitions and implementations are composed through two public
 facades:
 
 1. `tool_schemas.build_tool_definitions()` concatenates each domain's
-   `build_tools()` result in the established order and applies annotations.
+   `build_tools()` result in the established order, appends workspace lifecycle
+   tools, and applies annotations, workspace routing, and output contracts.
 2. `tool_handlers.register_tool_handlers()` creates a `HandlerContext`
-   containing model and session operations, then delegates registration to each
+   containing model and workspace operations, then delegates registration to each
    domain's `register_handlers()` function.
-3. `server.call_tool()` dispatches through the registered handler.
+3. The SDK v2 low-level server invokes explicit `async (ctx, params) -> result`
+   handlers. `server.call_tool()` resolves the application workspace, acquires
+   its lock, dispatches through the registry, and validates successful
+   structured output against JSON Schema 2020-12.
 
 The files under `stella_mcp/tools/` own both the schema and handler for their
 domain:
@@ -90,30 +94,52 @@ values and drive the same label-box estimator used by layout analysis and SVG.
 The compatibility corpus, focused parser/exporter tests, and exact built-in
 template exports guard these contracts.
 
-## Session State
+## Application Workspace State
 
-`SessionStore` owns every session's model registry and current-model pointer.
-Handlers receive narrow operations through `HandlerContext`; they do not read
-or mutate registry dictionaries directly.
+`WorkspaceStore` owns isolated model registries, current-model pointers,
+optional caller-selected expiry, bounded expiry/revocation tombstones, and one
+`asyncio.Lock` per workspace. Handlers receive narrow operations through
+`HandlerContext`; they do not read or mutate registry dictionaries directly.
 
-The stdio transport uses `id(session)` as the live session key. Tests and calls
-without an MCP session use the fallback key `-1`. Any future HTTP transport
-must provide a stable transport identity or call `SessionStore.clear(key)` at
-session teardown. Retaining an object-identity key after the session object is
-released is unsafe because Python may reuse that identity.
+MCP 2026-07-28 removes protocol sessions, so production state never depends on
+`server.request_context`, a transport object, or `id(session)`. Modern clients
+create an opaque workspace handle and send `workspace_id` with every stateful
+tool call; modern discovery marks the field required for those tools. Supported
+legacy stdio discovery keeps it optional, and calls that omit it resolve to the
+reserved process-local `legacy` workspace. Unknown, expired, and revoked IDs
+produce distinct classified tool errors and never fall back to shared state.
 
-Adding a transport therefore requires explicit lifecycle wiring and isolation
-tests. It must not infer cleanup from model deletion because one session may
-own multiple models.
+Workspace IDs are routing identifiers, not authorization secrets. This release
+ships stdio only. A future multi-user HTTP transport must separately bind
+workspace ownership to an authenticated principal and reject cross-principal
+replay; credentials must not appear in resource URIs, results, logs, or errors.
+
+Modern model resources encode both identifiers as
+`stella://workspaces/{workspace_id}/models/{model_id}` and resolve through the
+store without ambient request state. Modern resource listing returns immutable
+templates because list requests carry no workspace argument; legacy stdio also
+lists models from its compatibility workspace. Resource reads use a
+non-mutating model lookup, so reading a named resource cannot change the
+workspace's current-model pointer.
+
+## Structured Result Contracts
+
+All 44 tools retain human-readable `content` and declare a JSON Schema 2020-12
+`outputSchema` for successful `structuredContent`. Contracts require stable
+top-level fields and types while nested Stella snapshot records remain open to
+additive fields. The server validates success results before returning them,
+and SDK v2 clients validate them again. Classified `is_error` results use the
+separate stable error envelope and are not validated against success schemas,
+matching the verified SDK v2 client behavior.
 
 ## Compatibility Contracts
 
-Version 0.13 retains these public surfaces from 0.12 except for the documented
+Version 0.14 retains these public surfaces from 0.13 except for the documented
 compatibility failures, SIR identifier migration, and additive evidence/backend
 metadata:
 
-- tool names, order, input schemas, annotations, text results, and structured
-  results;
+- the existing 42 tool names, order, input behavior, annotations, text results,
+  and structured field meanings; workspace lifecycle tools are appended;
 - imports from `stella_mcp.xmile`, `stella_mcp.xmile_io`,
   `stella_mcp.tool_schemas`, and `stella_mcp.tool_handlers`;
 - strict and permissive XMILE modes, with new early rejection for documented
@@ -123,7 +149,11 @@ metadata:
 - simulation, analysis, and calibration behavior when the `sim` extra is
   installed, plus additive PySD version, actual/declared method, feature-preflight,
   and warning metadata;
-- stable structured error codes and categories.
+- stable structured error codes and categories;
+- legacy stdio model resource URIs inside the compatibility workspace.
+
+Code Mode, `StellaAPI`, and any server-side code executor are outside this
+release and do not appear in the tool catalog.
 
 Tests should be added at the owning module first. Facade-level contract tests
 remain necessary where ordering, import compatibility, or exact output is part

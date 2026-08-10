@@ -1,0 +1,79 @@
+name: Reusable release build
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact branch, commit, or tag to build
+        required: true
+        type: string
+      expected_tag:
+        description: Release tag to validate, or empty for a CI preflight build
+        required: false
+        default: ""
+        type: string
+    outputs:
+      artifact_digest:
+        description: SHA-256 digest of the immutable GitHub artifact archive
+        value: ${{ jobs.build.outputs.artifact_digest }}
+      manifest_digest:
+        description: SHA-256 digest of the distribution manifest
+        value: ${{ jobs.build.outputs.manifest_digest }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      artifact_digest: ${{ steps.upload.outputs['artifact-digest'] }}
+      manifest_digest: ${{ steps.manifest.outputs.manifest_digest }}
+    steps:
+      - name: Check out exact source ref
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+      - name: Install release tooling
+        run: uv sync --locked --extra dev
+      - name: Validate release tag and metadata
+        if: ${{ inputs.expected_tag != '' }}
+        env:
+          EXPECTED_TAG: ${{ inputs.expected_tag }}
+        run: uv run python scripts/check_release_metadata.py --expected-tag "$EXPECTED_TAG"
+      - name: Build source and wheel distributions
+        run: uv build
+      - name: Validate distributions
+        run: uv run twine check dist/*
+      - name: Validate distribution metadata and bundled templates
+        run: |
+          uv run python scripts/check_built_wheel.py dist/*.whl
+          uv run python scripts/check_built_sdist.py dist/*.tar.gz
+      - name: Validate installed MCP package
+        run: |
+          uv venv .package-venv
+          uv pip install --python .package-venv/bin/python dist/*.whl
+          .package-venv/bin/python -c "import stella_mcp.server"
+          uv run python scripts/check_installed_mcp.py \
+            --python .package-venv/bin/python
+      - name: Create artifact manifest
+        id: manifest
+        run: |
+          cd dist
+          sha256sum *.whl *.tar.gz > SHA256SUMS
+          sha256sum --check SHA256SUMS
+          manifest_digest="$(sha256sum SHA256SUMS | cut -d ' ' -f 1)"
+          printf 'manifest_digest=%s\n' "$manifest_digest" >> "$GITHUB_OUTPUT"
+      - name: Retain validated distributions
+        id: upload
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: stella-mcp-distributions
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/SHA256SUMS
+          if-no-files-found: error

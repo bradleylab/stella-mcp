@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from mcp.types import TextContent, Tool
+from mcp.types import Tool
 
+from ..model_snapshot import module_to_dict
+from ..tool_results import success_result
 from .shared import (
     HandlerContext,
     RegisterTool,
@@ -27,7 +29,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="create_module",
             description="Create a logical module/group for organizing variables",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -44,7 +46,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="add_to_module",
             description="Add variables to an existing module",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -61,7 +63,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="remove_from_module",
             description="Remove variables from an existing module",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -78,7 +80,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="rename_module",
             description="Rename an existing module",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -91,7 +93,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="delete_module",
             description="Delete a module",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -103,7 +105,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="set_module_view",
             description="Set explicit view box geometry for a module",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -119,7 +121,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="set_module_style",
             description="Set module box visual style in the diagram view",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -151,7 +153,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="auto_place_module_boxes",
             description="Auto-place module view boxes around their member variables",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -194,10 +196,11 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             name=arguments["name"],
             members=arguments.get("members"),
         )
-        return [TextContent(
-            type="text",
-            text=f"Created module '{module.name}' in model_id={model_id} with {len(module.members)} members"
-        )]
+        key = model._normalize_name(module.name)
+        return success_result(
+            f"Created module '{module.name}' in model_id={model_id} with {len(module.members)} members",
+            {"model_id": model_id, "module": module_to_dict(model, key, module)},
+        )
 
     @register("add_to_module")
     def _handle_add_to_module(arguments: dict[str, Any]) -> ToolResponse:
@@ -206,13 +209,14 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             module_name=arguments["module_name"],
             members=arguments["members"],
         )
-        return [TextContent(
-            type="text",
-            text=(
+        key = model._normalize_name(module.name)
+        return success_result(
+            (
                 f"Added {len(arguments['members'])} members to module '{module.name}' "
                 f"in model_id={model_id} (total members: {len(module.members)})"
             ),
-        )]
+            {"model_id": model_id, "module": module_to_dict(model, key, module)},
+        )
 
     @register("remove_from_module")
     def _handle_remove_from_module(arguments: dict[str, Any]) -> ToolResponse:
@@ -221,13 +225,14 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             module_name=arguments["module_name"],
             members=arguments["members"],
         )
-        return [TextContent(
-            type="text",
-            text=(
+        key = model._normalize_name(module.name)
+        return success_result(
+            (
                 f"Removed up to {len(arguments['members'])} members from module '{module.name}' "
                 f"in model_id={model_id} (total members: {len(module.members)})"
             ),
-        )]
+            {"model_id": model_id, "module": module_to_dict(model, key, module)},
+        )
 
     @register("rename_module")
     def _handle_rename_module(arguments: dict[str, Any]) -> ToolResponse:
@@ -236,19 +241,20 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             module_name=arguments["module_name"],
             new_name=arguments["new_name"],
         )
-        return [TextContent(
-            type="text",
-            text=f"Renamed module '{arguments['module_name']}' to '{module.name}' in model_id={model_id}",
-        )]
+        key = model._normalize_name(module.name)
+        return success_result(
+            f"Renamed module '{arguments['module_name']}' to '{module.name}' in model_id={model_id}",
+            {"model_id": model_id, "module": module_to_dict(model, key, module)},
+        )
 
     @register("delete_module")
     def _handle_delete_module(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
         module = model.delete_module(arguments["module_name"])
-        return [TextContent(
-            type="text",
-            text=f"Deleted module '{module.name}' from model_id={model_id}",
-        )]
+        return success_result(
+            f"Deleted module '{module.name}' from model_id={model_id}",
+            {"model_id": model_id, "module_name": module.name, "deleted": module.name},
+        )
 
     @register("set_module_view")
     def _handle_set_module_view(arguments: dict[str, Any]) -> ToolResponse:
@@ -260,13 +266,14 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             width=arguments["width"],
             height=arguments["height"],
         )
-        return [TextContent(
-            type="text",
-            text=(
+        key = model._normalize_name(module.name)
+        return success_result(
+            (
                 f"Set module view for '{module.name}' in model_id={model_id} "
                 f"to center=({module.x}, {module.y}), size=({module.width}, {module.height})"
             ),
-        )]
+            {"model_id": model_id, "module": module_to_dict(model, key, module)},
+        )
 
     @register("set_module_style")
     def _handle_set_module_style(arguments: dict[str, Any]) -> ToolResponse:
@@ -290,13 +297,14 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             style_parts.append(f"font_size={module.font_size}")
         if module.label_side is not None:
             style_parts.append(f"label_side={module.label_side}")
-        return [TextContent(
-            type="text",
-            text=(
+        key = model._normalize_name(module.name)
+        return success_result(
+            (
                 f"Set module style for '{module.name}' in model_id={model_id}: "
                 + ", ".join(style_parts)
             ),
-        )]
+            {"model_id": model_id, "module": module_to_dict(model, key, module)},
+        )
 
     @register("auto_place_module_boxes")
     def _handle_auto_place_module_boxes(arguments: dict[str, Any]) -> ToolResponse:
@@ -307,7 +315,13 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             min_height=arguments.get("min_height", 120.0),
             only_missing=arguments.get("only_missing", False),
         )
-        return [TextContent(
-            type="text",
-            text=f"Auto-placed module boxes in model_id={model_id} for {len(model.modules)} modules",
-        )]
+        return success_result(
+            f"Auto-placed module boxes in model_id={model_id} for {len(model.modules)} modules",
+            {
+                "model_id": model_id,
+                "modules": [
+                    module_to_dict(model, key, model.modules[key])
+                    for key in sorted(model.modules)
+                ],
+            },
+        )

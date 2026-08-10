@@ -14,6 +14,7 @@ import stella_mcp
 from scripts.check_release_metadata import main, validate_release_metadata
 
 ROOT = Path(__file__).resolve().parents[1]
+CANDIDATE_RELEASE_DATE = "2026-08-09"
 
 
 def test_release_metadata_sources_agree():
@@ -27,6 +28,48 @@ def test_release_metadata_sources_agree():
     assert citation["version"] == distribution_version
     assert f"## [{distribution_version}] - {metadata.release_date}" in changelog
     assert str(citation["date-released"]) == metadata.release_date
+
+
+def test_release_metadata_uses_intended_cutover_date():
+    metadata = validate_release_metadata(ROOT)
+
+    assert metadata.release_date == CANDIDATE_RELEASE_DATE
+
+
+def test_changelog_links_skip_unpublished_0_13_tag():
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+    assert (
+        "[Unreleased]: https://github.com/bradleylab/stella-mcp/compare/v0.14.0...HEAD"
+    ) in changelog
+    assert (
+        "[0.14.0]: https://github.com/bradleylab/stella-mcp/compare/v0.12.0...v0.14.0"
+    ) in changelog
+    assert "[0.13.0]: https://" not in changelog
+    assert "v0.13.0..." not in changelog
+
+
+def test_unpublished_0_13_records_do_not_advertise_install():
+    release_notes = (ROOT / "docs" / "releases" / "0.13.0.md").read_text(encoding="utf-8")
+    release_gates = (ROOT / "docs" / "evaluation" / "0.13.0-release-gates.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "unpublished internal candidate" in release_notes.lower()
+    assert "unpublished internal candidate" in release_gates.lower()
+    assert 'pip install "stella-mcp' not in release_notes
+    assert "pip install stella-mcp" not in release_notes
+
+
+def test_0_14_release_notes_are_cumulative_from_public_0_12():
+    release_notes = (ROOT / "docs" / "releases" / "0.14.0.md").read_text(encoding="utf-8")
+    normalized = release_notes.lower()
+
+    assert "public 0.12.0" in normalized
+    assert "unpublished 0.13.0" in normalized
+    assert "mcp 2026-07-28" in normalized
+    assert "unsupported" in normalized
+    assert "numeric" in normalized
 
 
 def test_release_metadata_cli_accepts_matching_tag(capsys):
@@ -46,10 +89,7 @@ def test_release_metadata_cli_rejects_mismatched_tag(capsys):
 
 
 def test_distribution_dependency_contract():
-    requirements = [
-        Requirement(value)
-        for value in importlib.metadata.requires("stella-mcp") or []
-    ]
+    requirements = [Requirement(value) for value in importlib.metadata.requires("stella-mcp") or []]
     unconditional = {
         requirement.name.lower()
         for requirement in requirements
@@ -61,13 +101,13 @@ def test_distribution_dependency_contract():
         if requirement.marker is not None and requirement.marker.evaluate({"extra": "sim"})
     }
 
-    assert unconditional == {"mcp"}
+    assert unconditional == {"jsonschema", "mcp"}
     assert sim == {"numpy", "pandas", "pysd", "scipy"}
 
     [mcp_requirement] = [
         requirement for requirement in requirements if requirement.name.lower() == "mcp"
     ]
-    assert mcp_requirement.specifier == Requirement("mcp>=1.19.0,<2").specifier
+    assert mcp_requirement.specifier == Requirement("mcp>=2.0.0,<3").specifier
 
 
 def test_server_import_does_not_load_simulation_dependencies():
@@ -93,3 +133,28 @@ import stella_mcp.server
     )
 
     assert completed.returncode == 0, completed.stderr
+
+
+def test_local_workflow_state_is_ignored_and_untracked():
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+    local_paths = {
+        ".agents/",
+        ".beads/",
+        ".claude/",
+        ".codex/",
+        ".elves/",
+        ".elves-session.json",
+        "HANDOFF.md",
+        "docs/superpowers/",
+    }
+
+    assert local_paths <= set(gitignore)
+
+    completed = subprocess.run(
+        ["git", "ls-files", "--", *sorted(local_paths)],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.stdout == ""

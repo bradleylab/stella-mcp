@@ -74,8 +74,8 @@ def test_mcp_strict_export_returns_structured_reserved_identifier_error(tmp_path
         )
     )
 
-    assert result.isError is True
-    assert result.structuredContent["error"] == {
+    assert result.is_error is True
+    assert result.structured_content["error"] == {
         "code": "reserved_identifier",
         "message": "Stella-reserved variable identifiers: gamma",
         "category": "compatibility",

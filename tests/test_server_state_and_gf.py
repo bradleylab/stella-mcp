@@ -170,8 +170,8 @@ def test_unknown_tool_returns_structured_error():
     """Unknown tool should return isError with stable error code."""
     result = asyncio.run(server_mod.call_tool("does_not_exist", {}))
     assert isinstance(result, CallToolResult)
-    assert result.isError is True
-    assert result.structuredContent["error"]["code"] == "unknown_tool"
+    assert result.is_error is True
+    assert result.structured_content["error"]["code"] == "unknown_tool"
 
 
 def test_model_not_found_returns_structured_error(monkeypatch):
@@ -181,9 +181,9 @@ def test_model_not_found_returns_structured_error(monkeypatch):
 
     result = asyncio.run(server_mod.call_tool("list_variables", {"model_id": "missing"}))
     assert isinstance(result, CallToolResult)
-    assert result.isError is True
-    assert result.structuredContent["error"]["code"] == "model_not_found"
-    assert result.structuredContent["error"]["category"] == "user_input"
+    assert result.is_error is True
+    assert result.structured_content["error"]["code"] == "model_not_found"
+    assert result.structured_content["error"]["category"] == "user_input"
 
 
 def test_internal_error_returns_structured_error(monkeypatch):
@@ -199,9 +199,11 @@ def test_internal_error_returns_structured_error(monkeypatch):
     model.to_xml = boom  # type: ignore[method-assign]
     result = asyncio.run(server_mod.call_tool("get_model_xml", {"model_id": "m1"}))
     assert isinstance(result, CallToolResult)
-    assert result.isError is True
-    assert result.structuredContent["error"]["code"] == "internal_error"
-    assert result.structuredContent["error"]["category"] == "internal"
+    assert result.is_error is True
+    assert result.structured_content["error"]["code"] == "internal_error"
+    assert result.structured_content["error"]["category"] == "internal"
+    assert result.structured_content["error"]["message"] == "Internal server error"
+    assert "boom" not in result.content[0].text
 
 
 def test_call_tool_session_isolation_end_to_end(monkeypatch):
@@ -314,8 +316,8 @@ def test_set_connector_routing_requires_lookup_fields(monkeypatch):
         )
     )
     assert isinstance(result, CallToolResult)
-    assert result.isError is True
-    assert result.structuredContent["error"]["code"] == "invalid_input"
+    assert result.is_error is True
+    assert result.structured_content["error"]["code"] == "invalid_input"
 
 
 def test_list_connectors_empty(monkeypatch):
@@ -454,8 +456,8 @@ def test_read_model_strict_returns_invalid_input(monkeypatch, tmp_path):
         )
     )
     assert isinstance(result, CallToolResult)
-    assert result.isError is True
-    assert result.structuredContent["error"]["code"] == "invalid_input"
+    assert result.is_error is True
+    assert result.structured_content["error"]["code"] == "invalid_input"
 
 
 def test_get_model_xml_strict_mode_returns_invalid_input(monkeypatch):
@@ -471,8 +473,8 @@ def test_get_model_xml_strict_mode_returns_invalid_input(monkeypatch):
         server_mod.call_tool("get_model_xml", {"model_id": "m1", "compat_mode": "strict"})
     )
     assert isinstance(result, CallToolResult)
-    assert result.isError is True
-    assert result.structuredContent["error"]["code"] == "invalid_input"
+    assert result.is_error is True
+    assert result.structured_content["error"]["code"] == "invalid_input"
 
 
 def test_list_models_returns_structured_content(monkeypatch):
@@ -483,7 +485,7 @@ def test_list_models_returns_structured_content(monkeypatch):
     result = asyncio.run(server_mod.call_tool("list_models", {}))
 
     assert isinstance(result, CallToolResult)
-    assert result.structuredContent["models"] == [
+    assert result.structured_content["models"] == [
         {"model_id": "m1", "name": "M1", "current": True}
     ]
 
@@ -502,8 +504,8 @@ def test_validate_model_returns_structured_issues(monkeypatch):
     result = asyncio.run(server_mod.call_tool("validate_model", {"model_id": "m1"}))
 
     assert isinstance(result, CallToolResult)
-    assert result.structuredContent["model_id"] == "m1"
-    assert result.structuredContent["issues"][0]["category"] == "mass_balance"
+    assert result.structured_content["model_id"] == "m1"
+    assert result.structured_content["issues"][0]["category"] == "mass_balance"
 
 
 def test_inspect_model_returns_complete_structured_summary(monkeypatch):
@@ -529,9 +531,9 @@ def test_inspect_model_returns_complete_structured_summary(monkeypatch):
     )
 
     assert isinstance(result, CallToolResult)
-    assert result.structuredContent["model"]["model_id"] == "m1"
-    assert result.structuredContent["model"]["counts"]["stocks"] == 1
-    assert result.structuredContent["validation"]["passed"] is True
+    assert result.structured_content["model"]["model_id"] == "m1"
+    assert result.structured_content["model"]["counts"]["stocks"] == 1
+    assert result.structured_content["validation"]["passed"] is True
 
 
 def test_update_tools_return_structured_content(monkeypatch):
@@ -566,10 +568,10 @@ def test_update_tools_return_structured_content(monkeypatch):
         )
     )
 
-    assert specs.structuredContent["sim_specs"]["stop"] == 20
-    assert stock.structuredContent["stock"]["initial_value"] == "200"
-    assert aux.structuredContent["auxiliary"]["equation"] == "0.2"
-    assert flow.structuredContent["flow"]["equation"] == "S * k * 2"
+    assert specs.structured_content["sim_specs"]["stop"] == 20
+    assert stock.structured_content["stock"]["initial_value"] == "200"
+    assert aux.structured_content["auxiliary"]["equation"] == "0.2"
+    assert flow.structured_content["flow"]["equation"] == "S * k * 2"
 
 
 def test_sync_connectors_from_equations_tool(monkeypatch):
@@ -592,9 +594,9 @@ def test_sync_connectors_from_equations_tool(monkeypatch):
         server_mod.call_tool("sync_connectors_from_equations", {"model_id": "m1"})
     )
 
-    assert result.structuredContent["added"] == 2
+    assert result.structured_content["added"] == 2
     listed = asyncio.run(server_mod.call_tool("list_connectors", {"model_id": "m1"}))
-    assert len(listed.structuredContent["connectors"]) == 2
+    assert len(listed.structured_content["connectors"]) == 2
 
 
 def test_delete_model_removes_from_session(monkeypatch):
@@ -606,10 +608,10 @@ def test_delete_model_removes_from_session(monkeypatch):
 
     result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "a"}))
 
-    assert result.structuredContent["deleted"] == "a"
-    assert result.structuredContent["remaining"] == ["b"]
+    assert result.structured_content["deleted"] == "a"
+    assert result.structured_content["remaining"] == ["b"]
     listed = asyncio.run(server_mod.call_tool("list_models", {}))
-    assert [m["model_id"] for m in listed.structuredContent["models"]] == ["b"]
+    assert [m["model_id"] for m in listed.structured_content["models"]] == ["b"]
 
 
 def test_delete_model_clears_current_pointer(monkeypatch):
@@ -620,10 +622,10 @@ def test_delete_model_clears_current_pointer(monkeypatch):
 
     result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "a"}))
 
-    assert result.structuredContent["current_model_id"] is None
+    assert result.structured_content["current_model_id"] is None
     followup = asyncio.run(server_mod.call_tool("list_variables", {}))
-    assert followup.isError
-    assert followup.structuredContent["error"]["code"] == "model_not_found"
+    assert followup.is_error
+    assert followup.structured_content["error"]["code"] == "model_not_found"
 
 
 def test_delete_model_unknown_id_is_structured_error(monkeypatch):
@@ -633,8 +635,8 @@ def test_delete_model_unknown_id_is_structured_error(monkeypatch):
 
     result = asyncio.run(server_mod.call_tool("delete_model", {"model_id": "nope"}))
 
-    assert result.isError
-    assert result.structuredContent["error"]["code"] == "model_not_found"
+    assert result.is_error
+    assert result.structured_content["error"]["code"] == "model_not_found"
 
 
 def test_graphical_function_exports_comma_separated_points(monkeypatch):
@@ -704,8 +706,8 @@ def test_simulate_without_pysd_is_structured_error(monkeypatch):
 
     result = asyncio.run(server_mod.call_tool("simulate", {"model_id": "m"}))
 
-    assert result.isError
-    err = result.structuredContent["error"]
+    assert result.is_error
+    err = result.structured_content["error"]
     assert err["code"] == "sim_dependency_missing"
     assert "stella-mcp[sim]" in err["message"]
 
@@ -772,8 +774,8 @@ def test_render_diagram_tool_returns_svg(monkeypatch, tmp_path):
         "render_diagram", {"model_id": "d", "filepath": str(svg_path)}
     ))
 
-    assert not result.isError
-    sc = result.structuredContent
+    assert not result.is_error
+    sc = result.structured_content
     assert sc["svg"].startswith("<svg")
     assert sc["filepath"] == str(svg_path)
     assert sc["layout"]["warnings"] == []
@@ -793,9 +795,9 @@ def test_render_diagram_inline_only_without_filepath(monkeypatch):
 
     result = asyncio.run(server_mod.call_tool("render_diagram", {"model_id": "d"}))
 
-    assert not result.isError
-    assert result.structuredContent["filepath"] is None
-    assert "<rect" in result.structuredContent["svg"]
+    assert not result.is_error
+    assert result.structured_content["filepath"] is None
+    assert "<rect" in result.structured_content["svg"]
 
 
 @pytest.mark.parametrize("tool_name", ["save_model", "get_model_xml", "render_diagram"])
@@ -813,8 +815,8 @@ def test_export_tools_return_structured_layout_warnings(
 
     result = asyncio.run(server_mod.call_tool(tool_name, arguments))
 
-    assert not result.isError
-    report = result.structuredContent["layout"]
+    assert not result.is_error
+    report = result.structured_content["layout"]
     assert len(report["metrics"]["connector_connector_crossings"]) == 1
     assert [warning["code"] for warning in report["warnings"]] == [
         "layout.unavoidable_crossing"

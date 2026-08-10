@@ -1,15 +1,36 @@
 """MCP server for Stella system dynamics models."""
 
+from __future__ import annotations
+
+import asyncio
+import contextvars
 import math
 from collections.abc import Callable
 from typing import Any
 
-from mcp.server import Server
-from mcp.server.lowlevel.helper_types import ReadResourceContents
+from jsonschema import Draft202012Validator
+from mcp.server import Server, ServerRequestContext
 from mcp.server.stdio import stdio_server
-from mcp.types import CallToolResult, GetPromptResult, Prompt, Resource, TextContent, Tool
-from pydantic import AnyUrl
+from mcp.types import (
+    LATEST_PROTOCOL_VERSION,
+    CallToolRequestParams,
+    CallToolResult,
+    GetPromptRequestParams,
+    GetPromptResult,
+    ListPromptsResult,
+    ListResourcesResult,
+    ListToolsResult,
+    PaginatedRequestParams,
+    Prompt,
+    ReadResourceRequestParams,
+    ReadResourceResult,
+    Resource,
+    TextContent,
+    TextResourceContents,
+    Tool,
+)
 
+from . import __version__
 from .mcp_resources import (
     build_model_prompt,
     list_all_resources,
@@ -17,69 +38,83 @@ from .mcp_resources import (
     read_resource_content,
 )
 from .session_store import (
+    LEGACY_WORKSPACE_ID,
     SessionDeleteResult,
     SessionModelEntry,
-    SessionStore,
-    session_key_for,
+    WorkspaceError,
+    WorkspaceExpiredError,
+    WorkspaceNotFoundError,
+    WorkspaceRevokedError,
+    WorkspaceStore,
 )
 from .tool_handlers import register_tool_handlers
+from .tool_results import success_result
 from .tool_schemas import build_tool_definitions
 from .xmile import GraphicalFunction, StellaModel
 
-_session_store = SessionStore()
+_workspace_store = WorkspaceStore()
+_current_workspace_id: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "stella_workspace_id", default=LEGACY_WORKSPACE_ID
+)
 _GF_TYPES = {"continuous", "discrete"}
+_WORKSPACE_FREE_TOOLS = {
+    "create_workspace",
+    "revoke_workspace",
+    "list_templates",
+    "get_template_info",
+}
 
 
-# Create MCP server
-server = Server("stella-mcp")
+def _get_workspace_id() -> str:
+    """Return the application workspace bound to the current tool call."""
+    return _current_workspace_id.get()
 
 
-def _get_session_key() -> int:
-    """Get a stable key for the current MCP session context."""
-    try:
-        session = server.request_context.session
-    except LookupError:
-        session = None
-    return session_key_for(session)
+def _get_session_key() -> str:
+    """Deprecated direct-test alias for the current application workspace."""
+    return _get_workspace_id()
+
+
+def _active_workspace_id() -> str:
+    """Normalize the retained direct-test seam without affecting wire routing."""
+    value = _get_session_key()
+    if isinstance(value, str):
+        return value
+    workspace_id = f"test_workspace_{value}"
+    _workspace_store.ensure_test_workspace(workspace_id)
+    return workspace_id
 
 
 def _list_session_models() -> tuple[SessionModelEntry, ...]:
-    """List models for the current session."""
-    return _session_store.list(_get_session_key())
+    return _workspace_store.list(_active_workspace_id())
 
 
 def _delete_session_model(model_id: str) -> SessionDeleteResult:
-    """Delete a model from the current session."""
-    return _session_store.delete(_get_session_key(), model_id)
+    return _workspace_store.delete(_active_workspace_id(), model_id)
 
 
 def _contains_session_model(model_id: str) -> bool:
-    """Return whether the current session contains a model ID."""
-    return _session_store.contains(_get_session_key(), model_id)
+    return _workspace_store.contains(_active_workspace_id(), model_id)
 
 
 def _replace_session_model(model_id: str, model: StellaModel) -> None:
-    """Replace an existing model in the current session."""
-    _session_store.replace(_get_session_key(), model_id, model)
+    _workspace_store.replace(_active_workspace_id(), model_id, model)
 
 
-def _clear_session_store(session_key: int | None = None) -> None:
-    """Explicit test/lifecycle hook for clearing session state."""
-    _session_store.clear(session_key)
+def _clear_session_store(workspace_id: str | None = None) -> None:
+    """Explicit test/lifecycle hook for clearing workspace state."""
+    _workspace_store.clear(workspace_id)
 
 
 def _set_current_model(model: StellaModel, model_id: str | None = None) -> str:
-    """Store model in session and set as current."""
-    return _session_store.set_current(_get_session_key(), model, model_id)
+    return _workspace_store.set_current(_active_workspace_id(), model, model_id)
 
 
 def get_model(model_id: str | None = None) -> tuple[str, StellaModel]:
-    """Get current (or requested) model for this session."""
-    return _session_store.get(_get_session_key(), model_id)
+    return _workspace_store.get(_active_workspace_id(), model_id)
 
 
 def _validate_scale(name: str, data: dict[str, Any]) -> tuple[float, float]:
-    """Validate and parse {min,max} scale object."""
     if "min" not in data or "max" not in data:
         raise ValueError(f"{name} requires both min and max")
     min_val = float(data["min"])
@@ -146,25 +181,19 @@ def _error_result(
     details: dict[str, Any] | None = None,
 ) -> CallToolResult:
     """Build a structured MCP tool error result."""
-    error: dict[str, Any] = {
-        "code": code,
-        "message": message,
-        "category": category,
-    }
+    error: dict[str, Any] = {"code": code, "message": message, "category": category}
     if details:
-        # Detail keys must never clobber the classified envelope fields.
         for key, value in details.items():
             if key not in error:
                 error[key] = value
     return CallToolResult(
-        isError=True,
+        is_error=True,
         content=[TextContent(type="text", text=f"[{code}] {message}")],
-        structuredContent={"error": error},
+        structured_content={"error": error},
     )
 
 
 def _classify_error(exc: Exception) -> tuple[str, str]:
-    """Map Python exceptions to stable tool error codes/categories."""
     from .equation_parser import StellaReservedIdentifierError
     from .simulate import SimulationDependencyError
     from .xmile_features import UnsupportedModelFeatureError
@@ -173,68 +202,41 @@ def _classify_error(exc: Exception) -> tuple[str, str]:
         return ("unsupported_model_feature", "compatibility")
     if isinstance(exc, StellaReservedIdentifierError):
         return ("reserved_identifier", "compatibility")
+    if isinstance(exc, WorkspaceExpiredError):
+        return ("workspace_expired", "workspace")
+    if isinstance(exc, WorkspaceRevokedError):
+        return ("workspace_revoked", "workspace")
+    if isinstance(exc, WorkspaceNotFoundError):
+        return ("workspace_not_found", "workspace")
+    if isinstance(exc, WorkspaceError):
+        return ("invalid_workspace", "workspace")
     message = str(exc)
     if isinstance(exc, SimulationDependencyError):
         return ("sim_dependency_missing", "environment")
     if isinstance(exc, FileNotFoundError):
         return ("not_found", "user_input")
     if isinstance(exc, ValueError):
-        if "No model created in this session" in message or "Unknown model_id" in message:
+        if "No model created" in message or "Unknown model_id" in message:
             return ("model_not_found", "user_input")
         return ("invalid_input", "user_input")
     return ("internal_error", "internal")
 
 
 def _compat_warning_suffix(warnings: list[str]) -> str:
-    """Build compact warning suffix for tool text responses."""
     if not warnings:
         return ""
-    return (
-        f" (compatibility warnings: {len(warnings)}; "
-        f"first: {warnings[0]})"
-    )
-
-
-@server.list_tools()
-async def list_tools() -> list[Tool]:
-    """List available tools."""
-    return build_tool_definitions()
-
-
-@server.list_resources()
-async def list_resources() -> list[Resource]:
-    """Expose templates and session models as MCP resources."""
-    return list_all_resources(_list_session_models())
-
-
-@server.read_resource()
-async def read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
-    """Return the content of a stella:// resource."""
-    content, mime_type = read_resource_content(str(uri), _list_session_models())
-    return [ReadResourceContents(content=content, mime_type=mime_type)]
-
-
-@server.list_prompts()
-async def list_prompts() -> list[Prompt]:
-    """Expose the model-building workflow as an MCP prompt."""
-    return list_prompt_definitions()
-
-
-@server.get_prompt()
-async def get_prompt(name: str, arguments: dict[str, str] | None) -> GetPromptResult:
-    """Render the build-stella-model prompt."""
-    if name != "build-stella-model":
-        raise ValueError(f"Unknown prompt '{name}'")
-    return build_model_prompt((arguments or {}).get("description"))
+    return f" (compatibility warnings: {len(warnings)}; first: {warnings[0]})"
 
 
 ToolResponse = list[TextContent] | CallToolResult
 ToolHandler = Callable[[dict[str, Any]], ToolResponse]
 _TOOL_HANDLERS: dict[str, ToolHandler] = {}
+_OUTPUT_SCHEMAS = {
+    tool.name: tool.output_schema for tool in build_tool_definitions()
+}
 
 
 def _register_tool_handler(name: str):
-    """Register a tool handler function by MCP tool name."""
     def decorator(func: ToolHandler) -> ToolHandler:
         _TOOL_HANDLERS[name] = func
         return func
@@ -254,37 +256,234 @@ register_tool_handlers(
     compat_warning_suffix=_compat_warning_suffix,
 )
 
-@server.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any]) -> ToolResponse:
-    """Handle tool calls via handler registry."""
-    try:
-        handler = _TOOL_HANDLERS.get(name)
-        if handler is None:
-            return _error_result(
-                code="unknown_tool",
-                message=f"Unknown tool: {name}",
-                category="user_input",
+# Lifecycle dispatch is handled asynchronously in ``call_tool`` so revocation
+# can coordinate with the workspace lock.  Sentinels keep the public registry
+# complete for schema/handler parity checks.
+_TOOL_HANDLERS["create_workspace"] = lambda arguments: []
+_TOOL_HANDLERS["revoke_workspace"] = lambda arguments: []
+
+
+def _validate_success_result(name: str, result: CallToolResult) -> None:
+    """Validate every successful result, including workspace lifecycle tools."""
+    schema = _OUTPUT_SCHEMAS.get(name)
+    if schema is None:
+        raise RuntimeError(f"Tool '{name}' has no output schema")
+    Draft202012Validator(schema).validate(result.structured_content)
+
+
+def _resolve_workspace(
+    name: str,
+    arguments: dict[str, Any],
+    *,
+    protocol_version: str,
+) -> str:
+    """Resolve explicit modern routing or the documented legacy fallback."""
+    supplied = arguments.get("workspace_id")
+    modern = protocol_version == LATEST_PROTOCOL_VERSION
+    if name in _WORKSPACE_FREE_TOOLS:
+        return LEGACY_WORKSPACE_ID
+    if supplied is None:
+        if modern:
+            raise WorkspaceNotFoundError(
+                "workspace_id is required for stateful MCP 2026-07-28 tool calls"
             )
-        return handler(arguments)
-    except Exception as e:
-        code, category = _classify_error(e)
+        return LEGACY_WORKSPACE_ID
+    if not isinstance(supplied, str):
+        raise WorkspaceNotFoundError("workspace_id must be a string")
+    _workspace_store.require(supplied)
+    return supplied
+
+
+async def call_tool(
+    name: str,
+    arguments: dict[str, Any] | None,
+    *,
+    protocol_version: str = "legacy",
+) -> CallToolResult:
+    """Call one registered tool; retained as a direct-test compatibility seam."""
+    args = dict(arguments or {})
+    try:
+        if name == "create_workspace":
+            workspace_id = _workspace_store.create(ttl_seconds=args.get("ttl_seconds"))
+            result = success_result(
+                f"Created workspace {workspace_id}",
+                {"workspace_id": workspace_id},
+            )
+        elif name == "revoke_workspace":
+            workspace_id = args.get("workspace_id")
+            if not isinstance(workspace_id, str):
+                raise WorkspaceNotFoundError("workspace_id is required")
+            lock = _workspace_store.lock_for(workspace_id)
+            async with lock:
+                _workspace_store.revoke(workspace_id)
+            result = success_result(
+                f"Revoked workspace {workspace_id}",
+                {"workspace_id": workspace_id, "revoked": True},
+            )
+        else:
+            handler = _TOOL_HANDLERS.get(name)
+            if handler is None:
+                return _error_result(
+                    "unknown_tool", f"Unknown tool: {name}", "user_input"
+                )
+            workspace_id = _resolve_workspace(
+                name, args, protocol_version=protocol_version
+            )
+            args.pop("workspace_id", None)
+            if name in _WORKSPACE_FREE_TOOLS:
+                response = handler(args)
+            else:
+                lock = _workspace_store.lock_for(workspace_id)
+                async with lock:
+                    # The workspace may have expired or been revoked while this
+                    # call waited behind another operation on the same lock.
+                    _workspace_store.require(workspace_id)
+                    token = _current_workspace_id.set(workspace_id)
+                    try:
+                        response = handler(args)
+                    finally:
+                        _current_workspace_id.reset(token)
+            result = (
+                response
+                if isinstance(response, CallToolResult)
+                else CallToolResult(content=response)
+            )
+        if not result.is_error:
+            _validate_success_result(name, result)
+        return result
+    except Exception as exc:
+        code, category = _classify_error(exc)
+        internal = category == "internal"
         return _error_result(
             code=code,
-            message=str(e),
+            message="Internal server error" if internal else str(exc),
             category=category,
-            details=getattr(e, "details", None),
+            details=None if internal else getattr(exc, "details", None),
         )
 
 
-async def run_server():
-    """Run the MCP server."""
+async def _on_list_tools(
+    ctx: ServerRequestContext[Any], params: PaginatedRequestParams | None
+) -> ListToolsResult:
+    del params
+    return ListToolsResult(
+        tools=build_tool_definitions(
+            require_workspace_id=ctx.protocol_version == LATEST_PROTOCOL_VERSION
+        )
+    )
+
+
+async def _on_call_tool(
+    ctx: ServerRequestContext[Any], params: CallToolRequestParams
+) -> CallToolResult:
+    return await call_tool(
+        params.name,
+        params.arguments,
+        protocol_version=ctx.protocol_version,
+    )
+
+
+async def _on_list_resources(
+    ctx: ServerRequestContext[Any], params: PaginatedRequestParams | None
+) -> ListResourcesResult:
+    del params
+    models = (
+        _workspace_store.list(LEGACY_WORKSPACE_ID)
+        if ctx.protocol_version != LATEST_PROTOCOL_VERSION
+        else ()
+    )
+    return ListResourcesResult(resources=list_all_resources(models))
+
+
+async def _on_read_resource(
+    ctx: ServerRequestContext[Any], params: ReadResourceRequestParams
+) -> ReadResourceResult:
+    content, mime_type = read_resource_content(
+        str(params.uri),
+        workspace_store=_workspace_store,
+        legacy_models=(
+            _workspace_store.list(LEGACY_WORKSPACE_ID)
+            if ctx.protocol_version != LATEST_PROTOCOL_VERSION
+            else ()
+        ),
+    )
+    return ReadResourceResult(
+        contents=[TextResourceContents(uri=str(params.uri), mime_type=mime_type, text=content)]
+    )
+
+
+async def _on_list_prompts(
+    ctx: ServerRequestContext[Any], params: PaginatedRequestParams | None
+) -> ListPromptsResult:
+    del ctx, params
+    return ListPromptsResult(prompts=list_prompt_definitions())
+
+
+async def _on_get_prompt(
+    ctx: ServerRequestContext[Any], params: GetPromptRequestParams
+) -> GetPromptResult:
+    del ctx
+    if params.name != "build-stella-model":
+        raise ValueError(f"Unknown prompt '{params.name}'")
+    return build_model_prompt((params.arguments or {}).get("description"))
+
+
+server = Server(
+    "stella-mcp",
+    version=__version__,
+    on_list_tools=_on_list_tools,
+    on_call_tool=_on_call_tool,
+    on_list_resources=_on_list_resources,
+    on_read_resource=_on_read_resource,
+    on_list_prompts=_on_list_prompts,
+    on_get_prompt=_on_get_prompt,
+)
+
+
+# Direct helpers remain useful to domain tests; they model legacy compatibility
+# behavior while the low-level handlers above exercise the real wire boundary.
+async def list_tools() -> list[Tool]:
+    return build_tool_definitions()
+
+
+async def list_resources() -> list[Resource]:
+    workspace_id = _active_workspace_id()
+    return list_all_resources(
+        _workspace_store.list(workspace_id), workspace_id=workspace_id
+    )
+
+
+async def read_resource(uri: Any) -> list[TextResourceContents]:
+    workspace_id = _active_workspace_id()
+    content, mime_type = read_resource_content(
+        str(uri),
+        workspace_store=_workspace_store,
+        legacy_models=(
+            _workspace_store.list(workspace_id)
+            if workspace_id == LEGACY_WORKSPACE_ID
+            else ()
+        ),
+    )
+    return [TextResourceContents(uri=str(uri), mime_type=mime_type, text=content)]
+
+
+async def list_prompts() -> list[Prompt]:
+    return list_prompt_definitions()
+
+
+async def get_prompt(name: str, arguments: dict[str, str] | None) -> GetPromptResult:
+    if name != "build-stella-model":
+        raise ValueError(f"Unknown prompt '{name}'")
+    return build_model_prompt((arguments or {}).get("description"))
+
+
+async def run_server() -> None:
+    """Run the dual-era stdio server."""
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
-def main():
-    """Entry point for the MCP server."""
-    import asyncio
+def main() -> None:
     asyncio.run(run_server())
 
 

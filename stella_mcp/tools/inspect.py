@@ -37,7 +37,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="list_models",
             description="List all model IDs available in the current session",
-            inputSchema={"type": "object", "properties": {}},
+            input_schema={"type": "object", "properties": {}},
         ),
         Tool(
             name="delete_model",
@@ -46,7 +46,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "not touched. model_id is required — there is deliberately no "
                 "implicit 'delete current model'."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": {
@@ -62,7 +62,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
             description=(
                 "Return a structured summary of the current model for agent inspection"
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -77,7 +77,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="list_modules",
             description="List modules/groups in the current model",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {"model_id": model_id_property},
             },
@@ -87,7 +87,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
             description=(
                 "List connector metadata (uid, endpoints, angle, routing lock/points)"
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {"model_id": model_id_property},
             },
@@ -95,7 +95,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="validate_model",
             description="Validate the current model for errors and warnings",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {"model_id": model_id_property},
             },
@@ -103,7 +103,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="list_variables",
             description="List all variables (stocks, flows, auxiliaries) in the current model",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {"model_id": model_id_property},
             },
@@ -111,7 +111,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="get_model_xml",
             description="Get the XMILE XML representation of the current model (for preview)",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,

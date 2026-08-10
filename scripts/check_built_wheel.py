@@ -55,9 +55,11 @@ def validate_wheel(wheel: Path, root: Path = ROOT) -> tuple[str, int]:
         for requirement in requirements
         if requirement.marker is not None and requirement.marker.evaluate({"extra": "sim"})
     }
-    if unconditional != {"mcp"}:
+    expected_core = {"jsonschema", "mcp"}
+    if unconditional != expected_core:
         raise WheelValidationError(
-            f"core wheel dependencies must be only mcp; found {sorted(unconditional)}"
+            f"core wheel dependencies must be {sorted(expected_core)}; "
+            f"found {sorted(unconditional)}"
         )
     expected_sim = {"numpy", "pandas", "pysd", "scipy"}
     if sim != expected_sim:

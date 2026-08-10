@@ -16,7 +16,7 @@ from stella_mcp.tool_schemas import (
     build_tool_definitions,
 )
 
-_TOOL_NAMES_0_10 = (
+_TOOL_NAMES_0_14 = (
     "create_model",
     "build_model",
     "add_variables",
@@ -59,24 +59,27 @@ _TOOL_NAMES_0_10 = (
     "validate_model",
     "list_variables",
     "get_model_xml",
+    "create_workspace",
+    "revoke_workspace",
 )
 _ANNOTATION_FIELDS = (
     "title",
-    "readOnlyHint",
-    "destructiveHint",
-    "idempotentHint",
-    "openWorldHint",
+    "read_only_hint",
+    "destructive_hint",
+    "idempotent_hint",
+    "open_world_hint",
 )
-_TOOL_CATALOG_SHA256_0_10 = "10b28141403d3fee5f36816efccc5ee9115f08384d3eaab8c6d7ff25b7360b83"
+_TOOL_CATALOG_SHA256_0_14 = "15554c62683ae70e7e5d7704a84438564b009879d007280c97f266a980f627cc"
 
 
-def test_tool_catalog_matches_0_10_snapshot():
+def test_tool_catalog_matches_0_14_snapshot():
     tools = build_tool_definitions()
     payload = [
         {
             "name": tool.name,
             "description": tool.description,
-            "inputSchema": tool.inputSchema,
+            "inputSchema": tool.input_schema,
+            "outputSchema": tool.output_schema,
             "annotations": None
             if tool.annotations is None
             else {
@@ -88,8 +91,25 @@ def test_tool_catalog_matches_0_10_snapshot():
     ]
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
-    assert tuple(tool.name for tool in tools) == _TOOL_NAMES_0_10
-    assert hashlib.sha256(canonical.encode()).hexdigest() == _TOOL_CATALOG_SHA256_0_10
+    assert tuple(tool.name for tool in tools) == _TOOL_NAMES_0_14
+    assert hashlib.sha256(canonical.encode()).hexdigest() == _TOOL_CATALOG_SHA256_0_14
+
+
+def test_modern_catalog_requires_workspace_only_for_stateful_tools():
+    legacy = {tool.name: tool for tool in build_tool_definitions()}
+    modern = {
+        tool.name: tool
+        for tool in build_tool_definitions(require_workspace_id=True)
+    }
+
+    assert "workspace_id" not in legacy["build_model"].input_schema["required"]
+    assert "workspace_id" in modern["build_model"].input_schema["required"]
+    assert "workspace_id" not in modern["list_templates"].input_schema.get(
+        "required", []
+    )
+    assert "workspace_id" not in modern["get_template_info"].input_schema.get(
+        "required", []
+    )
 
 
 def test_annotation_sets_partition_all_tools():
@@ -120,7 +140,7 @@ def test_tool_schemas_match_registered_handlers():
 
 def test_calibrate_schema_matches_optimizer_defaults():
     calibrate_tool = next(tool for tool in build_tool_definitions() if tool.name == "calibrate")
-    properties = calibrate_tool.inputSchema["properties"]
+    properties = calibrate_tool.input_schema["properties"]
 
     assert properties["max_nfev"]["default"] == 1000
     assert properties["maxiter"]["type"] == ["integer", "null"]
@@ -132,16 +152,16 @@ def test_calibrate_schema_matches_optimizer_defaults():
 def test_read_only_tools_are_annotated_read_only():
     tools = {t.name: t for t in build_tool_definitions()}
     for name in _READ_ONLY_TOOLS:
-        assert tools[name].annotations.readOnlyHint is True
+        assert tools[name].annotations.read_only_hint is True
 
 
 def test_destructive_and_idempotent_hints():
     tools = {t.name: t for t in build_tool_definitions()}
     for name in _DESTRUCTIVE_TOOLS:
-        assert tools[name].annotations.destructiveHint is True
-        assert tools[name].annotations.readOnlyHint is False
+        assert tools[name].annotations.destructive_hint is True
+        assert tools[name].annotations.read_only_hint is False
     for name in _IDEMPOTENT_TOOLS:
-        assert tools[name].annotations.idempotentHint is True
+        assert tools[name].annotations.idempotent_hint is True
 
 
 def test_get_model_xml_is_read_only_in_practice(monkeypatch):
@@ -175,7 +195,7 @@ def test_list_resources_includes_templates_and_models(monkeypatch):
 
     assert any(u.startswith("stella://templates/") for u in uris)
     assert "stella://templates/sir" in uris
-    assert "stella://models/mine" in uris
+    assert any(uri.endswith("/models/mine") for uri in uris)
     # All five builtin templates present.
     template_uris = {u for u in uris if u.startswith("stella://templates/")}
     assert len(template_uris) >= 5
@@ -187,7 +207,7 @@ def test_read_template_resource_parses_as_xml(monkeypatch):
 
     contents = asyncio.run(server_mod.read_resource(AnyUrl("stella://templates/sir")))
     assert len(contents) == 1
-    ET.fromstring(contents[0].content)  # well-formed XMILE
+    ET.fromstring(contents[0].text)  # well-formed XMILE
     assert contents[0].mime_type == "application/xml"
 
 
@@ -201,9 +221,11 @@ def test_read_model_resource_does_not_mutate_session(monkeypatch):
     ))
     _, model = server_mod.get_model("m")
 
-    contents = asyncio.run(server_mod.read_resource(AnyUrl("stella://models/m")))
+    resources = asyncio.run(server_mod.list_resources())
+    model_uri = next(str(resource.uri) for resource in resources if resource.name == "m")
+    contents = asyncio.run(server_mod.read_resource(AnyUrl(model_uri)))
 
-    ET.fromstring(contents[0].content)
+    ET.fromstring(contents[0].text)
     assert model.stocks["S"].x is None  # export ran on a copy
 
 
@@ -223,7 +245,7 @@ def test_model_resource_uri_round_trips_with_special_chars(monkeypatch):
 
     # Read back using the exact URI that list_resources advertised.
     contents = asyncio.run(server_mod.read_resource(AnyUrl(model_uri)))
-    ET.fromstring(contents[0].content)
+    ET.fromstring(contents[0].text)
 
 
 def test_read_unknown_resource_raises(monkeypatch):

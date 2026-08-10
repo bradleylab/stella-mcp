@@ -164,8 +164,8 @@ def test_compare_scenarios_tool(monkeypatch):
         "scenarios": [{"name": "high", "overrides": {"rate": 0.3}}],
         "include": ["Population"],
     }))
-    assert not result.isError
-    sc = result.structuredContent
+    assert not result.is_error
+    sc = result.structured_content
     assert sc["model_id"] == "g"
     assert sc["backend"]["name"] == "PySD"
     assert sc["scenarios"][0]["name"] == "high"
@@ -319,8 +319,8 @@ def test_sensitivity_tool(monkeypatch):
         "parameters": [{"name": "rate", "start": 1, "stop": 5, "steps": 5}],
         "output": {"variable": "Accumulator", "metric": "final"},
     }))
-    assert not result.isError
-    sc = result.structuredContent
+    assert not result.is_error
+    sc = result.structured_content
     assert sc["backend"]["actual_integration_method"] == "Euler"
     assert sc["total_runs"] == 5
     assert sc["parameters"][0]["range_sensitivity"] > 0

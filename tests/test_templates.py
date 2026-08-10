@@ -200,6 +200,6 @@ def test_list_templates_tool_returns_structured_templates(monkeypatch, tmp_path)
     monkeypatch.setenv("STELLA_MCP_TEMPLATE_DIR", str(tmp_path))
     result = asyncio.run(server_mod.call_tool("list_templates", {"source": "builtin"}))
 
-    assert result.structuredContent["templates"]
-    first = result.structuredContent["templates"][0]
+    assert result.structured_content["templates"]
+    first = result.structured_content["templates"][0]
     assert {"name", "source", "title", "stocks", "flows", "auxiliaries"}.issubset(first)

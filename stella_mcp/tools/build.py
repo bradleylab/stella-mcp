@@ -11,10 +11,11 @@ import copy
 import math
 from typing import Any
 
-from mcp.types import TextContent, Tool
+from mcp.types import Tool
 
 from ..model_snapshot import (
     aux_to_dict,
+    connector_to_dict,
     flow_to_dict,
     model_to_summary,
     stock_to_dict,
@@ -43,7 +44,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="create_model",
             description="Create a new Stella model with specified time settings",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "name": {"type": "string", "description": "Model name"},
@@ -85,7 +86,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "failing item (stage + index). Connector sync and validation run "
                 "by default, so the response doubles as an inspection."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "name": {"type": "string", "description": "Model name"},
@@ -137,7 +138,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "any item error the model is left unchanged and the error names "
                 "the failing item (stage + index)."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -148,7 +149,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="set_sim_specs",
             description="Update simulation time settings on an existing model",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -166,7 +167,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="add_stock",
             description="Add a stock (reservoir) to the current model",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -200,7 +201,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="update_stock",
             description="Update stock fields while preserving relationships",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -220,7 +221,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="add_flow",
             description="Add a flow between stocks in the current model",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -260,7 +261,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="update_flow",
             description="Update flow fields while preserving structural stock links",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -284,7 +285,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
                 "Add an auxiliary variable (parameter or intermediate calculation) "
                 "to the current model"
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -314,7 +315,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="update_aux",
             description="Update auxiliary variable fields",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -334,7 +335,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="add_connector",
             description="Add a connector (dependency arrow) between variables",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -352,7 +353,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
             description=(
                 "Add missing dependency connectors inferred from flow and auxiliary equations"
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {"model_id": model_id_property},
             },
@@ -360,7 +361,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="set_connector_routing",
             description="Set connector angle and/or explicit routing waypoints",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -412,7 +413,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="rename_variable",
             description="Rename a stock/flow/aux and update dependent references",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -425,7 +426,7 @@ def build_tools(shared: SharedSchemas | None = None) -> list[Tool]:
         Tool(
             name="delete_variable",
             description="Delete a stock/flow/aux and clean connectors/module membership",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "model_id": model_id_property,
@@ -470,13 +471,13 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
         model.sim_specs.method = arguments.get("method", "Euler")
         model.sim_specs.time_units = arguments.get("time_units", "Years")
         model_id = set_current_model(model, model_id=arguments.get("model_id"))
-        return [TextContent(
-            type="text",
-            text=(
+        return success_result(
+            (
                 f"Created model '{arguments['name']}' "
                 f"(model_id={model_id}) with time range {start}-{stop}, dt={dt}"
             ),
-        )]
+            {"model_id": model_id, "model": model_to_summary(model_id, model)},
+        )
 
     def _finalize_batch(model: StellaModel, arguments: dict[str, Any]) -> dict[str, Any]:
         """Finish work on an unregistered model so batch failure stays atomic."""
@@ -584,13 +585,14 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
         pos_info = ""
         if arguments.get("x") is not None and arguments.get("y") is not None:
             pos_info = f" at position ({arguments['x']}, {arguments['y']})"
-        return [TextContent(
-            type="text",
-            text=(
+        key = model._normalize_name(arguments["name"])
+        return success_result(
+            (
                 f"Added stock '{arguments['name']}' to model_id={model_id} "
                 f"with initial value {arguments['initial_value']}{pos_info}"
             ),
-        )]
+            {"model_id": model_id, "stock": stock_to_dict(key, model.stocks[key])},
+        )
 
     @register("update_stock")
     def _handle_update_stock(arguments: dict[str, Any]) -> ToolResponse:
@@ -632,10 +634,11 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
         pos_info = ""
         if arguments.get("x") is not None and arguments.get("y") is not None:
             pos_info = f" at position ({arguments['x']}, {arguments['y']})"
-        return [TextContent(
-            type="text",
-            text=f"Added flow '{arguments['name']}' to model_id={model_id} {flow_str}: {arguments['equation']}{pos_info}"
-        )]
+        key = model._normalize_name(arguments["name"])
+        return success_result(
+            f"Added flow '{arguments['name']}' to model_id={model_id} {flow_str}: {arguments['equation']}{pos_info}",
+            {"model_id": model_id, "flow": flow_to_dict(model, key, model.flows[key])},
+        )
 
     @register("update_flow")
     def _handle_update_flow(arguments: dict[str, Any]) -> ToolResponse:
@@ -669,10 +672,11 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
         pos_info = ""
         if arguments.get("x") is not None and arguments.get("y") is not None:
             pos_info = f" at position ({arguments['x']}, {arguments['y']})"
-        return [TextContent(
-            type="text",
-            text=f"Added auxiliary '{arguments['name']}' to model_id={model_id} = {arguments['equation']}{pos_info}"
-        )]
+        key = model._normalize_name(arguments["name"])
+        return success_result(
+            f"Added auxiliary '{arguments['name']}' to model_id={model_id} = {arguments['equation']}{pos_info}",
+            {"model_id": model_id, "auxiliary": aux_to_dict(key, model.auxs[key])},
+        )
 
     @register("update_aux")
     def _handle_update_aux(arguments: dict[str, Any]) -> ToolResponse:
@@ -694,14 +698,14 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
     @register("add_connector")
     def _handle_add_connector(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
-        model.add_connector(
+        connector = model.add_connector(
             from_var=arguments["from_var"],
             to_var=arguments["to_var"],
         )
-        return [TextContent(
-            type="text",
-            text=f"Added connector in model_id={model_id} from '{arguments['from_var']}' to '{arguments['to_var']}'"
-        )]
+        return success_result(
+            f"Added connector in model_id={model_id} from '{arguments['from_var']}' to '{arguments['to_var']}'",
+            {"model_id": model_id, "connector": connector_to_dict(model, connector)},
+        )
 
     @register("sync_connectors_from_equations")
     def _handle_sync_connectors_from_equations(arguments: dict[str, Any]) -> ToolResponse:
@@ -750,30 +754,36 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             points=points,
             points_locked=arguments.get("points_locked"),
         )
-        return [TextContent(
-            type="text",
-            text=(
+        return success_result(
+            (
                 f"Updated connector uid={connector.uid} in model_id={model_id}: "
                 f"angle={connector.angle}, angle_locked={connector.angle_locked}, "
                 f"points={len(connector.points)}, "
                 f"points_locked={connector.points_locked}"
             ),
-        )]
+            {"model_id": model_id, "connector": connector_to_dict(model, connector)},
+        )
 
     @register("rename_variable")
     def _handle_rename_variable(arguments: dict[str, Any]) -> ToolResponse:
         model_id, model = get_model(arguments.get("model_id"))
-        kind, _ = model.rename_variable(
+        kind, renamed_key = model.rename_variable(
             old_name=arguments["old_name"],
             new_name=arguments["new_name"],
         )
-        return [TextContent(
-            type="text",
-            text=(
+        return success_result(
+            (
                 f"Renamed {kind} '{arguments['old_name']}' to '{arguments['new_name']}' "
                 f"in model_id={model_id} and updated references"
             ),
-        )]
+            {
+                "model_id": model_id,
+                "kind": kind,
+                "old_name": arguments["old_name"],
+                "new_name": arguments["new_name"],
+                "new_key": renamed_key,
+            },
+        )
 
     @register("delete_variable")
     def _handle_delete_variable(arguments: dict[str, Any]) -> ToolResponse:
@@ -782,12 +792,12 @@ def register_handlers(register: RegisterTool, context: HandlerContext) -> None:
             name=arguments["name"],
             force=arguments.get("force", False),
         )
-        return [TextContent(
-            type="text",
-            text=(
+        return success_result(
+            (
                 f"Deleted {summary['kind']} '{arguments['name']}' from model_id={model_id}; "
                 f"removed_connectors={summary['removed_connectors']}, "
                 f"removed_module_memberships={summary['removed_module_memberships']}, "
                 f"detached_flows={summary['detached_flows']}"
             ),
-        )]
+            {"model_id": model_id, "name": arguments["name"], **summary},
+        )

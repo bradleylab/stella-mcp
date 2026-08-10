@@ -516,8 +516,8 @@ def test_calibrate_tool(monkeypatch):
         "observations": {"time": times, "targets": {"Accumulator": [3.0 * t for t in times]}},
         "parameters": [{"name": "rate", "initial": 1.0}],
     }))
-    assert not result.isError
-    sc = result.structuredContent
+    assert not result.is_error
+    sc = result.structured_content
     assert sc["model_id"] == "cal"
     assert sc["backend"]["actual_integration_method"] == "Euler"
     assert sc["optimizer"]["converged"]
@@ -531,5 +531,5 @@ def test_calibrate_tool_malformed_args_is_clean_error(monkeypatch):
     _build_accumulator_tool("cal2")
     # No parameters -> a clean ValueError (invalid_input), not an internal_error.
     result = asyncio.run(server_mod.call_tool("calibrate", {"model_id": "cal2"}))
-    assert result.isError
+    assert result.is_error
     assert "parameter" in result.content[0].text.lower()

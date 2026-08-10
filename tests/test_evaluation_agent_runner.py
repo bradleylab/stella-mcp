@@ -455,8 +455,8 @@ def test_agent_scenario_loader_rejects_unsafe_artifact_path(tmp_path: Path) -> N
 
 def test_agent_semantic_operators_are_explicit_and_normalize_time_units() -> None:
     result = SimpleNamespace(
-        isError=False,
-        structuredContent={
+        is_error=False,
+        structured_content={
             "label": "value",
             "time_units": "Year",
             "number": 1.25,

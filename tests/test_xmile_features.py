@@ -175,8 +175,8 @@ def test_mcp_strict_import_returns_structured_compatibility_error():
         )
     )
 
-    assert result.isError is True
-    assert result.structuredContent["error"] == {
+    assert result.is_error is True
+    assert result.structured_content["error"] == {
         "code": "unsupported_model_feature",
         "message": "Unsupported XMILE model features: xmile.arrays",
         "category": "compatibility",

@@ -281,12 +281,12 @@ def _is_non_empty(value: Any) -> bool:
 def evaluate_semantic_expectations(result: Any, check: dict[str, Any]) -> list[str]:
     """Evaluate one protocol-v2 post-run semantic check."""
     failures: list[str] = []
-    actual_error = bool(result.isError)
+    actual_error = bool(result.is_error)
     expected_error = check["expect_error"]
     if actual_error != expected_error:
         failures.append(f"is_error expected {expected_error}, got {actual_error}")
 
-    structured = result.structuredContent or {}
+    structured = result.structured_content or {}
     for expectation in check["expectations"]:
         path = expectation["path"]
         operator = expectation["operator"]
@@ -364,9 +364,9 @@ def _catalog_tools(tools: Any) -> list[dict[str, Any]]:
 
 def _tool_result_payload(result: Any) -> dict[str, Any]:
     return {
-        "is_error": bool(result.isError),
+        "is_error": bool(result.is_error),
         "content": [item.model_dump(mode="json") for item in result.content],
-        "structured_content": result.structuredContent,
+        "structured_content": result.structured_content,
     }
 
 
@@ -423,7 +423,7 @@ async def _execute_tool_call(
         return event, payload, False
 
     result = await session.call_tool(call.name, arguments)
-    structured = result.structuredContent or {}
+    structured = result.structured_content or {}
     event = {
         "round": round_number,
         "index": call_number,
@@ -431,12 +431,12 @@ async def _execute_tool_call(
         "tool": call.name,
         "arguments": _replace_tokens(arguments, redactions),
         "called_mcp": True,
-        "is_error": bool(result.isError),
+        "is_error": bool(result.is_error),
         "error_code": (structured.get("error") or {}).get("code"),
         "structured_keys": sorted(structured),
         "text": sanitize_text(_content_text(result), redactions),
     }
-    return event, _tool_result_payload(result), not result.isError
+    return event, _tool_result_payload(result), not result.is_error
 
 
 async def _run_scenario(
@@ -507,13 +507,13 @@ async def _run_scenario(
         arguments = _replace_tokens(check.get("arguments", {}), replacements)
         result = await session.call_tool(check["tool"], arguments)
         failures = evaluate_semantic_expectations(result, check)
-        structured = result.structuredContent or {}
+        structured = result.structured_content or {}
         check_results.append(
             {
                 "index": index,
                 "tool": check["tool"],
                 "status": "passed" if not failures else "failed",
-                "is_error": bool(result.isError),
+                "is_error": bool(result.is_error),
                 "error_code": (structured.get("error") or {}).get("code"),
                 "structured_keys": sorted(structured),
                 "text": sanitize_text(_content_text(result), redactions),
@@ -707,7 +707,7 @@ async def run_agent_evaluation(
                             catalog_sha256 = hashlib.sha256(catalog_json).hexdigest()
                             catalog_hashes.add(catalog_sha256)
                             tool_count = len(catalog)
-                            server_name = initialized.serverInfo.name
+                            server_name = initialized.server_info.name
                             run_result = await _run_scenario(
                                 session,
                                 backend,
