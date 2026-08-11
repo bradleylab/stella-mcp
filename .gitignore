@@ -60,6 +60,14 @@ Thumbs.db
 HANDOFF.md
 docs/superpowers/
 
+# Local planning and generated review artifacts
+docs/brainstorms/
+docs/evaluation/
+docs/plans/
+docs/releases/
+evaluation/
+results/
+
 # Test outputs
 *.stmx
 !stella_mcp/builtin_templates/
@@ -81,12 +89,5 @@ docs/superpowers/
 !tests/fixtures/layout/0.12_fanout_stella_4_1_1_roundtrip.stmx
 !tests/fixtures/layout/0.12_feedback_source.stmx
 !tests/fixtures/layout/0.12_feedback_stella_4_1_1_roundtrip.stmx
-!docs/evaluation/layout-0.13/*.stmx
-!results/evaluation/0.13.0-agent-artifacts/**/*.stmx
-!results/evaluation/0.13.0-desktop-candidates/*.stmx
-!results/evaluation/0.13.0-desktop-evidence/*.stmx
 *.isdb
-docs/evaluation/images/stella-4.1.1-0.12-fanout-angle-failed.png
-docs/evaluation/images/stella-4.1.1-0.12-fanout-bezier-spike.png
-docs/evaluation/images/stella-4.1.1-0.12-fanout-failed.png
 stella_mcp/builtin_templates/*.py

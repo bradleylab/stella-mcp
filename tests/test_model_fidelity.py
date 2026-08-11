@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from evaluation.corpus_manifest import load_external_corpus_manifest
-from evaluation.model_fidelity import (
+from stella_mcp.xmile import parse_stmx
+from tests.support.corpus_manifest import load_external_corpus_manifest
+from tests.support.model_fidelity import (
     compare_model_fidelity,
     model_semantic_signature,
     structured_diff,
 )
-from stella_mcp.xmile import parse_stmx
 
 _CORPUS_ROOT = Path(__file__).parent / "fixtures" / "external_corpus"
 

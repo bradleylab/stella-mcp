@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from evaluation.corpus_manifest import load_external_corpus_manifest
-from evaluation.model_fidelity import compare_model_fidelity
 from stella_mcp.simulate import run_simulation
 from stella_mcp.xmile import parse_stmx
 from stella_mcp.xmile_features import UnsupportedModelFeatureError
+from tests.support.corpus_manifest import load_external_corpus_manifest
+from tests.support.model_fidelity import compare_model_fidelity
 
 _ROOT = Path(__file__).parent / "fixtures" / "external_corpus"
 _MANIFEST = load_external_corpus_manifest()

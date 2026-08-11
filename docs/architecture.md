@@ -163,8 +163,8 @@ of the public behavior.
 
 Each release synchronizes the version in `pyproject.toml`, `uv.lock`,
 `stella_mcp/__init__.py`, `CITATION.cff`, and the dated `CHANGELOG.md` heading.
-The citation and changelog dates must match. A matching file under
-`docs/releases/` supplies the GitHub release notes.
+The citation and changelog dates must match. The matching changelog entry
+supplies the draft GitHub release notes.
 
 Before merge, CI and local verification cover:
 

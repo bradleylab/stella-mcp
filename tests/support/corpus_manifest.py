@@ -10,7 +10,6 @@ from typing import Any
 
 DEFAULT_EXTERNAL_CORPUS_MANIFEST = (
     Path(__file__).resolve().parents[1]
-    / "tests"
     / "fixtures"
     / "external_corpus"
     / "manifest.json"

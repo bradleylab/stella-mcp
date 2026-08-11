@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from evaluation.layout_fixtures import build_fanout
 from stella_mcp.xmile import StellaModel, parse_stmx
+from tests.support.layout_fixtures import build_fanout
 
 
 def test_round_trip_preserves_stock_size_and_flow_points(tmp_path: Path):

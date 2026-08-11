@@ -1,6 +1,5 @@
 """Tests for boundary ports and obstacle-aware polyline routing."""
 
-from evaluation.layout_fixtures import build_chain, build_fanout
 from stella_mcp.layout import segment_intersects_box
 from stella_mcp.layout_graph import place_stock_backbone
 from stella_mcp.layout_quality import LayoutBox
@@ -12,6 +11,7 @@ from stella_mcp.layout_router import (
     point_at_half_length,
     route_between,
 )
+from tests.support.layout_fixtures import build_chain, build_fanout
 
 
 def test_normalize_route_removes_duplicates_and_collinear_points():

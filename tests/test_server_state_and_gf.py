@@ -7,8 +7,8 @@ import pytest
 from mcp.types import CallToolResult
 
 import stella_mcp.server as server_mod
-from evaluation.layout_fixtures import build_nonplanar
 from stella_mcp.xmile import StellaModel
+from tests.support.layout_fixtures import build_nonplanar
 
 
 def _tool_text(result):

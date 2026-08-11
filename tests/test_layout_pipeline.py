@@ -2,7 +2,13 @@
 
 import math
 
-from evaluation.layout_fixtures import (
+from stella_mcp import layout_pipeline
+from stella_mcp.layout_quality import (
+    ROUTE_BEND_CAP,
+    ROUTE_LENGTH_MANHATTAN_MULTIPLIER,
+)
+from stella_mcp.xmile import StellaModel
+from tests.support.layout_fixtures import (
     build_chain,
     build_dense_planar,
     build_fanout,
@@ -13,12 +19,6 @@ from evaluation.layout_fixtures import (
     fixture_builders,
     template_models,
 )
-from stella_mcp import layout_pipeline
-from stella_mcp.layout_quality import (
-    ROUTE_BEND_CAP,
-    ROUTE_LENGTH_MANHATTAN_MULTIPLIER,
-)
-from stella_mcp.xmile import StellaModel
 
 
 def _hard_counts(metrics):

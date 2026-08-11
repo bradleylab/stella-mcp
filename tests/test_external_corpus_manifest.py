@@ -6,7 +6,7 @@ import copy
 
 import pytest
 
-from evaluation.corpus_manifest import (
+from tests.support.corpus_manifest import (
     DEFAULT_EXTERNAL_CORPUS_MANIFEST,
     load_external_corpus_manifest,
     validate_external_corpus_manifest,

@@ -1,4 +1,4 @@
-"""Reproducible model builders for layout-quality evaluation."""
+"""Reproducible model builders for layout regression tests."""
 
 from __future__ import annotations
 

@@ -41,11 +41,6 @@ sim = [
     "scipy>=1.10",
 ]
 
-[dependency-groups]
-agent-eval = [
-    "openai>=2.45.0",
-]
-
 [project.scripts]
 stella-mcp = "stella_mcp.server:main"
 

@@ -1,8 +1,8 @@
 """Tests for the directed stock-flow layout graph."""
 
-from evaluation.layout_fixtures import build_chain, build_feedback, build_mixed_pins
 from stella_mcp.layout_graph import build_stock_graph, place_stock_backbone
 from stella_mcp.xmile import StellaModel
+from tests.support.layout_fixtures import build_chain, build_feedback, build_mixed_pins
 
 
 def test_chain_uses_increasing_ranks_and_one_aligned_pipe():
