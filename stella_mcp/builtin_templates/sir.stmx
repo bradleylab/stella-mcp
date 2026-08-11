@@ -69,14 +69,14 @@
 				<stock x="590" y="280" width="45" height="35" name="Recovered"/>
 				<flow x="275" y="280" name="infection">
 					<pts>
-						<pt x="192.5" y="280"/>
-						<pt x="357.5" y="280"/>
+						<pt x="215" y="280"/>
+						<pt x="380" y="280"/>
 					</pts>
 				</flow>
 				<flow x="485" y="280" name="recovery">
 					<pts>
-						<pt x="402.5" y="280"/>
-						<pt x="567.5" y="280"/>
+						<pt x="425" y="280"/>
+						<pt x="590" y="280"/>
 					</pts>
 				</flow>
 				<aux x="275" y="140" name="transmission rate"/>

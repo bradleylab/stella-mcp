@@ -42,24 +42,16 @@ def _label(
     font_pixels: float = DEFAULT_FONT_POINTS * CSS_PIXELS_PER_POINT,
 ) -> str:
     default_pixels = DEFAULT_FONT_POINTS * CSS_PIXELS_PER_POINT
-    font_size = (
-        ""
-        if font_pixels == default_pixels
-        else f' style="font-size:{_fmt(font_pixels)}px"'
-    )
+    font_size = "" if font_pixels == default_pixels else f' style="font-size:{_fmt(font_pixels)}px"'
     return (
         f'<text class="label" x="{_fmt(cx)}" y="{_fmt(baseline_y)}" '
         f'text-anchor="middle"{font_size}>{escape(text)}</text>'
     )
 
 
-def _element_label_svg(
-    model: StellaModel, key: str
-) -> tuple[str, list[tuple[float, float]]]:
+def _element_label_svg(model: StellaModel, key: str) -> tuple[str, list[tuple[float, float]]]:
     element = next(
-        registry[key]
-        for registry in (model.stocks, model.flows, model.auxs)
-        if key in registry
+        registry[key] for registry in (model.stocks, model.flows, model.auxs) if key in registry
     )
     glyph = element_box(model, key)
     assert glyph is not None
@@ -121,7 +113,10 @@ def _aux_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, float]]]:
         )
         label, label_extents = _element_label_svg(model, key)
         parts.append(label)
-        extents += [(aux.x - AUX_RADIUS, aux.y - AUX_RADIUS), (aux.x + AUX_RADIUS, aux.y + AUX_RADIUS)]
+        extents += [
+            (aux.x - AUX_RADIUS, aux.y - AUX_RADIUS),
+            (aux.x + AUX_RADIUS, aux.y + AUX_RADIUS),
+        ]
         extents += label_extents
     return parts, extents
 
@@ -131,9 +126,9 @@ def _cloud_svg(cx: float, cy: float) -> str:
     r = _CLOUD_R
     return (
         f'<path class="cloud" d="M{_fmt(cx - r)},{_fmt(cy)} '
-        f'a{_fmt(r * 0.5)},{_fmt(r * 0.5)} 0 0 1 {_fmt(r * 0.5)},{_fmt(-r * 0.5)} '
-        f'a{_fmt(r * 0.5)},{_fmt(r * 0.5)} 0 0 1 {_fmt(r)},0 '
-        f'a{_fmt(r * 0.5)},{_fmt(r * 0.5)} 0 0 1 {_fmt(r * 0.5)},{_fmt(r * 0.5)} '
+        f"a{_fmt(r * 0.5)},{_fmt(r * 0.5)} 0 0 1 {_fmt(r * 0.5)},{_fmt(-r * 0.5)} "
+        f"a{_fmt(r * 0.5)},{_fmt(r * 0.5)} 0 0 1 {_fmt(r)},0 "
+        f"a{_fmt(r * 0.5)},{_fmt(r * 0.5)} 0 0 1 {_fmt(r * 0.5)},{_fmt(r * 0.5)} "
         f'a{_fmt(r * 0.5)},{_fmt(r * 0.5)} 0 0 1 {_fmt(-r * 2)},0 z"/>'
     )
 
@@ -146,11 +141,14 @@ def _flow_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, float]]]
         points = flow.points or [(flow.x, flow.y)]
         pts_attr = " ".join(f"{_fmt(px)},{_fmt(py)}" for px, py in points)
         parts.append(f'<polyline class="flow-pipe" points="{pts_attr}"/>')
+        parts.append(
+            f'<polyline class="flow-pipe-inner" points="{pts_attr}" marker-end="url(#flow-arrow)"/>'
+        )
         # Valve bowtie centered on the flow position.
         vx, vy, h = flow.x, flow.y, _VALVE_HALF
         parts.append(
             f'<path class="flow-valve" d="M{_fmt(vx - h)},{_fmt(vy - h)} '
-            f'L{_fmt(vx + h)},{_fmt(vy + h)} L{_fmt(vx + h)},{_fmt(vy - h)} '
+            f"L{_fmt(vx + h)},{_fmt(vy + h)} L{_fmt(vx + h)},{_fmt(vy - h)} "
             f'L{_fmt(vx - h)},{_fmt(vy + h)} z"/>'
         )
         # Clouds mark ends not attached to a stock.
@@ -181,7 +179,9 @@ def _connector_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, flo
     for connector in sorted(model.connectors, key=lambda c: c.uid):
         if connector.points:
             pts = " ".join(f"{_fmt(px)},{_fmt(py)}" for px, py in connector.points)
-            parts.append(f'<polyline class="connector" points="{pts}" marker-end="url(#arrow)"/>')
+            parts.append(
+                f'<polyline class="connector" points="{pts}" marker-end="url(#connector-arrow)"/>'
+            )
             extents += [(px, py) for px, py in connector.points]
             continue
         src = _element_center(model, connector.from_var)
@@ -195,7 +195,8 @@ def _connector_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, flo
         cx, cy = mx - vy * _CONNECTOR_BOW, my + vx * _CONNECTOR_BOW
         parts.append(
             f'<path class="connector" d="M{_fmt(sx)},{_fmt(sy)} '
-            f'Q{_fmt(cx)},{_fmt(cy)} {_fmt(dx)},{_fmt(dy)}" marker-end="url(#arrow)"/>'
+            f'Q{_fmt(cx)},{_fmt(cy)} {_fmt(dx)},{_fmt(dy)}" '
+            f'marker-end="url(#connector-arrow)"/>'
         )
         extents += [(sx, sy), (dx, dy), (cx, cy)]
     return parts, extents
@@ -209,8 +210,8 @@ def _module_svg(model: StellaModel) -> tuple[list[str], list[tuple[float, float]
         if None in (module.x, module.y, module.width, module.height):
             continue
         left, top = module.x - module.width / 2, module.y - module.height / 2
-        style = f' fill={quoteattr(module.background)}' if module.background else ""
-        style += f' stroke={quoteattr(module.border_color)}' if module.border_color else ""
+        style = f" fill={quoteattr(module.background)}" if module.background else ""
+        style += f" stroke={quoteattr(module.border_color)}" if module.border_color else ""
         parts.append(
             f'<rect class="module" x="{_fmt(left)}" y="{_fmt(top)}" '
             f'width="{_fmt(module.width)}" height="{_fmt(module.height)}" rx="6"{style}/>'
@@ -258,20 +259,27 @@ def render_model_svg(model: StellaModel, *, margin: float = 40.0) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'viewBox="{_fmt(min_x)} {_fmt(min_y)} {_fmt(width)} {_fmt(height)}" '
         f'width="{_fmt(width)}" height="{_fmt(height)}">',
-        '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" '
+        '<defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" '
+        'markerWidth="6" markerHeight="6" orient="auto-start-reverse">'
+        '<path d="M0,0 L10,5 L0,10 z" fill="#000"/></marker>'
+        '<marker id="connector-arrow" viewBox="0 0 10 10" refX="9" refY="5" '
         'markerWidth="6" markerHeight="6" orient="auto-start-reverse">'
         '<path d="M0,0 L10,5 L0,10 z" fill="#FF007F"/></marker></defs>',
-        '<style>'
-        '.stock{fill:#fff;stroke:#000;stroke-width:1.5}'
-        '.aux{fill:#fff;stroke:#000;stroke-width:1.5}'
-        '.flow-pipe{fill:none;stroke:#000;stroke-width:3}'
-        '.flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}'
-        '.cloud{fill:#fff;stroke:#000;stroke-width:1}'
-        '.connector{fill:none;stroke:#FF007F;stroke-width:1}'
-        '.module{fill:none;stroke:#666;stroke-width:1}'
-        '.label{font-family:Arial,sans-serif;font-size:12px;fill:#000}'
-        '</style>',
+        "<style>"
+        ".canvas{fill:#fff}"
+        ".stock{fill:#fff;stroke:#000;stroke-width:1.5}"
+        ".aux{fill:#fff;stroke:#000;stroke-width:1.5}"
+        ".flow-pipe{fill:none;stroke:#000;stroke-width:5;stroke-linejoin:round}"
+        ".flow-pipe-inner{fill:none;stroke:#fff;stroke-width:2;stroke-linejoin:round}"
+        ".flow-valve{fill:#fff;stroke:#000;stroke-width:1.5}"
+        ".cloud{fill:#fff;stroke:#000;stroke-width:1}"
+        ".connector{fill:none;stroke:#FF007F;stroke-width:1}"
+        ".module{fill:none;stroke:#666;stroke-width:1}"
+        ".label{font-family:Arial,sans-serif;font-size:12px;fill:#000}"
+        "</style>",
+        f'<rect class="canvas" x="{_fmt(min_x)}" y="{_fmt(min_y)}" '
+        f'width="{_fmt(width)}" height="{_fmt(height)}" fill="#fff"/>',
         *body,
-        '</svg>',
+        "</svg>",
     ]
     return "\n".join(lines)

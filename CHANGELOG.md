@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- SVG previews now use an opaque white canvas, Stella-style double-line flow
+  pipes, and distinct arrowheads for flows and information connectors.
+- The built-in SIR template's flow routes now meet the adjacent stock
+  boundaries instead of leaving visible gaps.
+
 ## [0.14.0] - 2026-08-09
 
 This is the cumulative public successor to `0.12.0`. It includes both the

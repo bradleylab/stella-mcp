@@ -70,6 +70,13 @@ def test_sir_template_layout_fits_one_page_with_compact_connectors():
     assert susceptible_x < infection_x < infected_x < recovery_x < recovered_x
     assert susceptible_y == infected_y == recovered_y
 
+    for flow in model.flows.values():
+        source = model.stocks[flow.from_stock]
+        target = model.stocks[flow.to_stock]
+        assert flow.points[0][0] == source.x + source.width / 2
+        assert flow.points[-1][0] == target.x - target.width / 2
+        assert all(point[1] == flow.y for point in flow.points)
+
     max_connector_length = min(page_width, page_height) / 2
     for connector in model.connectors:
         source = positions[connector.from_var]
@@ -82,9 +89,7 @@ def test_readme_sir_diagram_matches_current_builtin_template():
     _, model = load_template_model("sir")
     model._auto_layout()
 
-    diagram = (Path(__file__).parents[1] / "docs/images/sir.svg").read_text(
-        encoding="utf-8"
-    )
+    diagram = (Path(__file__).parents[1] / "docs/images/sir.svg").read_text(encoding="utf-8")
 
     assert diagram == render_model_svg(model)
     assert "transmission rate" in diagram
@@ -165,7 +170,9 @@ def test_server_template_discovery_tools(monkeypatch, tmp_path):
     monkeypatch.setattr(server_mod, "_get_session_key", lambda: 1515)
 
     asyncio.run(server_mod.call_tool("create_model", {"name": "TemplateServer", "model_id": "m1"}))
-    asyncio.run(server_mod.call_tool("add_stock", {"model_id": "m1", "name": "S", "initial_value": "100"}))
+    asyncio.run(
+        server_mod.call_tool("add_stock", {"model_id": "m1", "name": "S", "initial_value": "100"})
+    )
     asyncio.run(
         server_mod.call_tool(
             "save_as_template",
