@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pytest
 
-from evaluation.model_fidelity import unsupported_xml_signature
 from stella_mcp import server as server_mod
 from stella_mcp.analysis import compare_scenarios, sensitivity_analysis
 from stella_mcp.calibrate import calibrate
@@ -19,6 +18,7 @@ from stella_mcp.xmile_features import (
     UnsupportedModelFeatureError,
     detect_xmile_features,
 )
+from tests.support.model_fidelity import unsupported_xml_signature
 
 _CORPUS = Path(__file__).parent / "fixtures" / "external_corpus" / "sdxorg"
 _ARRAY = _CORPUS / "samples" / "arrays" / "a2a" / "a2a.stmx"

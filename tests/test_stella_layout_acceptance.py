@@ -88,11 +88,6 @@ def test_stella_4_1_1_release_fixture_semantics_and_layout(case):
             f"{artifact_key}_sha256"
         ]
 
-    screenshot = (FIXTURES / case["screenshot"]).resolve()
-    assert hashlib.sha256(screenshot.read_bytes()).hexdigest() == case[
-        "screenshot_sha256"
-    ]
-
     names = case["identifier_renames"]
     # The historical SIR pair records the beta/gamma renames that now cause
     # intentional 0.13 strict-mode rejection. Preserve that 0.12 evidence in

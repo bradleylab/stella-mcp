@@ -24,7 +24,7 @@
         "application": "Stella Professional",
         "application_version": "4.1.1",
         "saved_at": "2026-07-13",
-        "source": "evaluation/scenarios.json#analysis_stack",
+        "source": "git:v0.14.0:evaluation/scenarios.json#analysis_stack",
         "acceptance": {
           "opened_without_repair": true,
           "run_completed": true,
@@ -42,7 +42,7 @@
         "application": "Stella Professional",
         "application_version": "4.1.1",
         "saved_at": "2026-07-13",
-        "source": "evaluation/scenarios.json#build_growth",
+        "source": "git:v0.14.0:evaluation/scenarios.json#build_growth",
         "acceptance": {
           "opened_without_repair": true,
           "run_completed": true,
@@ -60,7 +60,7 @@
         "application": "Stella Professional",
         "application_version": "4.1.1",
         "saved_at": "2026-07-13",
-        "source": "evaluation/scenarios.json#template_sir",
+        "source": "git:v0.14.0:evaluation/scenarios.json#template_sir",
         "acceptance": {
           "opened_without_repair": true,
           "run_completed": true,

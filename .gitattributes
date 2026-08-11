@@ -4,6 +4,3 @@ tests/fixtures/layout/*_stella_4_1_1*.stmx binary
 # Keep the pinned upstream license hash stable despite its terminal blank line.
 tests/fixtures/external_corpus/sdxorg/LICENSE whitespace=-blank-at-eof
 tests/fixtures/external_corpus/**/*.stmx whitespace=-blank-at-eof
-results/evaluation/0.13.0-desktop-evidence/*-stella-saved.stmx binary
-results/evaluation/0.13.0-agent-artifacts/**/*.csv binary
-results/evaluation/0.13.0-agent-evaluation.md whitespace=-blank-at-eol

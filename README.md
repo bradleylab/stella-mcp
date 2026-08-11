@@ -703,28 +703,21 @@ The `validate_model` tool checks for:
   `tests/fixtures/external_corpus/`; both run offline in CI.
 - Maintainer helper: `python scripts/sync_compat_corpus_manifest.py --check` validates corpus manifest sync
 
-## Evaluation
+## Testing
 
-The repository includes a deterministic maintainer evaluation that launches the
-server through a real MCP stdio client. It covers build, validation, rendering,
-strict save/import, structured error recovery, simulation, scenario comparison,
-sensitivity analysis, and calibration. Run the complete baseline from a source
-checkout with:
+The repository test suite covers the MCP stdio protocol, workspace isolation,
+model construction, validation, SVG rendering, XMILE import/export, simulation,
+scenario analysis, sensitivity analysis, calibration, and package installation.
+Run it from a source checkout with:
 
 ```bash
-uv run --extra sim python -m evaluation.runner --require sim
+uv sync --locked --extra dev --extra sim
+uv run python -m pytest
 ```
 
-The runner writes JSON and Markdown reports under `results/evaluation/` by
-default. The unpublished 0.13 internal-candidate evidence, retained as part of
-the cumulative 0.14 release record, includes a generated
-[capability matrix](docs/evaluation/0.13.0-capability-matrix.md), an explicit
-[numeric discrepancy review](docs/evaluation/0.13.0-numeric-fidelity.md), and
-[Stella Professional desktop acceptance](docs/evaluation/0.13.0-desktop-acceptance.md).
-These retained cases are evidence for their tested constructs, not a claim of
-compatibility with every Stella or XMILE model. See
-[`docs/evaluation/README.md`](docs/evaluation/README.md) for reproduction commands
-and evidence limits.
+Pinned Stella-saved and external XMILE fixtures live under `tests/fixtures/` and
+run offline in CI. Generated reports, local planning files, and manual review
+artifacts are intentionally not committed to the source tree.
 
 ## Project Structure
 
@@ -774,15 +767,12 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 PyPI publishing is handled by `.github/workflows/publish.yml` using PyPI Trusted
 Publishing. To release a new version:
 
-The current public upgrade path skips the unpublished `0.13.0` internal
-candidate: `0.14.0` is prepared as the cumulative successor to public `0.12.0`.
-
 1. Synchronize the version in `pyproject.toml`, `stella_mcp/__init__.py`,
    `CITATION.cff`, and `CHANGELOG.md`; keep the citation and changelog release
    dates identical.
 2. Run `uv lock --check`, the core and simulation test suites, the MCP-floor
-   suite, and the package job. Prepare a release-notes file such as
-   `docs/releases/0.14.0.md`.
+   suite, and the package job. Prepare the draft GitHub release notes from the
+   matching `CHANGELOG.md` entry.
 3. Before pushing the release branch, verify the protected `main` and `v*` tag
    rules, the `pypi` environment's protected-tag policy, and the configured
    PyPI Trusted Publisher.

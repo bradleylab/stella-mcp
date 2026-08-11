@@ -37,9 +37,7 @@
         ],
         "visual_review": "pass",
         "notes": "Stella retained the flow waypoint sequence except for clamping its final point to the stock boundary, treated connector points as Bezier anchors while preserving their interior coordinates, retained all four label sides and the 3-by-2 page grid, and normalized the page dimensions."
-      },
-      "screenshot": "../../../docs/evaluation/images/stella-4.1.1-layout-format-spike.png",
-      "screenshot_sha256": "e6bf57401b68a688ef89666099e79f80e8e1218e4ba0a9d5190404afc63ef3c2"
+      }
     },
     {
       "case": "sir",
@@ -66,9 +64,7 @@
         "maximum_connector_endpoint_delta": 10.36422872190691,
         "visual_review": "pass",
         "notes": "Compact one-page stock-flow chain with separated labels and traceable dependencies. Stella renamed beta and gamma because they conflict with reserved identifiers; equations and connectors were rewritten consistently."
-      },
-      "screenshot": "../../../docs/evaluation/images/stella-4.1.1-0.12-sir.png",
-      "screenshot_sha256": "11c21315a275b5678118008b9e01c61e30576c426e85db83e26ab4f4b2e6f902"
+      }
     },
     {
       "case": "lotka_volterra",
@@ -95,9 +91,7 @@
         "maximum_connector_endpoint_delta": 19,
         "visual_review": "pass",
         "notes": "The two coupled stock-flow components are aligned within one page; shortened dependency routes remain outside glyphs and avoid crossings. The run completed with two expected nonnegative-constraint messages from the fixture dynamics."
-      },
-      "screenshot": "../../../docs/evaluation/images/stella-4.1.1-0.12-lotka-volterra.png",
-      "screenshot_sha256": "499fd8641161c81bf2cee0d652bb2587243c27cbf7165f6f1ec1877b76b60e28"
+      }
     },
     {
       "case": "chain",
@@ -124,9 +118,7 @@
         "maximum_connector_endpoint_delta": 9,
         "visual_review": "pass",
         "notes": "Straight two-page horizontal chain with zero bends, overlaps, crossings, or page overflow. The run completed with two expected nonnegative-constraint messages from the fixture dynamics."
-      },
-      "screenshot": "../../../docs/evaluation/images/stella-4.1.1-0.12-chain.png",
-      "screenshot_sha256": "aa9c6f8494f3f108a366b095b145aece578a842df422e20a5dc75ced5cb3b184"
+      }
     },
     {
       "case": "fanout",
@@ -153,9 +145,7 @@
         "maximum_connector_endpoint_delta": 10.38716520519435,
         "visual_review": "pass",
         "notes": "Eight distinct orthogonal flow channels leave separate hub ports, remain within one page, and reach non-overlapping destination stocks without route crossings; unobstructed information connectors use direct routes."
-      },
-      "screenshot": "../../../docs/evaluation/images/stella-4.1.1-0.12-fanout.png",
-      "screenshot_sha256": "2212badda208c296d18fda021ecc568e6a54f416d32d4245b446d0a3376d2a7e"
+      }
     },
     {
       "case": "feedback",
@@ -182,9 +172,7 @@
         "maximum_connector_endpoint_delta": 15.213350748602348,
         "visual_review": "pass",
         "notes": "The six-stock cycle and its controls fit one page. Orthogonal flows remain traceable around the ring; information connectors use direct routes when clear and perimeter corridors when required, without avoidable crossings or glyph overlap."
-      },
-      "screenshot": "../../../docs/evaluation/images/stella-4.1.1-0.12-feedback.png",
-      "screenshot_sha256": "e2bd3d8b8da26b91a31add1d6ed09ef99b46eb37a7477369f528242bceda7f71"
+      }
     }
   ]
 }
