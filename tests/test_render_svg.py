@@ -14,7 +14,9 @@ def _positioned_model() -> StellaModel:
     model.add_stock("Source Stock", "100", x=100, y=100)
     model.add_stock("Sink Stock", "0", x=300, y=100)
     model.add_aux("rate", "0.1", x=200, y=220)
-    model.add_flow("transfer", "Source_Stock * rate", from_stock="Source Stock", to_stock="Sink Stock")
+    model.add_flow(
+        "transfer", "Source_Stock * rate", from_stock="Source Stock", to_stock="Sink Stock"
+    )
     model.flows["transfer"].x = 200
     model.flows["transfer"].y = 100
     model.flows["transfer"].points = [(122, 100), (278, 100)]
@@ -47,9 +49,37 @@ def test_render_element_counts_by_class():
     assert counts["stock"] == 2
     assert counts["aux"] == 1
     assert counts["flow-pipe"] == 1
+    assert counts["flow-pipe-inner"] == 1
     assert counts["flow-valve"] == 1
     assert counts["connector"] == 2
     assert counts["module"] == 1
+
+
+def test_render_includes_opaque_canvas_matching_viewbox():
+    root = ET.fromstring(render_model_svg(_positioned_model()))
+    [canvas] = [element for element in root.iter() if element.get("class") == "canvas"]
+    min_x, min_y, width, height = root.get("viewBox").split()
+
+    assert canvas.get("x") == min_x
+    assert canvas.get("y") == min_y
+    assert canvas.get("width") == width
+    assert canvas.get("height") == height
+    assert canvas.get("fill") == "#fff"
+
+
+def test_render_uses_double_flow_pipe_with_distinct_arrowheads():
+    root = ET.fromstring(render_model_svg(_positioned_model()))
+    markers = {element.get("id"): element for element in root.iter() if element.get("id")}
+    [outer] = [element for element in root.iter() if element.get("class") == "flow-pipe"]
+    [inner] = [element for element in root.iter() if element.get("class") == "flow-pipe-inner"]
+    connectors = [element for element in root.iter() if element.get("class") == "connector"]
+
+    assert outer.get("points") == inner.get("points")
+    assert outer.get("marker-end") is None
+    assert inner.get("marker-end") == "url(#flow-arrow)"
+    assert all(connector.get("marker-end") == "url(#connector-arrow)" for connector in connectors)
+    assert next(iter(markers["flow-arrow"])).get("fill") == "#000"
+    assert next(iter(markers["connector-arrow"])).get("fill") == "#FF007F"
 
 
 def test_render_includes_display_name_labels():
